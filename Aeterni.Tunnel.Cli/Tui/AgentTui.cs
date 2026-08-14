@@ -1,21 +1,32 @@
 using System.Collections.Concurrent;
-using System.Text;
+using System.Collections.ObjectModel;
+using System.Text.RegularExpressions;
 using Aeterni.Tunnel.Engine.Hosting;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
 using Spectre.Console;
+using Terminal.Gui.App;
+using Terminal.Gui.Drawing;
+using Terminal.Gui.Input;
+using Terminal.Gui.ViewBase;
+using Terminal.Gui.Views;
 
 namespace Aeterni.Tunnel.Cli.Tui;
 
 /// <summary>
-/// ATC 全屏交互式 REPL（VS C# Interactive 风格）：
-/// 上部隧道状态表（Spectre Table 规整）+ 中部日志 + 底部命令输入。
-/// 输入走 Roslyn 脚本引擎：atc.Tunnel.Add("mc","tcp","25565","6071") 或任意 C# 表达式（变量跨输入保持）。
-/// 实时刷新（后台 1s 覆盖重绘，无频闪），Tab 补全快捷命令，Ctrl+C 退出。
+/// ATC 交互式界面（Terminal.Gui v2 完整重构）：
+/// 左侧隧道列表（按 Group/类型分组，实时刷新） + 右侧日志窗口 + 底部指令输入（Roslyn REPL + 框架级补全）。
+/// 安全模式：仅允许 atc.* 操作。
 /// </summary>
 public static class AgentTui
 {
-    private static readonly string[] QuickCommands = ["help", "quit", "exit", "clear"];
+    // 安全模式：只放行 atc 表达式/调用，其余拒绝
+    private static readonly Regex AtcOnlyPattern = new(
+        @"^\s*(var\s+\w+\s*=\s*)?atc\.[\w().\[\],""'\s\-]+;?\s*$",
+        RegexOptions.Compiled);
+
+    /// <summary>列表行（IsGroup=true 为分组头）</summary>
+    private sealed record RowItem(string Text, bool IsGroup);
 
     public static async Task RunAsync(AgentHost agent, CancellationToken ct)
     {
@@ -26,242 +37,397 @@ public static class AgentTui
             await agent.StopAsync();
             return;
         }
+        if (string.IsNullOrEmpty(typeof(AtcGlobals).Assembly.Location))
+        {
+            Console.Error.WriteLine("[agent] REPL 需要程序集可定位：单文件发布请启用 IncludeAllContentForSelfExtract=true");
+            await agent.StopAsync();
+            return;
+        }
 
-        // 隧道注册结果（ProxyRegistered 事件 → ProxyId → (成功?, 信息)）
         var registered = new ConcurrentDictionary<string, (bool Ok, string? Msg)>();
         agent.ProxyRegistered += (id, ok, msg) => registered[id] = (ok, msg);
 
-        // 日志环形缓冲（含时间戳）
-        var logs = new ConcurrentQueue<string>();
-        agent.LogLine += s =>
-        {
-            logs.Enqueue($"{DateTime.Now:HH:mm:ss} {s}");
-            while (logs.Count > 64) logs.TryDequeue(out _);
-        };
-
-        // 后台连接（失败自动重连，不阻塞界面）
-        _ = Task.Run(async () =>
-        {
-            try { await agent.StartAsync(ct); }
-            catch (Exception ex) { Console.Error.WriteLine($"[agent] 启动异常：{ex.Message}"); }
-        });
-
-        // ── Roslyn REPL 状态 ──
-        var scriptOptions = ScriptOptions.Default
-            .AddReferences(typeof(AtcContext).Assembly)
-            .AddImports("System", "System.Linq", "System.Collections.Generic", "Aeterni.Tunnel.Engine.Hosting");
         var atc = new AtcContext(agent);
+        var globals = new AtcGlobals(atc);
         ScriptState? scriptState = null;
 
-        try { AnsiConsole.Cursor.Hide(); } catch (IOException) { }
+        // ── Terminal.Gui 界面（诊断日志定位闪退） ──
+        Application.Init();
+        var win = new Window { Title = " AETERNI TUNNEL · Agent " };
 
-        var input = new StringBuilder();
-        var result = "";
-        var running = true;
-        var lastRender = 0L;
+        // ① 顶部 Banner（Apple 绿标题 + 灰副标 + 分隔线）
+        var banner = new BannerView { Width = Dim.Fill(), Height = 3 };
+
+        // ② Tab 标签头（隧道列表 / 日志 切换）
+        var tabHeader = new TabHeaderView { Width = Dim.Fill(), Height = 1 };
+
+        // ③ 内容区（单面板：隧道列表 / 日志 叠放，Tab 切换 Visible）
+        var content = new View { Width = Dim.Fill(), Height = Dim.Fill(4) };
+        var tunnelList = new ListView { X = 0, Y = 0, Width = Dim.Fill(), Height = Dim.Fill() };
+        var tunnelFrame = new FrameView
+        {
+            Title = " 隧道列表 ",
+            Width = Dim.Fill(),
+            Height = Dim.Fill(),
+            BorderStyle = LineStyle.Rounded,
+        };
+        tunnelFrame.Add(tunnelList);
+        var logView = new LogView { Width = Dim.Fill(), Height = Dim.Fill() };
+        var logFrame = new FrameView
+        {
+            Title = " 日志 ",
+            Width = Dim.Fill(),
+            Height = Dim.Fill(),
+            BorderStyle = LineStyle.Rounded,
+        };
+        logFrame.Add(logView);
+        content.Add(tunnelFrame, logFrame);
+
+        // ④ 指令输入区块
+        var input = new TextField { X = 1, Y = 0, Width = Dim.Fill(1) };
+        var inputFrame = new FrameView
+        {
+            Title = " 指令 ",
+            Width = Dim.Fill(),
+            Height = 3,
+            BorderStyle = LineStyle.Rounded,
+        };
+        inputFrame.Add(input);
+
+        // ⑤ 底部状态栏（连接 / 隧道数 / 流量 / 键位提示）
+        var statusBar = new StatusBarView { Width = Dim.Fill(), Height = 1 };
+
+        // 布局坐标（纵向链）
+        banner.Y = 0;
+        tabHeader.Y = Pos.Bottom(banner);
+        content.Y = Pos.Bottom(tabHeader);
+        inputFrame.Y = Pos.Bottom(content);
+        statusBar.Y = Pos.Bottom(inputFrame);
+        win.Add(banner, tabHeader, content, inputFrame, statusBar);
+
+        // Tab 切换面板（0=隧道列表 1=日志）
+        void SwitchTab(int n)
+        {
+            tunnelFrame.Visible = n == 0;
+            logFrame.Visible = n == 1;
+            tabHeader.Active = n;
+        }
+        SwitchTab(0);
+
+        // ── 自绘补全弹窗（浮动在输入框上方，完全可控） ──
+        var popup = new Window { BorderStyle = LineStyle.Rounded, Visible = false };
+        var popupLabels = new List<Label>();
+        var popupSuggestions = new List<Suggestion>();
+        var popupSelected = 0;
+        win.Add(popup);   // 最后 Add → z-order 最上层
+
+        void UpdatePopup()
+        {
+            var suggestions = GetSuggestions(input.Text ?? "");
+            if (suggestions.Count == 0)
+            {
+                popup.Visible = false;
+                return;
+            }
+            foreach (var l in popupLabels)
+                popup.Remove(l);
+            popupLabels.Clear();
+
+            var shown = suggestions.Take(8).ToList();
+            popupSelected = Math.Clamp(popupSelected, 0, shown.Count - 1);
+            for (var i = 0; i < shown.Count; i++)
+            {
+                var isSel = i == popupSelected;
+                var label = new Label
+                {
+                    X = 1,
+                    Y = i,
+                    Text = (isSel ? "▶ " : "  ") + shown[i].Title,
+                };
+                popup.Add(label);
+                popupLabels.Add(label);
+            }
+            popupSuggestions = shown;
+            popup.X = Pos.Left(inputFrame) + 1;
+            popup.Y = Pos.Bottom(content) - shown.Count - 1;   // 输入框上方
+            popup.Width = 58;
+            popup.Height = shown.Count + 2;
+            popup.Visible = true;
+        }
+        // 提前 EndInit：FrameView 的 Title 会在 EndInit 时动态添加子视图，
+        // 若等到 Application.Run 的 EndInit 阶段（正在枚举 Subviews）才加 → Collection modified 崩溃。
+        // 手动先初始化，Run 时因 IsInitialized 跳过。
+        win.EndInit();
+        // 初始焦点给指令输入框（主循环启动后设置才生效）
+        Application.Invoke(() => input.SetFocus());
+
+
+        // 隧道列表数据源 + 分组头高亮（SetSource 由首次 RefreshTunnels 懒设置——所有触发点都在 Run 之后，避免 EndInit 枚举冲突）
+        var rows = new ObservableCollection<object>();
+        tunnelList.RowRender += (_, e) =>
+        {
+            if (e.Row >= 0 && e.Row < rows.Count && rows[e.Row] is RowItem { IsGroup: true })
+                e.RowAttribute = new Terminal.Gui.Drawing.Attribute(Terminal.Gui.Drawing.Color.BrightCyan, Terminal.Gui.Drawing.Color.Black);
+        };
+
+        // 日志 → 右侧窗口（自动滚动）
+        agent.LogLine += s => Application.Invoke(() =>
+            AppendLog(logView, $"[{DateTime.Now:HH:mm:ss}] {s}"));
+
+        // 隧道变化 / 每秒 → 刷新左侧列表 + 状态栏（流量、状态实时）
+        agent.ProxyRegistered += (_, _, _) => Application.Invoke(() => RefreshTunnels(agent, rows, registered, tunnelList));
+        Application.AddTimeout(TimeSpan.FromSeconds(1), () =>
+        {
+            Application.Invoke(() =>
+            {
+                RefreshTunnels(agent, rows, registered, tunnelList);
+                var (up, down) = agent.GetTraffic().Values.Aggregate((0L, 0L), (acc, t) => (acc.Item1 + t.Up, acc.Item2 + t.Down));
+                statusBar.SetStatus(agent.IsConnected, agent.Proxies.Count, up, down);
+            });
+            return true;
+        });
+
+        // 后台连接：主循环启动后 100ms 再连（避免 UI 初始化期间事件修改集合 → EndInit 枚举冲突）
+        Application.AddTimeout(TimeSpan.FromMilliseconds(100), () =>
+        {
+            _ = Task.Run(async () =>
+            {
+                try { await agent.StartAsync(ct); }
+                catch (Exception ex) { Console.Error.WriteLine($"[agent] 启动异常：{ex.Message}"); }
+            });
+            return false;   // 仅执行一次
+        });
+
+        // 回车 → 执行（安全模式）
+        // 输入变化 → 更新补全弹窗
+        input.TextChanged += (_, _) => UpdatePopup();
+
+        input.KeyDown += async (_, key) =>
+        {
+            // 补全弹窗交互（↑↓ 选择 / Tab 接受 / Esc 关闭）
+            if (popup.Visible && popupSuggestions.Count > 0)
+            {
+                if (key == Key.CursorUp)
+                {
+                    popupSelected = Math.Max(0, popupSelected - 1);
+                    UpdatePopup();
+                    key.Handled = true;
+                    return;
+                }
+                if (key == Key.CursorDown)
+                {
+                    popupSelected = Math.Min(popupSuggestions.Count - 1, popupSelected + 1);
+                    UpdatePopup();
+                    key.Handled = true;
+                    return;
+                }
+                if (key == Key.Tab)
+                {
+                    input.Text += popupSuggestions[popupSelected].Replacement;
+                    popup.Visible = false;
+                    key.Handled = true;
+                    return;
+                }
+                if (key == Key.Esc)
+                {
+                    popup.Visible = false;
+                    key.Handled = true;
+                    return;
+                }
+            }
+            // 无补全弹窗时：Tab 切换面板（隧道列表 / 日志）
+            if (key == Key.Tab)
+            {
+                var next = tunnelFrame.Visible ? 1 : 0;
+                SwitchTab(next);
+                key.Handled = true;
+                return;
+            }
+
+            if (key == Key.Enter)
+            {
+                popup.Visible = false;
+                var code = input.Text ?? "";
+                if (code.Trim().Length > 0)
+                {
+                    input.Text = "";
+                    scriptState = await ExecuteAsync(globals, logView, code, atc, scriptState);
+                    RefreshTunnels(agent, rows, registered, tunnelList);
+                }
+                key.Handled = true;
+            }
+        };
 
         try
         {
-            while (running && !ct.IsCancellationRequested)
-            {
-                if (Console.KeyAvailable)
-                {
-                    var key = Console.ReadKey(intercept: true);
-                    switch (key.Key)
-                    {
-                        case ConsoleKey.Enter:
-                            (result, running, scriptState) = await EvalAsync(atc, scriptState, input.ToString(), running);
-                            input.Clear();
-                            if (running)
-                                RenderAll(agent, registered, logs, input.ToString(), result);
-                            break;
-                        case ConsoleKey.Backspace when input.Length > 0:
-                            input.Length--;
-                            RenderInputLine(input.ToString());
-                            break;
-                        case ConsoleKey.Tab:
-                            TabComplete(input);
-                            RenderInputLine(input.ToString());
-                            break;
-                        case ConsoleKey.C when key.Modifiers.HasFlag(ConsoleModifiers.Control):
-                            running = false;
-                            break;
-                        default:
-                            if (!char.IsControl(key.KeyChar))
-                            {
-                                input.Append(key.KeyChar);
-                                RenderInputLine(input.ToString());
-                            }
-                            break;
-                    }
-                }
-                else
-                {
-                    var now = Environment.TickCount64;
-                    if (now - lastRender >= 1000)
-                    {
-                        lastRender = now;
-                        RenderAll(agent, registered, logs, input.ToString(), result);
-                    }
-                    Thread.Sleep(40);
-                }
-            }
+            Application.Run(win);
         }
-        finally
+        catch (Exception ex)
         {
-            try { AnsiConsole.Cursor.Show(); } catch (IOException) { }
-            Console.WriteLine();
         }
-
+        Application.Shutdown();
         await agent.StopAsync();
     }
 
-    /// <summary>执行输入：快捷命令或 Roslyn C# 表达式；返回 (结果文本, 是否继续, 新脚本状态)</summary>
-    private static async Task<(string Result, bool Running, ScriptState? State)> EvalAsync(
-        AtcContext atc, ScriptState? state, string code, bool running)
+    // ═════════ 补全候选（静态白名单：仅 atc 接口，杜绝 C# 内置提示） ═════════
+
+    private static readonly IReadOnlyList<Suggestion> AtcSuggestions =
+    [
+        new Suggestion(0, "Tunnel", "P Tunnel → 隧道管理"),
+        new Suggestion(0, "TunnelCount", "P TunnelCount → 当前隧道数"),
+        new Suggestion(0, "Status", "P Status → 连接状态"),
+        new Suggestion(0, "Connected", "P Connected → 是否已连接"),
+        new Suggestion(0, "Version", "P Version → 版本号"),
+        new Suggestion(0, "Quit", "M Quit() → 退出"),
+        new Suggestion(0, "Help", "M Help() → 用法说明"),
+    ];
+
+    private static readonly IReadOnlyList<Suggestion> TunnelSuggestions =
+    [
+        new Suggestion(0, "Add(", "M Add(名称, 类型, 本地端口, 公网端口|域名)"),
+        new Suggestion(0, "Remove(", "M Remove(隧道名称)"),
+        new Suggestion(0, "List", "M List() → 隧道名列表"),
+        new Suggestion(0, "Count", "P Count → 隧道数"),
+    ];
+
+    private static IReadOnlyList<Suggestion> GetSuggestions(string text)
+    {
+        if (!text.StartsWith("atc", StringComparison.Ordinal))
+            return [];
+
+        // 当前输入的最后一段（. / ( / 空格 之后）作为过滤前缀
+        var lastWord = text[(text.LastIndexOfAny(['.', '(', ' ']) + 1)..];
+        var all = text.Contains("atc.Tunnel.", StringComparison.Ordinal)
+            ? TunnelSuggestions
+            : AtcSuggestions;
+        if (lastWord.Length == 0)
+            return all;
+        return all.Where(s => s.Replacement.StartsWith(lastWord, StringComparison.OrdinalIgnoreCase)).ToList();
+    }
+
+    // ═════════ 隧道列表（分组 + 实时刷新） ═════════
+
+    private static bool _sourceSet;
+
+    private static void RefreshTunnels(
+        AgentHost agent, ObservableCollection<object> rows,
+        ConcurrentDictionary<string, (bool Ok, string? Msg)> registered,
+        ListView tunnelList)
+    {
+        // 首次调用时设置数据源（所有触发点都在 Run 之后，安全）
+        if (!_sourceSet)
+        {
+            tunnelList.SetSource(rows);
+            _sourceSet = true;
+        }
+
+        var proxies = agent.Proxies
+            .OrderBy(p => p.Group ?? p.LinkType.ToString())
+            .ThenBy(p => p.ProxyId)
+            .ToList();
+
+        var newRows = new List<object>();
+        string? currentGroup = null;
+        foreach (var p in proxies)
+        {
+            var group = p.Group ?? p.LinkType.ToString().ToUpperInvariant();
+            if (group != currentGroup)
+            {
+                newRows.Add(new RowItem($"══ {group} ══", true));
+                currentGroup = group;
+            }
+
+            var remote = p.RemotePort is not null ? $"0.0.0.0:{p.RemotePort}" : p.Domain ?? "-";
+            var (up, down) = agent.GetTraffic().TryGetValue(p.ProxyId, out var t) ? t : (0L, 0L);
+            var ok = !agent.IsConnected || (registered.TryGetValue(p.ProxyId, out var r) && r.Ok);
+            var icon = !agent.IsConnected ? "○" : ok ? "●" : "○";
+            newRows.Add(new RowItem(
+                $"{icon} {p.ProxyId}  {p.LinkType.ToString().ToLowerInvariant()}  {remote}  ↑{Format.Bytes(up)} ↓{Format.Bytes(down)}",
+                false));
+        }
+        if (newRows.Count == 0)
+            newRows.Add(new RowItem("（暂无隧道 —— 输入 atc.Tunnel.Add(\"mc\",\"tcp\",\"25565\",\"6071\") 添加）", true));
+
+        rows.Clear();
+        foreach (var r in newRows)
+            rows.Add(r);
+    }
+
+    // ═════════ 执行（安全模式：仅 atc） ═════════
+
+    private static async Task<ScriptState?> ExecuteAsync(
+        AtcGlobals globals, LogView logView, string code, AtcContext atc, ScriptState? state)
     {
         var trimmed = code.Trim();
-        if (trimmed.Length == 0)
-            return ("", running, state);
+        AppendLog(logView, $"> {trimmed}");
 
         switch (trimmed.ToLowerInvariant())
         {
             case "help":
-                return (atc.Help(), running, state);
+                AppendLog(logView, atc.Help());
+                return state;
             case "quit":
             case "exit":
-                return ("bye", false, state);
+                Application.Invoke(() => Application.RequestStop());
+                return state;
             case "clear":
-                return ("", running, state);
+                Application.Invoke(() => logView.Text = "");
+                return state;
+        }
+
+        if (!AtcOnlyPattern.IsMatch(trimmed))
+        {
+            AppendLog(logView, "⚠ 仅允许 atc 操作（安全模式）：atc.Tunnel.Add / atc.TunnelCount / atc.Status / atc.Quit…");
+            return state;
         }
 
         try
         {
             state = state is null
-                ? await CSharpScript.RunAsync(trimmed, ScriptOptionsOf(atc), globals: atc, globalsType: typeof(AtcContext))
+                ? await CSharpScript.RunAsync(trimmed, ScriptOptionsOf(globals), globals: globals, globalsType: typeof(AtcGlobals))
                 : await state.ContinueWithAsync(trimmed);
-            if (atc.ExitRequested)
-                return (state.ReturnValue?.ToString() ?? "", false, state);
-            var value = state.ReturnValue;
-            return (value is null ? "" : value.ToString() ?? "", running, state);
+            if (globals.atc.ExitRequested)
+            {
+                Application.Invoke(() => Application.RequestStop());
+                return state;
+            }
+            var value = await UnwrapAsync(state.ReturnValue);
+            if (value is not null)
+                AppendLog(logView, value.ToString() ?? "");
         }
         catch (CompilationErrorException ex)
         {
-            var errors = string.Join(" / ", ex.Diagnostics.Take(3).Select(d => d.ToString()));
-            return ($"[red]编译错误：{Markup.Escape(errors)}[/]", running, state);
+            AppendLog(logView, $"✗ {string.Join(" / ", ex.Diagnostics.Take(2).Select(d => d.ToString()))}");
         }
         catch (Exception ex)
         {
-            return ($"[red]{Markup.Escape(ex.GetType().Name)}：{Markup.Escape(ex.Message)}[/]", running, state);
+            AppendLog(logView, $"✗ {ex.GetType().Name}：{ex.Message}");
         }
+        return state;
     }
 
-    private static ScriptOptions ScriptOptionsOf(AtcContext atc)
+    private static async Task<object?> UnwrapAsync(object? value)
+    {
+        while (value is Task task)
+        {
+            await task;
+            if (!task.GetType().IsGenericType)
+                return "(completed)";
+            value = task.GetType().GetProperty("Result")?.GetValue(task);
+        }
+        return value;
+    }
+
+    private static ScriptOptions ScriptOptionsOf(AtcGlobals globals)
         => ScriptOptions.Default
-            .AddReferences(typeof(AtcContext).Assembly)
+            .AddReferences(typeof(AtcGlobals).Assembly)
             .AddImports("System", "System.Linq", "System.Collections.Generic", "Aeterni.Tunnel.Engine.Hosting");
 
-    // ═════════ 渲染（全屏覆盖，无频闪） ═════════
+    // ═════════ 输出与补全 ═════════
 
-    private static void RenderAll(
-        AgentHost agent,
-        ConcurrentDictionary<string, (bool Ok, string? Msg)> registered,
-        ConcurrentQueue<string> logs,
-        string input, string result)
+    private static void AppendLog(LogView logView, string text)
     {
-        var height = Format.TerminalHeight();
-        var width = Format.TerminalWidth();
-
-        AnsiConsole.Write("\x1b[H");   // 光标归位，覆盖重绘（不清屏 → 不闪）
-
-        // ① 品牌 + 状态行
-        var state = agent.IsConnected ? "[green]● 已连接[/]" : "[yellow]○ 重连中[/]";
-        AnsiConsole.MarkupLine($"  [bold green]AETERNI[/] [dim]TUNNEL · Agent[/]  {state}  隧道 [bold]{agent.Proxies.Count}[/] 条");
-
-        // ② 隧道状态表（Spectre Table 规整；按高度截断）
-        var tableHeight = Math.Min(agent.Proxies.Count + 4, Math.Max(5, height - 9));
-        RenderTable(agent, registered, tableHeight);
-
-        // ③ 结果行（命令输出）
-        if (result.Length > 0)
-        {
-            var clipped = result.Length > width - 4 ? result[..(width - 4)] : result;
-            AnsiConsole.MarkupLine($"  {clipped}");
-        }
-
-        // ④ 日志窗（填满剩余）
-        var logRows = Math.Max(1, height - tableHeight - (result.Length > 0 ? 8 : 7));
-        AnsiConsole.MarkupLine($"  [dim]{new string('─', Math.Max(20, width - 4))}[/]");
-        var logLines = logs.TakeLast(logRows).ToArray();
-        if (logLines.Length == 0)
-            logLines = ["[dim]（等待日志…）[/]"];
-        foreach (var line in logLines)
-        {
-            var clipped = line.Length > width - 4 ? line[..(width - 4)] : line;
-            AnsiConsole.MarkupLine($"  {Markup.Escape(clipped)}");
-        }
-
-        AnsiConsole.Write("\x1b[J");
-        RenderInputLine(input);
+        logView.Add(text);
     }
 
-    private static void RenderTable(
-        AgentHost agent,
-        ConcurrentDictionary<string, (bool Ok, string? Msg)> registered,
-        int maxRows)
-    {
-        var rows = agent.Proxies.Take(Math.Max(0, maxRows - 2)).ToList();
-        if (rows.Count == 0)
-        {
-            AnsiConsole.MarkupLine("  [dim]（暂无隧道——输入 [cyan]atc.Tunnel.Add(\"mc\",\"tcp\",\"25565\",\"6071\")[/] 添加）[/]");
-            return;
-        }
-
-        var table = new Table { Border = TableBorder.Rounded, Expand = true, Width = Math.Max(30, Format.TerminalWidth() - 4) };
-        table.AddColumn(new TableColumn("名称").Centered());
-        table.AddColumn(new TableColumn("类型").Centered());
-        table.AddColumn(new TableColumn("远程地址"));
-        table.AddColumn(new TableColumn("↑ 累计").Centered());
-        table.AddColumn(new TableColumn("↓ 累计").Centered());
-        table.AddColumn(new TableColumn("状态").Centered());
-
-        foreach (var p in rows)
-        {
-            (bool Ok, string? Msg) reg = registered.TryGetValue(p.ProxyId, out var r) ? r : (false, null);
-            (long Up, long Down) traffic = agent.GetTraffic().TryGetValue(p.ProxyId, out var t) ? t : (0L, 0L);
-            var remote = p.RemotePort is not null ? $"0.0.0.0:{p.RemotePort}" : p.Domain ?? "-";
-            var status = !agent.IsConnected
-                ? "[grey]未连接[/]"
-                : reg.Ok ? "[green]● 在线[/]"
-                : reg.Msg is not null ? "[red]● 失败[/]"
-                : "[grey]○ 注册中[/]";
-            table.AddRow(Markup.Escape(p.ProxyId), p.LinkType.ToString().ToLowerInvariant(),
-                Markup.Escape(remote), $"↑{Format.Bytes(traffic.Up)}", $"↓{Format.Bytes(traffic.Down)}", status);
-        }
-        if (rows.Count < agent.Proxies.Count)
-            table.Caption = new TableTitle($"… 还有 {agent.Proxies.Count - rows.Count} 条未显示");
-        AnsiConsole.Write(table);
-    }
-
-    private static void RenderInputLine(string input)
-    {
-        var row = Format.TerminalHeight();
-        AnsiConsole.Write($"\x1b[{row};1H\x1b[2K");
-        var display = input.Length > 80 ? input[^80..] : input;
-        AnsiConsole.Markup($"[bold green]ats›[/] {Markup.Escape(display)}");
-    }
-
-    /// <summary>Tab 补全快捷命令</summary>
-    private static void TabComplete(StringBuilder input)
-    {
-        var text = input.ToString();
-        if (text.Contains(' '))
-            return;
-        var match = QuickCommands.FirstOrDefault(c => c.StartsWith(text, StringComparison.OrdinalIgnoreCase));
-        if (match is not null)
-        {
-            input.Clear();
-            input.Append(match);
-        }
-    }
 }

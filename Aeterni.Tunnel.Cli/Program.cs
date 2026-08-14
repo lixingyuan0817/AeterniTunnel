@@ -2,7 +2,6 @@
 using Aeterni.Tunnel.Engine.Config;
 using Aeterni.Tunnel.Engine.Hosting;
 using Aeterni.Tunnel.Cli.Tui;
-using Spectre.Console;
 
 // ═══════════════════════════════════════════════════════════
 // Aeterni Tunnel CLI —— ATC 客户端
@@ -33,8 +32,8 @@ var token = GetValue(args, "--token");
 
 if (server is null || token is null)
 {
-    server ??= AnsiConsole.Ask<string>("[green]ATS 服务端地址（host:port）[/]：");
-    token ??= AnsiConsole.Ask<string>("[green]认证令牌[/]：");
+    server ??= Prompt("ATS 服务端地址（host:port）");
+    token ??= Prompt("认证令牌");
 }
 
 var (host, port) = ParseHostPort(server);
@@ -43,15 +42,22 @@ var useTls = args.Contains("--tls");
 await using var agent = new AgentHost(new AgentOptions(host, port, token, ClientId: "", UseTls: useTls));
 await AgentTui.RunAsync(agent, CancellationToken.None);
 
+/// <summary>终端提示输入（无 Spectre 依赖）</summary>
+static string Prompt(string label)
+{
+    Console.Write($"{label}：");
+    return Console.ReadLine()?.Trim() ?? "";
+}
+
 static void PrintHelp()
 {
-    AnsiConsole.MarkupLine("""
-        [bold green]Aeterni Tunnel CLI[/] —— ATC 客户端
+    Console.WriteLine("""
+        Aeterni Tunnel CLI —— ATC 客户端
 
         用法：
-          [cyan]aeterni-client --server 主机:端口 --token 令牌[/] [[--tui]]
-            交互式界面：进入后用命令添加/管理隧道（add/remove/list/help/quit）
-          [cyan]aeterni-client --config agent.toml[/]
+          aeterni-client --server 主机:端口 --token 令牌 [--tui]
+            交互式界面：隧道列表 + 日志 + 指令（atc.Tunnel.Add(...) 等）
+          aeterni-client --config agent.toml
             配置文件模式：读 [[tunnels]] 纯日志运行，改配置自动热更新
 
         选项：
