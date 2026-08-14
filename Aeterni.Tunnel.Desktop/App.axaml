@@ -28,13 +28,15 @@
                     <Color x:Key="BannerBorderColor">#55FBBF24</Color>
                     <Color x:Key="BannerTextColor">#FDE68A</Color>
                     <Color x:Key="WindowBgColor">#8C05070F</Color>
-                    <Color x:Key="ScrollThumbColor">#30FFFFFF</Color>
-                    <Color x:Key="ScrollThumbHoverColor">#50FFFFFF</Color>
+                    <Color x:Key="ScrollThumbColor">#26FFFFFF</Color>
+                    <Color x:Key="ScrollThumbHoverColor">#40FFFFFF</Color>
+                    <Color x:Key="ScrollThumbPressedColor">#55FFFFFF</Color>
                     <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentColor}" />
                     <SolidColorBrush x:Key="BgBrush" Color="{StaticResource BgColor}" />
                     <SolidColorBrush x:Key="WindowBgBrush" Color="{StaticResource WindowBgColor}" />
                     <SolidColorBrush x:Key="ScrollThumbBrush" Color="{StaticResource ScrollThumbColor}" />
                     <SolidColorBrush x:Key="ScrollThumbHoverBrush" Color="{StaticResource ScrollThumbHoverColor}" />
+                    <SolidColorBrush x:Key="ScrollThumbPressedBrush" Color="{StaticResource ScrollThumbPressedColor}" />
                     <SolidColorBrush x:Key="PanelBrush" Color="{StaticResource PanelColor}" />
                     <SolidColorBrush x:Key="PanelBorderBrush" Color="{StaticResource PanelBorderColor}" />
                     <SolidColorBrush x:Key="InputBgBrush" Color="{StaticResource InputBgColor}" />
@@ -73,13 +75,15 @@
                     <Color x:Key="BannerBorderColor">#66D97706</Color>
                     <Color x:Key="BannerTextColor">#92400E</Color>
                     <Color x:Key="WindowBgColor">#8CEEF1F8</Color>
-                    <Color x:Key="ScrollThumbColor">#1A1E293B</Color>
-                    <Color x:Key="ScrollThumbHoverColor">#331E293B</Color>
+                    <Color x:Key="ScrollThumbColor">#141E293B</Color>
+                    <Color x:Key="ScrollThumbHoverColor">#241E293B</Color>
+                    <Color x:Key="ScrollThumbPressedColor">#331E293B</Color>
                     <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentColor}" />
                     <SolidColorBrush x:Key="BgBrush" Color="{StaticResource BgColor}" />
                     <SolidColorBrush x:Key="WindowBgBrush" Color="{StaticResource WindowBgColor}" />
                     <SolidColorBrush x:Key="ScrollThumbBrush" Color="{StaticResource ScrollThumbColor}" />
                     <SolidColorBrush x:Key="ScrollThumbHoverBrush" Color="{StaticResource ScrollThumbHoverColor}" />
+                    <SolidColorBrush x:Key="ScrollThumbPressedBrush" Color="{StaticResource ScrollThumbPressedColor}" />
                     <SolidColorBrush x:Key="PanelBrush" Color="{StaticResource PanelColor}" />
                     <SolidColorBrush x:Key="PanelBorderBrush" Color="{StaticResource PanelBorderColor}" />
                     <SolidColorBrush x:Key="InputBgBrush" Color="{StaticResource InputBgColor}" />
@@ -279,13 +283,16 @@
             <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
         </Style>
 
-        <!-- ═══ ScrollBar：细条 + 圆角滑块 + 半透明主题色（替代 Fluent 默认粗蓝灰） ═══ -->
+        <!-- ═══ ScrollBar：窄胶囊滑块，平时低透明，悬停/拖动加深（低调不抢眼） ═══ -->
         <Style Selector="ScrollBar /template/ Thumb">
             <Setter Property="Background" Value="{DynamicResource ScrollThumbBrush}" />
-            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="CornerRadius" Value="3" />
         </Style>
         <Style Selector="ScrollBar /template/ Thumb:pointerover">
             <Setter Property="Background" Value="{DynamicResource ScrollThumbHoverBrush}" />
+        </Style>
+        <Style Selector="ScrollBar /template/ Thumb:pressed">
+            <Setter Property="Background" Value="{DynamicResource ScrollThumbPressedBrush}" />
         </Style>
         <!-- 隐藏两端箭头按钮（简洁；拖拽 + 滚轮仍可用） -->
         <Style Selector="ScrollBar /template/ RepeatButton">
@@ -293,8 +300,8 @@
         </Style>
         <!-- 滚动条收窄 -->
         <Style Selector="ScrollViewer /template/ ScrollBar">
-            <Setter Property="MinWidth" Value="8" />
-            <Setter Property="MinHeight" Value="8" />
+            <Setter Property="MinWidth" Value="6" />
+            <Setter Property="MinHeight" Value="6" />
         </Style>
     </Application.Styles>
 </Application>
