@@ -1,6 +1,6 @@
 <Solution>
   <Project Path="Aeterni.Tunnel.Engine/Aeterni.Tunnel.Engine.csproj" Id="f396f23d-66b0-442e-9f9a-1e752693a9c7" />
-  <Project Path="Aeterni.Tunnel.Cli/Aeterni.Tunnel.Cli.csproj" />
+  <Project Path="Aeterni.Tunnel.Desktop/Aeterni.Tunnel.Desktop.csproj" />
   <Project Path="Aeterni.Tunnel.Engine.Tests/Aeterni.Tunnel.Engine.Tests.csproj" Id="8b3d4f2a-1c9e-4d5b-8a77-0f6e2a9c3d21" />
   <Project Path="Aeterni.Tunnel.Web/Aeterni.Tunnel.Web.csproj" Id="d70d7148-2b31-41bf-baaa-c0dce6d50d1b" />
 </Solution>

@@ -1,0 +1,21 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Aeterni.Tunnel.Desktop.Dialogs.ConfirmDialog"
+        Title="确认" Width="380" SizeToContent="Height"
+        WindowStartupLocation="CenterOwner" CanResize="False"
+        Background="{DynamicResource BgBrush}">
+    <Border Classes="card" Margin="16">
+        <StackPanel Spacing="14">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <Border Classes="titleBar" Width="3" Height="14" Background="{DynamicResource YellowBrush}" />
+                <TextBlock x:Name="TitleText" Text="确认" Classes="cardTitle" />
+            </StackPanel>
+            <TextBlock x:Name="MessageText" Text="" TextWrapping="Wrap" FontSize="12"
+                       Foreground="{DynamicResource TextBrush}" />
+            <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                <Button Classes="ghost" Content="取消" x:Name="CancelBtn" />
+                <Button Classes="primary" Content="确定" x:Name="OkBtn" Background="{DynamicResource RedBrush}" />
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</Window>

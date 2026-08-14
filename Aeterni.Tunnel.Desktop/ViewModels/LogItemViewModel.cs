@@ -1,0 +1,34 @@
+using Avalonia.Media;
+
+namespace Aeterni.Tunnel.Desktop.ViewModels;
+
+/// <summary>日志行（分级着色，与 CLI LogView 同款分类、Web 同款调色板）</summary>
+public sealed class LogItemViewModel
+{
+    // Web 调色板（wwwroot/css/app.css 深色主题语义色）
+    private static readonly IBrush Error = SolidColorBrush.Parse("#F87171");
+    private static readonly IBrush Warning = SolidColorBrush.Parse("#FBBF24");
+    private static readonly IBrush Success = SolidColorBrush.Parse("#4CD964");
+    private static readonly IBrush Info = SolidColorBrush.Parse("#60A5FA");
+    private static readonly IBrush Muted = SolidColorBrush.Parse("#94A3B8");
+
+    public string Text { get; }
+
+    public IBrush Brush { get; }
+
+    public LogItemViewModel(string text, IBrush brush)
+    {
+        Text = text;
+        Brush = brush;
+    }
+
+    public static LogItemViewModel Create(string text)
+        => new(text, Classify(text));
+
+    public static IBrush Classify(string text) =>
+        text.Contains("失败") || text.Contains("异常") || text.Contains("✗") || text.Contains("拒绝") ? Error :
+        text.Contains("警告") || text.Contains("⚠") || text.Contains("超时") ? Warning :
+        text.Contains("成功") || text.Contains("登录") || text.Contains("注册") || text.Contains("在线") ? Success :
+        text.Contains("连接") || text.Contains("心跳") || text.Contains("重连") ? Info :
+        Muted;
+}

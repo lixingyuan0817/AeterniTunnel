@@ -35,6 +35,15 @@ public sealed class AgentHost : IAsyncDisposable
 
     public bool IsConnected => _session?.IsConnected ?? false;
 
+    /// <summary>ATS 服务端地址（TUI 展示用）</summary>
+    public string ServerAddr => _options.ServerAddr;
+
+    /// <summary>ATS 服务端端口（TUI 展示用）</summary>
+    public int ServerPort => _options.ServerPort;
+
+    /// <summary>客户端标识（TUI 展示用）</summary>
+    public string ClientId => _options.ClientId;
+
     /// <summary>已配置的代理列表（TUI/管理用）</summary>
     public IReadOnlyList<ProxyDefinition> Proxies
     {

@@ -1,0 +1,176 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Aeterni.Tunnel.Desktop.App"
+             RequestedThemeVariant="Dark">
+
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.ThemeDictionaries>
+
+                <!-- ═══ 深色主题（Web 深色 #05070f） ═══ -->
+                <ResourceDictionary x:Key="Dark">
+                    <Color x:Key="AccentColor">#34C759</Color>
+                    <Color x:Key="AccentStrongColor">#16A34A</Color>
+                    <Color x:Key="BgColor">#05070F</Color>
+                    <Color x:Key="PanelColor">#0DFFFFFF</Color>
+                    <Color x:Key="PanelBorderColor">#1FFFFFFF</Color>
+                    <Color x:Key="InputBgColor">#14FFFFFF</Color>
+                    <Color x:Key="InputBorderColor">#2AFFFFFF</Color>
+                    <Color x:Key="RowLineColor">#14FFFFFF</Color>
+                    <Color x:Key="TextColor">#E2E8F0</Color>
+                    <Color x:Key="MutedColor">#94A3B8</Color>
+                    <Color x:Key="RedColor">#F87171</Color>
+                    <Color x:Key="YellowColor">#FBBF24</Color>
+                    <Color x:Key="BlueColor">#60A5FA</Color>
+                    <Color x:Key="PurpleColor">#A78BFA</Color>
+                    <Color x:Key="BannerBgColor">#22FBBF24</Color>
+                    <Color x:Key="BannerBorderColor">#55FBBF24</Color>
+                    <Color x:Key="BannerTextColor">#FDE68A</Color>
+                    <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentColor}" />
+                    <SolidColorBrush x:Key="BgBrush" Color="{StaticResource BgColor}" />
+                    <SolidColorBrush x:Key="PanelBrush" Color="{StaticResource PanelColor}" />
+                    <SolidColorBrush x:Key="PanelBorderBrush" Color="{StaticResource PanelBorderColor}" />
+                    <SolidColorBrush x:Key="InputBgBrush" Color="{StaticResource InputBgColor}" />
+                    <SolidColorBrush x:Key="InputBorderBrush" Color="{StaticResource InputBorderColor}" />
+                    <SolidColorBrush x:Key="RowLineBrush" Color="{StaticResource RowLineColor}" />
+                    <SolidColorBrush x:Key="TextBrush" Color="{StaticResource TextColor}" />
+                    <SolidColorBrush x:Key="MutedBrush" Color="{StaticResource MutedColor}" />
+                    <SolidColorBrush x:Key="RedBrush" Color="{StaticResource RedColor}" />
+                    <SolidColorBrush x:Key="YellowBrush" Color="{StaticResource YellowColor}" />
+                    <SolidColorBrush x:Key="BlueBrush" Color="{StaticResource BlueColor}" />
+                    <SolidColorBrush x:Key="PurpleBrush" Color="{StaticResource PurpleColor}" />
+                    <SolidColorBrush x:Key="BannerBgBrush" Color="{StaticResource BannerBgColor}" />
+                    <SolidColorBrush x:Key="BannerBorderBrush" Color="{StaticResource BannerBorderColor}" />
+                    <SolidColorBrush x:Key="BannerTextBrush" Color="{StaticResource BannerTextColor}" />
+                </ResourceDictionary>
+
+                <!-- ═══ 亮色主题（Web 亮色 #eef1f8） ═══ -->
+                <ResourceDictionary x:Key="Light">
+                    <Color x:Key="AccentColor">#16A34A</Color>
+                    <Color x:Key="AccentStrongColor">#15803D</Color>
+                    <Color x:Key="BgColor">#EEF1F8</Color>
+                    <Color x:Key="PanelColor">#99FFFFFF</Color>
+                    <Color x:Key="PanelBorderColor">#331E293B</Color>
+                    <Color x:Key="InputBgColor">#99FFFFFF</Color>
+                    <Color x:Key="InputBorderColor">#331E293B</Color>
+                    <Color x:Key="RowLineColor">#141E293B</Color>
+                    <Color x:Key="TextColor">#1E293B</Color>
+                    <Color x:Key="MutedColor">#64748B</Color>
+                    <Color x:Key="RedColor">#DC2626</Color>
+                    <Color x:Key="YellowColor">#D97706</Color>
+                    <Color x:Key="BlueColor">#2563EB</Color>
+                    <Color x:Key="PurpleColor">#7C3AED</Color>
+                    <Color x:Key="BannerBgColor">#33FBBF24</Color>
+                    <Color x:Key="BannerBorderColor">#66D97706</Color>
+                    <Color x:Key="BannerTextColor">#92400E</Color>
+                    <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentColor}" />
+                    <SolidColorBrush x:Key="BgBrush" Color="{StaticResource BgColor}" />
+                    <SolidColorBrush x:Key="PanelBrush" Color="{StaticResource PanelColor}" />
+                    <SolidColorBrush x:Key="PanelBorderBrush" Color="{StaticResource PanelBorderColor}" />
+                    <SolidColorBrush x:Key="InputBgBrush" Color="{StaticResource InputBgColor}" />
+                    <SolidColorBrush x:Key="InputBorderBrush" Color="{StaticResource InputBorderColor}" />
+                    <SolidColorBrush x:Key="RowLineBrush" Color="{StaticResource RowLineColor}" />
+                    <SolidColorBrush x:Key="TextBrush" Color="{StaticResource TextColor}" />
+                    <SolidColorBrush x:Key="MutedBrush" Color="{StaticResource MutedColor}" />
+                    <SolidColorBrush x:Key="RedBrush" Color="{StaticResource RedColor}" />
+                    <SolidColorBrush x:Key="YellowBrush" Color="{StaticResource YellowColor}" />
+                    <SolidColorBrush x:Key="BlueBrush" Color="{StaticResource BlueColor}" />
+                    <SolidColorBrush x:Key="PurpleBrush" Color="{StaticResource PurpleColor}" />
+                    <SolidColorBrush x:Key="BannerBgBrush" Color="{StaticResource BannerBgColor}" />
+                    <SolidColorBrush x:Key="BannerBorderBrush" Color="{StaticResource BannerBorderColor}" />
+                    <SolidColorBrush x:Key="BannerTextBrush" Color="{StaticResource BannerTextColor}" />
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
+
+    <Application.Styles>
+        <FluentTheme />
+
+        <!-- ═══ 卡片（Web .stat-card 同款） ═══ -->
+        <Style Selector="Border.card">
+            <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource PanelBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="Padding" Value="16" />
+        </Style>
+
+        <Style Selector="TextBlock.cardTitle">
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="Border.titleBar">
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="CornerRadius" Value="2" />
+        </Style>
+
+        <Style Selector="TextBlock.fieldLabel">
+            <Setter Property="Foreground" Value="{DynamicResource MutedBrush}" />
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+
+        <Style Selector="TextBox">
+            <Setter Property="Background" Value="{DynamicResource InputBgBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource InputBorderBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+            <Setter Property="Padding" Value="10,7" />
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+        <Style Selector="ComboBox">
+            <Setter Property="Background" Value="{DynamicResource InputBgBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource InputBorderBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+            <Setter Property="MinHeight" Value="32" />
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+
+        <Style Selector="Button.primary">
+            <Setter Property="Background" Value="{DynamicResource AccentStrongColor}" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="16,7" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="Button.primary:pointerover">
+            <Setter Property="Background" Value="{DynamicResource AccentColor}" />
+        </Style>
+
+        <Style Selector="Button.ghost">
+            <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource PanelBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="14,7" />
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+        <Style Selector="Button.ghost:pointerover">
+            <Setter Property="Background" Value="{DynamicResource InputBgBrush}" />
+        </Style>
+
+        <Style Selector="Button.danger">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource RedBrush}" />
+            <Setter Property="BorderBrush" Value="#33F87171" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="10,4" />
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+        <Style Selector="Button.danger:pointerover">
+            <Setter Property="Background" Value="#22F87171" />
+        </Style>
+
+        <Style Selector="Border.badge">
+            <Setter Property="Background" Value="{DynamicResource InputBgBrush}" />
+            <Setter Property="CornerRadius" Value="5" />
+            <Setter Property="Padding" Value="6,2" />
+        </Style>
+        <Style Selector="TextBlock.badgeText">
+            <Setter Property="FontSize" Value="10" />
+        </Style>
+    </Application.Styles>
+</Application>

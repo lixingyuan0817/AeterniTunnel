@@ -78,7 +78,7 @@ localPort = 5000
 remotePort = 17062
 ```
 
-启动 ATC：当前阶段客户端以类库形式提供——`AgentHost`（`Engine/Hosting`）可被任何宿主直接嵌入，读取上述 `agent.toml` 并建立隧道；独立客户端可执行程序尚未提供（用法参考 `Aeterni.Tunnel.Engine.Tests/AgentHostTests.cs`）。
+启动 ATC：桌面客户端 `Aeterni.Tunnel.Desktop`（Avalonia）——界面管理隧道；引擎层 `AgentHost`（`Engine/Hosting`）也可被任何宿主直接嵌入，读取上述 `agent.toml` 建立隧道。
 
 之后在管理台即可看到该客户端及其隧道；`remotePort` 即对外访问端口。
 

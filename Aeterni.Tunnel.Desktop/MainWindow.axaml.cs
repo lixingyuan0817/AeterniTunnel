@@ -1,0 +1,45 @@
+using Aeterni.Tunnel.Desktop.Dialogs;
+using Aeterni.Tunnel.Desktop.ViewModels;
+using Aeterni.Tunnel.Engine.Hosting;
+using Avalonia.Controls;
+
+namespace Aeterni.Tunnel.Desktop;
+
+public partial class MainWindow : Window
+{
+    private readonly MainWindowViewModel _vm;
+
+    public MainWindow()
+    {
+        InitializeComponent();
+        _vm = new MainWindowViewModel();
+        DataContext = _vm;
+
+        // 日志追加后自动滚动到底部
+        _vm.Logs.CollectionChanged += (_, _) => LogScroll.ScrollToEnd();
+
+        // 弹窗承载：添加/修改隧道
+        _vm.EditTunnelRequested += async def =>
+        {
+            var dialog = new TunnelEditorWindow(def);
+            await dialog.ShowDialog(this);
+            if (dialog.Result is not null)
+                await _vm.ApplyTunnelAsync(dialog.Result, dialog.IsEdit);
+        };
+
+        // 弹窗承载：删除确认
+        _vm.RemoveTunnelRequested += async proxyId =>
+        {
+            var dialog = new ConfirmDialog("删除隧道", $"确定删除隧道 \"{proxyId}\"？该操作会同步更新 agent.toml。");
+            await dialog.ShowDialog(this);
+            if (dialog.Confirmed)
+                await _vm.RemoveTunnelAsync(proxyId);
+        };
+
+        // 窗口打开：读取 agent.toml（首启无配置 → 引导填写；有配置 → 自动填充并自动连接）
+        Opened += async (_, _) => await _vm.OnLoadedAsync();
+
+        // 窗口关闭：断开连接、释放引擎
+        Closed += async (_, _) => await _vm.DisposeAsync();
+    }
+}
