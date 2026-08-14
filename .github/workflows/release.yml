@@ -93,9 +93,9 @@ jobs:
         with:
           dotnet-version: '10.0.302'
 
-      - name: Publish CLI (NativeAOT)
+      - name: Publish CLI (self-contained single-file, Roslyn REPL 不支持 AOT)
         run: |
-          dotnet publish Aeterni.Tunnel.Cli/Aeterni.Tunnel.Cli.csproj -c Release -r ${{ matrix.rid }} --self-contained true -p:PublishAot=true -o publish/out
+          dotnet publish Aeterni.Tunnel.Cli/Aeterni.Tunnel.Cli.csproj -c Release -r ${{ matrix.rid }} --self-contained true -p:PublishAot=false -p:PublishSingleFile=true -o publish/out
 
       - name: Package (tar.gz)
         if: runner.os != 'Windows'
