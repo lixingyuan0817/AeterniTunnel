@@ -212,11 +212,14 @@ public sealed class ServerListener : IAsyncDisposable
         return true;
     }
 
-    /// <summary>会话关闭：清理 clientId 映射</summary>
+    /// <summary>会话关闭：从会话列表移除 + 清理 clientId 映射</summary>
     private void OnSessionClosed(ServerSession session)
     {
         lock (_sessionsLock)
         {
+            // 必须从 _sessions 移除：否则断开/被替换的旧会话残留在列表，
+            // 状态快照会一直显示"离线"条目，客户端重连后出现一旧一新两个客户端
+            _sessions.Remove(session);
             if (session.ClientId is not null &&
                 _sessionsByClient.TryGetValue(session.ClientId, out var cur) &&
                 ReferenceEquals(cur, session))
@@ -231,7 +234,9 @@ public sealed class ServerListener : IAsyncDisposable
         _cts.Cancel();
         lock (_sessionsLock)
         {
-            foreach (var session in _sessions)
+            // 遍历副本：session.DisposeAsync 会触发 Closed → OnSessionClosed → _sessions.Remove，
+            // 直接枚举原集合会抛 "Collection was modified"
+            foreach (var session in _sessions.ToArray())
                 _ = session.DisposeAsync();
             _sessions.Clear();
             _sessionsByClient.Clear();

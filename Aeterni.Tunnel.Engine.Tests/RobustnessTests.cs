@@ -175,4 +175,52 @@ public class RobustnessTests
         Assert.True(okb, addrb);
         Assert.NotEqual(addra, addrb);
     }
+
+    /// <summary>回归：客户端断开后会话必须从快照清空；同 clientId 重连不产生一旧一新两个条目</summary>
+    [Fact]
+    public async Task Client_Disconnect_CleansSession_NoDuplicateAfterReconnect()
+    {
+        var controlPort = FreePort();
+        var listener = new ServerListener(controlPort, TestToken);
+        listener.Start();
+        try
+        {
+            // ① 连接并登录
+            var agent1 = await ConnectAgentAsync(controlPort, "agent-cleanup");
+            await WaitConnectedAsync(agent1, true);
+            await WaitForClientCountAsync(listener, 1);
+
+            // ② 断开：快照应完全清空（不再残留"离线"条目）
+            await agent1.DisposeAsync();
+            await WaitForClientCountAsync(listener, 0);
+
+            // ③ 同 clientId 重连：快照应只有 1 个客户端且在线
+            var agent2 = await ConnectAgentAsync(controlPort, "agent-cleanup");
+            await WaitConnectedAsync(agent2, true);
+            await WaitForClientCountAsync(listener, 1);
+
+            var snap = listener.GetStatusSnapshot();
+            Assert.Single(snap.Clients);
+            Assert.True(snap.Clients[0].Online, "重连后应只有在线客户端，无旧离线残留");
+
+            await agent2.DisposeAsync();
+            await WaitForClientCountAsync(listener, 0);
+        }
+        finally
+        {
+            await listener.DisposeAsync();
+        }
+    }
+
+    private static async Task WaitForClientCountAsync(ServerListener listener, int expect, int timeoutMs = 8000)
+    {
+        var deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
+        while (DateTime.UtcNow < deadline)
+        {
+            if (listener.GetStatusSnapshot().Clients.Count == expect)
+                return;
+            await Task.Delay(100);
+        }
+        Assert.Equal(expect, listener.GetStatusSnapshot().Clients.Count);
+    }
 }
