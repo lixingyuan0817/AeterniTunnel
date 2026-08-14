@@ -16,6 +16,7 @@
                     <Color x:Key="PanelBorderColor">#1FFFFFFF</Color>
                     <Color x:Key="InputBgColor">#14FFFFFF</Color>
                     <Color x:Key="InputBorderColor">#2AFFFFFF</Color>
+                    <Color x:Key="InputBgFocusColor">#24FFFFFF</Color>
                     <Color x:Key="RowLineColor">#14FFFFFF</Color>
                     <Color x:Key="TextColor">#E2E8F0</Color>
                     <Color x:Key="MutedColor">#94A3B8</Color>
@@ -34,6 +35,7 @@
                     <SolidColorBrush x:Key="PanelBorderBrush" Color="{StaticResource PanelBorderColor}" />
                     <SolidColorBrush x:Key="InputBgBrush" Color="{StaticResource InputBgColor}" />
                     <SolidColorBrush x:Key="InputBorderBrush" Color="{StaticResource InputBorderColor}" />
+                    <SolidColorBrush x:Key="InputBgFocusBrush" Color="{StaticResource InputBgFocusColor}" />
                     <SolidColorBrush x:Key="RowLineBrush" Color="{StaticResource RowLineColor}" />
                     <SolidColorBrush x:Key="TextBrush" Color="{StaticResource TextColor}" />
                     <SolidColorBrush x:Key="MutedBrush" Color="{StaticResource MutedColor}" />
@@ -55,6 +57,7 @@
                     <Color x:Key="PanelBorderColor">#331E293B</Color>
                     <Color x:Key="InputBgColor">#99FFFFFF</Color>
                     <Color x:Key="InputBorderColor">#331E293B</Color>
+                    <Color x:Key="InputBgFocusColor">#E6FFFFFF</Color>
                     <Color x:Key="RowLineColor">#141E293B</Color>
                     <Color x:Key="TextColor">#1E293B</Color>
                     <Color x:Key="MutedColor">#64748B</Color>
@@ -73,6 +76,7 @@
                     <SolidColorBrush x:Key="PanelBorderBrush" Color="{StaticResource PanelBorderColor}" />
                     <SolidColorBrush x:Key="InputBgBrush" Color="{StaticResource InputBgColor}" />
                     <SolidColorBrush x:Key="InputBorderBrush" Color="{StaticResource InputBorderColor}" />
+                    <SolidColorBrush x:Key="InputBgFocusBrush" Color="{StaticResource InputBgFocusColor}" />
                     <SolidColorBrush x:Key="RowLineBrush" Color="{StaticResource RowLineColor}" />
                     <SolidColorBrush x:Key="TextBrush" Color="{StaticResource TextColor}" />
                     <SolidColorBrush x:Key="MutedBrush" Color="{StaticResource MutedColor}" />
@@ -119,8 +123,23 @@
             <Setter Property="Background" Value="{DynamicResource InputBgBrush}" />
             <Setter Property="BorderBrush" Value="{DynamicResource InputBorderBrush}" />
             <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+            <Setter Property="CaretBrush" Value="{DynamicResource TextBrush}" />
+            <Setter Property="SelectionBrush" Value="#6634C759" />
             <Setter Property="Padding" Value="10,7" />
+            <Setter Property="CornerRadius" Value="8" />
             <Setter Property="FontSize" Value="12" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="BorderBrush" Duration="0:0:0.18" />
+                    <BrushTransition Property="Background" Duration="0:0:0.18" />
+                </Transitions>
+            </Setter>
+        </Style>
+
+        <!-- 输入框焦点：绿色边框 + 背景微亮（替代默认 Fluent 蓝） -->
+        <Style Selector="TextBox:focus">
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="Background" Value="{DynamicResource InputBgFocusBrush}" />
         </Style>
         <Style Selector="ComboBox">
             <Setter Property="Background" Value="{DynamicResource InputBgBrush}" />
