@@ -23,7 +23,8 @@
                     <Button Classes="ghost" Background="Transparent" BorderThickness="0" Padding="10,6"
                             Content="首页" Foreground="{Binding NavHomeBrush}" Command="{Binding NavigateHomeCommand}" />
                     <Button Classes="ghost" Background="Transparent" BorderThickness="0" Padding="10,6"
-                            Content="隧道" Foreground="{Binding NavTunnelsBrush}" Command="{Binding NavigateTunnelsCommand}" />
+                            Content="隧道" Foreground="{Binding NavTunnelsBrush}" Command="{Binding NavigateTunnelsCommand}"
+                            IsEnabled="{Binding TunnelsNavEnabled}" />
                     <Button Classes="ghost" Background="Transparent" BorderThickness="0" Padding="10,6"
                             Content="设置" Foreground="{Binding NavSettingsBrush}" Command="{Binding NavigateSettingsCommand}" />
                 </StackPanel>

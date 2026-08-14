@@ -150,10 +150,17 @@ public sealed class MainWindowViewModel : ObservableBase, IAsyncDisposable
             {
                 OnPropertyChanged(nameof(StatusText));
                 OnPropertyChanged(nameof(StatusBrush));
+                OnPropertyChanged(nameof(TunnelsNavEnabled));
                 AddTunnelCommand.RaiseCanExecuteChanged();
+                // 断联（含重连中）时若停留在隧道页 → 跳回首页；隧道页仅在连接后可用
+                if (!value && CurrentPage == "tunnels")
+                    Navigate("home");
             }
         }
     }
+
+    /// <summary>顶栏「隧道」导航是否可用（未连接/重连中禁用）</summary>
+    public bool TunnelsNavEnabled => IsConnected;
 
     public string StatusText => IsConnected ? "已连接" : "未连接";
 
