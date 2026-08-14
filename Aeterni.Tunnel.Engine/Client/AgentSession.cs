@@ -26,6 +26,8 @@ public sealed class AgentSession : IAsyncDisposable
     public event Action<string>? ProxyRemoved;
     public event Action? Disconnected;
 
+    private TaskCompletionSource<(bool Ok, string? Error, string? Version)>? _pendingHelloAck;
+
     public bool IsConnected => Volatile.Read(ref _connected) != 0;
 
     public AgentSession(AgentOptions options)
@@ -36,7 +38,21 @@ public sealed class AgentSession : IAsyncDisposable
     /// <summary>连接并登录（Hello）；结果经 LogLine / 后续消息体现</summary>
     public async Task ConnectAsync(CancellationToken ct = default)
     {
-        await ConnectCoreAsync(ct);
+        try
+        {
+            await ConnectCoreAsync(ct);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            // 初次连接失败（拒绝/超时/登录失败）→ 进入后台重连循环，不阻塞调用方
+            LogLine?.Invoke($"连接失败：{ex.Message}，进入后台重连");
+            _ = ReconnectLoopAsync();
+            throw;
+        }
     }
 
     private async Task ConnectCoreAsync(CancellationToken ct = default)
@@ -51,7 +67,28 @@ public sealed class AgentSession : IAsyncDisposable
         _mux.ConnectionClosed += OnConnectionClosed;
         _mux.Start();
 
+        // 握手：发 Hello 并等待服务端 HelloAck（带超时）——连到非 ATS 服务不误判"已连接"
+        var ack = new TaskCompletionSource<(bool Ok, string? Error, string? Version)>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _pendingHelloAck = ack;
         await SendAsync(new HelloMessage(_options.ClientId, 1, _options.Token, Environment.MachineName));
+
+        var finished = await Task.WhenAny(ack.Task, Task.Delay(TimeSpan.FromSeconds(10), ct));
+        if (finished != ack.Task)
+        {
+            LogLine?.Invoke("登录超时（未收到服务端确认，目标可能不是 Aeterni Tunnel 服务）");
+            await _mux.DisposeAsync();
+            throw new TimeoutException("Hello ack 超时");
+        }
+
+        var result = await ack.Task;
+        if (!result.Ok)
+        {
+            LogLine?.Invoke($"登录失败：{result.Error}");
+            await _mux.DisposeAsync();
+            throw new InvalidOperationException($"登录失败：{result.Error}");
+        }
+
+        LogLine?.Invoke($"登录成功 (server {result.Version})");
         Interlocked.Exchange(ref _connected, 1);
         StartHeartbeat();
     }
@@ -115,7 +152,7 @@ public sealed class AgentSession : IAsyncDisposable
                     foreach (var (id, msg) in _desiredProxies)
                     {
                         await SendAsync(msg, _cts.Token);
-                        ProxyRegistered?.Invoke(id, true, null); // 重注册成功信号（供宿主感知重连）
+                        // 不伪造注册成功：等服务端真实 RegisterProxyAck（避免连到非 ATS 显示"在线"假象）
                     }
                     return;
                 }
@@ -144,9 +181,8 @@ public sealed class AgentSession : IAsyncDisposable
         switch (msg)
         {
             case HelloAckMessage ack:
-                LogLine?.Invoke(ack.Ok ? $"登录成功 (server {ack.ServerVersion})" : $"登录失败：{ack.Error}");
-                if (!ack.Ok)
-                    await DisposeAsync();
+                // 握手结果由 ConnectCoreAsync 统一处理（日志/失败断开/标记已连接）
+                _pendingHelloAck?.TrySetResult((ack.Ok, ack.Error, ack.ServerVersion));
                 break;
 
             case RegisterProxyAckMessage ack:

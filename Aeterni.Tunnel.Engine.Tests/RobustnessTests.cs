@@ -213,6 +213,35 @@ public class RobustnessTests
         }
     }
 
+    /// <summary>回归：连到非 ATS 的普通 TCP 服务 → 握手超时，不误判"已连接"</summary>
+    [Fact]
+    public async Task Connect_ToNonAtsTcpService_NotReportedConnected()
+    {
+        var port = FreePort();
+        // 普通 TCP 服务：接受连接但不回 HelloAck（模拟非 Aeterni Tunnel 服务/错误端口）
+        var tcp = new TcpListener(IPAddress.Loopback, port);
+        tcp.Start();
+        try
+        {
+            var agent = new AgentSession(new AgentOptions(
+                ServerAddr: "127.0.0.1", ServerPort: port,
+                Token: TestToken, ClientId: "agent-nonats"));
+            await using var _ = agent;
+
+            // 握手 10s 超时 → 抛异常（不再立即标记"已连接"）
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            await Assert.ThrowsAsync<TimeoutException>(() => agent.ConnectAsync());
+            sw.Stop();
+
+            Assert.False(agent.IsConnected, "连到非 ATS 服务不得误判为已连接");
+            Assert.True(sw.Elapsed >= TimeSpan.FromSeconds(9), $"应走握手超时（实际 {sw.Elapsed.TotalSeconds:0}s）");
+        }
+        finally
+        {
+            tcp.Stop();
+        }
+    }
+
     private static async Task WaitForClientCountAsync(ServerListener listener, int expect, int timeoutMs = 8000)
     {
         var deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);

@@ -73,16 +73,22 @@ public class ControlPlaneTests
         await using var _ = listener;
 
         var loginTcs = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var agent = await ConnectAgentAsync(listener, "wrong-token", "agent-bad",
-            a => a.LogLine += s => loginTcs.TrySetResult(s));
+        var agent = new AgentSession(new AgentOptions(
+            ServerAddr: "127.0.0.1",
+            ServerPort: port,
+            Token: "wrong-token",
+            ClientId: "agent-bad",
+            HeartbeatInterval: TimeSpan.FromMilliseconds(500)));
+        agent.LogLine += s => loginTcs.TrySetResult(s);
         await using var _2 = agent;
 
-        var log = await loginTcs.Task.WaitAsync(TimeSpan.FromSeconds(15));
-        Assert.Contains("登录失败", log);
-
-        // 登录失败后会话应已断开
-        await Task.Delay(300);
+        // 握手校验：token 不匹配 → ConnectAsync 抛异常（不再误判"已连接"）
+        await Assert.ThrowsAsync<InvalidOperationException>(() => agent.ConnectAsync());
         Assert.False(agent.IsConnected);
+
+        // 日志含失败原因
+        var log = await loginTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Contains("登录失败", log);
     }
 
     [Fact]

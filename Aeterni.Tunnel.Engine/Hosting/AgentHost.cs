@@ -55,7 +55,15 @@ public sealed class AgentHost : IAsyncDisposable
             _stopped = false;
         }
 
-        await ConnectOnceAsync(ct);
+        try
+        {
+            await ConnectOnceAsync(ct);
+        }
+        catch (Exception ex)
+        {
+            // 初次连接失败（拒绝/超时/登录失败）：AgentSession 已进入后台重连循环，不抛给上层
+            LogLine?.Invoke($"连接失败：{ex.Message}（后台自动重连中）");
+        }
 
         List<ProxyDefinition> proxies;
         lock (_lock) proxies = _proxies.ToList();
