@@ -72,10 +72,10 @@ _ = app.Services.GetRequiredService<Aeterni.Tunnel.Engine.Hosting.ServerHost>();
 
 app.Run();
 
-// webToken 来源解析：env > server.toml(哈希) > appsettings 明文 > 首启生成并写回 server.toml
+// webToken 来源解析：env(AETERNI_WEB_TOKEN) > server.toml(加盐哈希) > 首启自动生成写回
+// （不提供 appsettings 明文兜底：明文 token 易被误提交，首启自动生成已完全兜底）
 static AeterniWebAuthService BuildAuthService(IServiceProvider sp, string contentRoot)
 {
-    var config = sp.GetRequiredService<IConfiguration>();
     var logger = sp.GetRequiredService<ILogger<AeterniWebAuthService>>();
     var serverToml = Path.Combine(contentRoot, "server.toml");
 
@@ -95,15 +95,7 @@ static AeterniWebAuthService BuildAuthService(IServiceProvider sp, string conten
             Convert.FromHexString(cfg.WebTokenSalt), Convert.FromHexString(cfg.WebToken), serverToml, logger);
     }
 
-    // 3) 配置明文（appsettings Aeterni:WebToken，开发便利）
-    var cfgToken = config["Aeterni:WebToken"];
-    if (!string.IsNullOrEmpty(cfgToken))
-    {
-        var salt = RandomNumberGenerator.GetBytes(16);
-        return new AeterniWebAuthService(AeterniWebAuthService.ConfigSource, salt, AeterniWebAuthService.Hash(cfgToken, salt), serverToml, logger);
-    }
-
-    // 4) 首启：随机生成并写回 server.toml（持久化；明文仅本次日志可见）
+    // 3) 首启：随机生成并写回 server.toml（持久化；明文仅本次日志可见）
     var (plain, s, h) = AeterniWebAuthService.Generate();
     var serverCfg = cfg ?? new ServerConfig();
     serverCfg.WebToken = Convert.ToHexString(h);
