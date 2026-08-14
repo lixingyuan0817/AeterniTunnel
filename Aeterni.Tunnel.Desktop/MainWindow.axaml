@@ -35,10 +35,6 @@
                         <TextBlock Text="{Binding StatusText}" FontSize="12"
                                    Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" />
                     </StackPanel>
-                    <Button Classes="primary" Content="连接" Command="{Binding ConnectCommand}"
-                            IsVisible="{Binding !IsConnected}" />
-                    <Button Classes="ghost" Content="断开" Command="{Binding DisconnectCommand}"
-                            IsVisible="{Binding IsConnected}" />
                 </StackPanel>
             </Grid>
         </Border>
@@ -139,7 +135,8 @@
                                         <ItemsControl ItemsSource="{Binding Items}">
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate x:DataType="vm:TunnelItemViewModel">
-                                                    <Border BorderBrush="{DynamicResource RowLineBrush}" BorderThickness="0,0,0,1" Padding="8,7">
+                                                    <Border BorderBrush="{DynamicResource RowLineBrush}" BorderThickness="0,0,0,1" Padding="8,7"
+                                                            IsEnabled="{Binding IsEnabled}">
                                                         <Grid ColumnDefinitions="Auto,110,Auto,*,Auto,Auto,Auto" ColumnSpacing="10">
                                                             <Ellipse Width="8" Height="8" Fill="{Binding StateBrush}" VerticalAlignment="Center" />
                                                             <TextBlock Grid.Column="1" Text="{Binding ProxyId}" FontWeight="SemiBold"
@@ -198,7 +195,7 @@
                         </StackPanel>
 
                         <TextBlock Classes="fieldLabel" TextWrapping="Wrap"
-                                   Text="保存后写入 agent.toml，下次启动自动读取并自动连接；修改端口等参数后重新连接生效。" />
+                                   Text="保存后写入 agent.toml，下次启动自动读取并自动连接；修改服务端参数后保存会自动重新连接。" />
                     </StackPanel>
                 </Border>
 
@@ -209,7 +206,7 @@
                             <TextBlock Classes="cardTitle" Text="使用说明" />
                         </StackPanel>
                         <TextBlock FontSize="12" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"
-                                   Text="1. 填写 ATS 服务端地址、端口与令牌（与服务端 server.toml 一致）。&#10;2. 点击「保存设置」写入 agent.toml。&#10;3. 顶栏点击「连接」建立隧道；隧道在「隧道」页统一管理。&#10;4. 主题切换会一并保存，下次启动自动恢复。" />
+                                   Text="1. 填写 ATS 服务端地址、端口与令牌（与服务端 server.toml 一致）。&#10;2. 点击「保存设置」写入 agent.toml，保存后自动连接。&#10;3. 客户端常连：启动读取配置自动连接，断线自动重连；重连期间隧道列表禁用。&#10;4. 隧道在「隧道」页统一管理；主题切换会一并保存，下次启动自动恢复。" />
                     </StackPanel>
                 </Border>
             </Grid>

@@ -25,6 +25,7 @@ public sealed class MainWindowViewModel : ObservableBase, IAsyncDisposable
     private static readonly IBrush NavMutedLight = SolidColorBrush.Parse("#64748B");
 
     private AgentClientService? _service;
+    private AgentOptions? _activeOptions;   // 当前连接的服务端参数（保存设置时对比变化）
     private readonly HashSet<string> _registered = [];
     private readonly HashSet<string> _failed = [];
     private readonly List<ProxyDefinition> _pendingDefs = [];
@@ -42,12 +43,11 @@ public sealed class MainWindowViewModel : ObservableBase, IAsyncDisposable
         NavigateHomeCommand = new RelayCommand(() => Navigate("home"));
         NavigateTunnelsCommand = new RelayCommand(() => Navigate("tunnels"));
         NavigateSettingsCommand = new RelayCommand(() => Navigate("settings"));
-        ConnectCommand = new RelayCommand(Connect);
-        DisconnectCommand = new RelayCommand(Disconnect);
-        AddTunnelCommand = new RelayCommand(() => EditTunnelRequested?.Invoke(null));
+        // 客户端常连：无手动连接/断开；未连接（重连中）时隧道操作禁用
+        AddTunnelCommand = new RelayCommand(() => EditTunnelRequested?.Invoke(null), () => IsConnected);
         ToggleThemeCommand = new RelayCommand(ToggleTheme);
         LoadConfigCommand = new RelayCommand(() => _ = LoadConfigAsync());
-        SaveSettingsCommand = new RelayCommand(SaveConfig);
+        SaveSettingsCommand = new RelayCommand(SaveSettings);
 
         _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
         _timer.Tick += (_, _) => RefreshTick();
@@ -150,6 +150,7 @@ public sealed class MainWindowViewModel : ObservableBase, IAsyncDisposable
             {
                 OnPropertyChanged(nameof(StatusText));
                 OnPropertyChanged(nameof(StatusBrush));
+                AddTunnelCommand.RaiseCanExecuteChanged();
             }
         }
     }
@@ -184,11 +185,7 @@ public sealed class MainWindowViewModel : ObservableBase, IAsyncDisposable
 
     // ═════════ 命令 ═════════
 
-    public ICommand ConnectCommand { get; }
-
-    public ICommand DisconnectCommand { get; }
-
-    public ICommand AddTunnelCommand { get; }
+    public RelayCommand AddTunnelCommand { get; }
 
     public ICommand LoadConfigCommand { get; }
 
@@ -199,6 +196,9 @@ public sealed class MainWindowViewModel : ObservableBase, IAsyncDisposable
 
     /// <summary>请求确认删除隧道——View 层承载确认弹窗后调用 RemoveTunnelAsync</summary>
     public event Action<string>? RemoveTunnelRequested;
+
+    /// <summary>启动时配置缺失/无效：请求弹窗填写连接设置——View 层承载</summary>
+    public event Action? ConnectionSetupRequested;
 
     // ═════════ 首启与配置持久化 ═════════
 
@@ -212,15 +212,17 @@ public sealed class MainWindowViewModel : ObservableBase, IAsyncDisposable
         private set => SetProperty(ref _isFirstRun, value);
     }
 
-    public string FirstRunHint => "首次使用：请到「设置」页填写服务端信息，保存后将自动写入 agent.toml";
+    public string FirstRunHint => "缺少连接配置：请完善服务端地址/端口/令牌，保存后自动连接并写入 agent.toml";
 
-    /// <summary>窗口打开后调用：读配置 → 恢复主题 + 填充表单 + 导入隧道；有 token 自动连接</summary>
+    /// <summary>窗口打开后调用：读配置 → 恢复主题 + 填充表单 + 导入隧道；配置有效自动连接，无效弹窗引导填写</summary>
     public async Task OnLoadedAsync()
     {
         var cfg = ConfigLoader.LoadAgentConfig(ConfigPath);
         if (cfg is null)
         {
             IsFirstRun = true;
+            AddLog("未找到 agent.toml，请完善连接设置");
+            ConnectionSetupRequested?.Invoke();
             return;
         }
 
@@ -248,13 +250,18 @@ public sealed class MainWindowViewModel : ObservableBase, IAsyncDisposable
         IsFirstRun = false;
         AddLog($"已加载配置 {ConfigPath}：{defs.Count} 条隧道");
 
-        if (!string.IsNullOrWhiteSpace(cfg.Token))
+        var valid = !string.IsNullOrWhiteSpace(cfg.ServerAddr)
+            && cfg.ServerPort is >= 1 and <= 65535
+            && !string.IsNullOrWhiteSpace(cfg.Token);
+        if (valid)
         {
             Connect();   // 后续启动：直接读取配置并自动连接
         }
         else
         {
             IsFirstRun = true;
+            AddLog("配置文件缺少服务端信息（地址/端口/令牌），请完善连接设置");
+            ConnectionSetupRequested?.Invoke();
         }
         RefreshTick();
     }
@@ -277,15 +284,12 @@ public sealed class MainWindowViewModel : ObservableBase, IAsyncDisposable
         }
     }
 
-    // ═════════ 连接 / 断开 ═════════
+    // ═════════ 连接（常连，自动重连） ═════════
 
     private void Connect()
     {
         if (_service is not null)
-        {
-            AddLog("已在连接状态，请先断开");
             return;
-        }
         if (!int.TryParse(ServerPort.Trim(), out var port) || port is < 1 or > 65535)
         {
             AddLog("服务端端口无效");
@@ -295,6 +299,7 @@ public sealed class MainWindowViewModel : ObservableBase, IAsyncDisposable
         SaveConfig();   // 记录服务端信息到 agent.toml
 
         var options = new AgentOptions(ServerAddr.Trim(), port, Token.Trim(), ClientId.Trim(), UseTls: UseTls);
+        _activeOptions = options;
         var svc = new AgentClientService(options);
         svc.LogReceived += OnLogReceived;
         svc.ProxyRegistered += OnProxyRegistered;
@@ -307,16 +312,50 @@ public sealed class MainWindowViewModel : ObservableBase, IAsyncDisposable
         AddLog($"正在连接 {options.ServerAddr}:{port}{(options.UseTls ? "（TLS）" : "")}…");
     }
 
-    private void Disconnect()
+    /// <summary>用当前表单配置重建连接（保存设置/连接参数变更时调用）</summary>
+    private void Reconnect()
     {
         var svc = _service;
         _service = null;
         if (svc is not null)
-            _ = svc.StopAsync();
+        {
+            svc.LogReceived -= OnLogReceived;
+            svc.ProxyRegistered -= OnProxyRegistered;
+            _ = svc.DisposeAsync();
+        }
         _registered.Clear();
         _failed.Clear();
         IsConnected = false;
-        AddLog("已断开连接");
+        Connect();
+    }
+
+    /// <summary>设置页保存：写配置；连接参数变化则重建连接（修复改 IP 后日志仍是旧地址的问题）</summary>
+    private void SaveSettings()
+    {
+        SaveConfig();
+        var portOk = int.TryParse(ServerPort.Trim(), out var port) && port is >= 1 and <= 65535;
+        var changed = _activeOptions is null || !portOk
+            || _activeOptions.ServerAddr != ServerAddr.Trim()
+            || _activeOptions.ServerPort != port
+            || _activeOptions.Token != Token.Trim()
+            || _activeOptions.ClientId != ClientId.Trim()
+            || _activeOptions.UseTls != UseTls;
+        if (changed)
+        {
+            AddLog("连接配置已变更，正在重新连接…");
+            Reconnect();
+        }
+    }
+
+    /// <summary>连接设置弹窗确认后应用：写配置并（重新）连接</summary>
+    public void ApplyConnectionSettings(string addr, int port, string token, bool useTls)
+    {
+        ServerAddr = addr;
+        ServerPort = port.ToString();
+        Token = token;
+        UseTls = useTls;
+        SaveConfig();
+        Reconnect();
     }
 
     // ═════════ 引擎事件（后台线程 → UI 线程） ═════════
@@ -361,6 +400,9 @@ public sealed class MainWindowViewModel : ObservableBase, IAsyncDisposable
     {
         var svc = _service;
         IsConnected = svc?.IsConnected ?? false;
+        // 未连接/重连中：隧道列表置灰禁用（编辑/删除/添加均不可用）
+        foreach (var t in Tunnels)
+            t.IsEnabled = IsConnected;
         if (svc is null)
         {
             SyncGroups();

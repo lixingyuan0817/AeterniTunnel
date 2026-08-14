@@ -124,6 +124,15 @@ public sealed class TunnelItemViewModel : ObservableBase
 
     public ICommand EditCommand { get; }
 
+    /// <summary>是否可操作（未连接/重连中为 false，界面置灰）</summary>
+    private bool _isEnabled = true;
+
+    public bool IsEnabled
+    {
+        get => _isEnabled;
+        set => SetProperty(ref _isEnabled, value);
+    }
+
     private static string FormatBytes(long v) => v switch
     {
         >= 1024 * 1024 => $"{v / 1024.0 / 1024.0:F1}MB",

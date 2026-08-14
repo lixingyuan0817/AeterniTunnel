@@ -27,6 +27,15 @@ public partial class MainWindow : Window
                 await _vm.ApplyTunnelAsync(dialog.Result, dialog.IsEdit);
         };
 
+        // 弹窗承载：启动时连接配置缺失/无效 → 引导填写并保存连接
+        _vm.ConnectionSetupRequested += async () =>
+        {
+            var dialog = new ConnectionDialog(_vm.ServerAddr, _vm.ServerPort, _vm.Token, _vm.UseTls);
+            await dialog.ShowDialog(this);
+            if (dialog.Confirmed)
+                _vm.ApplyConnectionSettings(dialog.Address, dialog.Port, dialog.Token, dialog.UseTls);
+        };
+
         // 弹窗承载：删除确认
         _vm.RemoveTunnelRequested += async proxyId =>
         {
