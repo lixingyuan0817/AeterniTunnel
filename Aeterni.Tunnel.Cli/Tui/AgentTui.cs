@@ -82,7 +82,12 @@ public static class AgentTui
             var rate = sampler.Sample(p.ProxyId, traffic.Up, traffic.Down);
 
             var remote = p.RemotePort is not null ? $"0.0.0.0:{p.RemotePort}" : p.Domain ?? "-";
-            var status = reg.Ok ? "[green]● 在线[/]" : "[grey]○ 注册中[/]";
+            // 状态：成功=在线；有失败结果=失败（红）；无结果=注册中（灰）
+            var status = reg.Ok
+                ? "[green]● 在线[/]"
+                : reg.Msg is not null
+                    ? $"[red]● 失败[/] [dim]{Markup.Escape(reg.Msg)}[/]"
+                    : "[grey]○ 注册中[/]";
 
             table.AddRow(
                 Markup.Escape(p.ProxyId),
