@@ -173,6 +173,14 @@
             <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
             <Setter Property="Background" Value="{DynamicResource InputBgFocusBrush}" />
         </Style>
+
+        <!-- 水印：仅文本为空时显示（:empty 伪类控制，避免叠在已输入文字上） -->
+        <Style Selector="TextBox:empty /template/ TextBlock#PART_Watermark">
+            <Setter Property="IsVisible" Value="True" />
+        </Style>
+        <Style Selector="TextBox:not(:empty) /template/ TextBlock#PART_Watermark">
+            <Setter Property="IsVisible" Value="False" />
+        </Style>
         <Style Selector="ComboBox">
             <Setter Property="Background" Value="{DynamicResource InputBgBrush}" />
             <Setter Property="BorderBrush" Value="{DynamicResource InputBorderBrush}" />
@@ -226,6 +234,40 @@
         </Style>
         <Style Selector="TextBlock.badgeText">
             <Setter Property="FontSize" Value="10" />
+        </Style>
+
+        <!-- ═══ CheckBox：自定义模板（主题绿勾选框，替代 Fluent 默认蓝） ═══ -->
+        <Style Selector="CheckBox">
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Template">
+                <ControlTemplate TargetType="CheckBox">
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="7">
+                        <Border x:Name="BoxBorder" Width="16" Height="16" CornerRadius="4"
+                                Background="Transparent" BorderBrush="{DynamicResource InputBorderBrush}"
+                                BorderThickness="1.5" VerticalAlignment="Center">
+                            <Path x:Name="CheckPath" Data="M 2.5,8 L 6,11.5 L 13.5,4.5"
+                                  Stroke="White" StrokeThickness="2" StrokeLineCap="Round"
+                                  IsVisible="False" />
+                        </Border>
+                        <ContentPresenter Grid.Column="1" VerticalAlignment="Center"
+                                          Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}" />
+                    </Grid>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="CheckBox:checked /template/ Border#BoxBorder">
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+        </Style>
+        <Style Selector="CheckBox:checked /template/ Path#CheckPath">
+            <Setter Property="IsVisible" Value="True" />
+        </Style>
+        <Style Selector="CheckBox:pointerover /template/ Border#BoxBorder">
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+        </Style>
+        <Style Selector="CheckBox:focus /template/ Border#BoxBorder">
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
         </Style>
     </Application.Styles>
 </Application>
