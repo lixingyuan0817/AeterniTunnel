@@ -22,6 +22,7 @@ public partial class App : Application
             splash = new SplashWindow(() =>
                 Dispatcher.UIThread.Post(async () =>
                 {
+                    splash.Transitions ??= new Transitions();
                     splash.Transitions.Add(new DoubleTransition
                     {
                         Property = Visual.OpacityProperty,
@@ -32,6 +33,7 @@ public partial class App : Application
                     splash.Close();
 
                     var main = new MainWindow();
+                    main.Transitions ??= new Transitions();
                     main.Transitions.Add(new DoubleTransition
                     {
                         Property = Visual.OpacityProperty,
