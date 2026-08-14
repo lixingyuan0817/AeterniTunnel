@@ -26,8 +26,10 @@
                     <Color x:Key="BannerBgColor">#22FBBF24</Color>
                     <Color x:Key="BannerBorderColor">#55FBBF24</Color>
                     <Color x:Key="BannerTextColor">#FDE68A</Color>
+                    <Color x:Key="WindowBgColor">#8C05070F</Color>
                     <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentColor}" />
                     <SolidColorBrush x:Key="BgBrush" Color="{StaticResource BgColor}" />
+                    <SolidColorBrush x:Key="WindowBgBrush" Color="{StaticResource WindowBgColor}" />
                     <SolidColorBrush x:Key="PanelBrush" Color="{StaticResource PanelColor}" />
                     <SolidColorBrush x:Key="PanelBorderBrush" Color="{StaticResource PanelBorderColor}" />
                     <SolidColorBrush x:Key="InputBgBrush" Color="{StaticResource InputBgColor}" />
@@ -63,8 +65,10 @@
                     <Color x:Key="BannerBgColor">#33FBBF24</Color>
                     <Color x:Key="BannerBorderColor">#66D97706</Color>
                     <Color x:Key="BannerTextColor">#92400E</Color>
+                    <Color x:Key="WindowBgColor">#8CEEF1F8</Color>
                     <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentColor}" />
                     <SolidColorBrush x:Key="BgBrush" Color="{StaticResource BgColor}" />
+                    <SolidColorBrush x:Key="WindowBgBrush" Color="{StaticResource WindowBgColor}" />
                     <SolidColorBrush x:Key="PanelBrush" Color="{StaticResource PanelColor}" />
                     <SolidColorBrush x:Key="PanelBorderBrush" Color="{StaticResource PanelBorderColor}" />
                     <SolidColorBrush x:Key="InputBgBrush" Color="{StaticResource InputBgColor}" />
