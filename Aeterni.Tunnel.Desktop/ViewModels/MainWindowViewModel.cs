@@ -333,6 +333,12 @@ public sealed class MainWindowViewModel : ObservableBase, IAsyncDisposable
     private void SaveSettings()
     {
         SaveConfig();
+        ApplyServerSettingsIfChanged();
+    }
+
+    /// <summary>连接参数（地址/端口/令牌/客户端ID/TLS）变化 → 重建连接；未变化则不动</summary>
+    private void ApplyServerSettingsIfChanged()
+    {
         var portOk = int.TryParse(ServerPort.Trim(), out var port) && port is >= 1 and <= 65535;
         var changed = _activeOptions is null || !portOk
             || _activeOptions.ServerAddr != ServerAddr.Trim()
@@ -563,14 +569,18 @@ public sealed class MainWindowViewModel : ObservableBase, IAsyncDisposable
         var defs = ConfigLoader.ToProxyDefinitions(cfg);
         _pendingDefs.Clear();
         _pendingDefs.AddRange(defs);
-        if (_service is not null)
+        IsFirstRun = false;
+        AddLog($"加载配置 {path}：{defs.Count} 条隧道");
+        SaveConfig();
+
+        // 服务端参数变化 → 重建连接（Connect 自动注册 _pendingDefs）；未变化则向当前连接补齐隧道
+        var before = _activeOptions;
+        ApplyServerSettingsIfChanged();
+        if (_service is not null && ReferenceEquals(before, _activeOptions))
         {
             foreach (var d in defs)
                 await _service.AddTunnelAsync(d);
         }
-        IsFirstRun = false;
-        AddLog($"加载配置 {path}：{defs.Count} 条隧道");
-        SaveConfig();
         RefreshTick();
     }
 
