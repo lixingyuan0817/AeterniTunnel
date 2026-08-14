@@ -283,10 +283,19 @@
             <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
         </Style>
 
-        <!-- ═══ ScrollBar：窄胶囊滑块，平时低透明，悬停/拖动加深（低调不抢眼） ═══ -->
+        <!-- ═══ ScrollBar：窄胶囊滑块，平时低透明，悬停/拖动加深，滑块与轨道留空隙 ═══ -->
         <Style Selector="ScrollBar /template/ Thumb">
             <Setter Property="Background" Value="{DynamicResource ScrollThumbBrush}" />
-            <Setter Property="CornerRadius" Value="3" />
+            <Setter Property="CornerRadius" Value="2" />
+            <Setter Property="Margin" Value="1" />
+            <!-- 自定义模板：纯 Border 渲染，确保圆角/边距/背景全部生效 -->
+            <Setter Property="Template">
+                <ControlTemplate TargetType="Thumb">
+                    <Border Background="{TemplateBinding Background}"
+                            CornerRadius="{TemplateBinding CornerRadius}"
+                            Margin="{TemplateBinding Margin}" />
+                </ControlTemplate>
+            </Setter>
         </Style>
         <Style Selector="ScrollBar /template/ Thumb:pointerover">
             <Setter Property="Background" Value="{DynamicResource ScrollThumbHoverBrush}" />
@@ -300,8 +309,8 @@
         </Style>
         <!-- 滚动条收窄 -->
         <Style Selector="ScrollViewer /template/ ScrollBar">
-            <Setter Property="MinWidth" Value="6" />
-            <Setter Property="MinHeight" Value="6" />
+            <Setter Property="MinWidth" Value="4" />
+            <Setter Property="MinHeight" Value="4" />
         </Style>
     </Application.Styles>
 </Application>
