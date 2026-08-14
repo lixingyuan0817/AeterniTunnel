@@ -194,9 +194,10 @@ public class RobustnessTests
             await agent1.DisposeAsync();
             await WaitForClientCountAsync(listener, 0);
 
-            // ③ 同 clientId 重连：快照应只有 1 个客户端且在线
+            // ③ 同 clientId 重连：等登录完成（_sessionsByClient 有映射）后快照应只有 1 个客户端且在线
             var agent2 = await ConnectAgentAsync(controlPort, "agent-cleanup");
             await WaitConnectedAsync(agent2, true);
+            await WaitForSessionAsync(listener, "agent-cleanup");
             await WaitForClientCountAsync(listener, 1);
 
             var snap = listener.GetStatusSnapshot();
@@ -222,5 +223,18 @@ public class RobustnessTests
             await Task.Delay(100);
         }
         Assert.Equal(expect, listener.GetStatusSnapshot().Clients.Count);
+    }
+
+    /// <summary>等登录完成：_sessionsByClient 有该 clientId 映射（连接建立早于登录，count 不能代表已登录）</summary>
+    private static async Task WaitForSessionAsync(ServerListener listener, string clientId, int timeoutMs = 8000)
+    {
+        var deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
+        while (DateTime.UtcNow < deadline)
+        {
+            if (listener.GetSession(clientId) is not null)
+                return;
+            await Task.Delay(100);
+        }
+        Assert.NotNull(listener.GetSession(clientId));
     }
 }
