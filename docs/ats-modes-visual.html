@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AeterniTunnel · 三种接入模式逻辑图</title>
+<style>
+  :root {
+    --bg: #0b0f14;
+    --panel: rgba(255,255,255,.04);
+    --border: rgba(255,255,255,.08);
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --accent: #34d399;
+    --accent2: #22d3ee;
+    --warn: #fbbf24;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: radial-gradient(1200px 600px at 20% -10%, #12352455, transparent),
+                radial-gradient(1000px 500px at 90% 10%, #0e2f3a55, transparent),
+                var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    min-height: 100vh;
+    padding: 32px 24px 64px;
+  }
+  h1 { font-size: 22px; font-weight: 600; letter-spacing: .02em; }
+  h1 .dot { color: var(--accent); }
+  .sub { color: var(--muted); font-size: 13px; margin-top: 6px; }
+  .cards { display: flex; flex-direction: column; gap: 20px; margin-top: 28px; max-width: 1080px; }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px 20px 12px;
+    backdrop-filter: blur(10px);
+  }
+  .card h2 { font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  .tag {
+    font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px;
+    background: rgba(52,211,153,.12); color: var(--accent); border: 1px solid rgba(52,211,153,.25);
+  }
+  .tag.alt { background: rgba(34,211,238,.12); color: var(--accent2); border-color: rgba(34,211,238,.25); }
+  .tag.warn { background: rgba(251,191,36,.1); color: var(--warn); border-color: rgba(251,191,36,.25); }
+  .desc { color: var(--muted); font-size: 12.5px; margin-top: 6px; line-height: 1.6; }
+  .desc b { color: var(--text); font-weight: 600; }
+  svg { width: 100%; height: auto; display: block; margin-top: 10px; }
+  .node rect { fill: rgba(255,255,255,.05); stroke: rgba(255,255,255,.18); stroke-width: 1.2; rx: 10; }
+  .node .icon { font-size: 16px; }
+  .node .t { font-size: 13px; font-weight: 600; fill: var(--text); }
+  .node .s { font-size: 11px; fill: var(--muted); }
+  .node:hover rect { stroke: var(--accent); fill: rgba(52,211,153,.08); }
+  .node.warn:hover rect { stroke: var(--warn); fill: rgba(251,191,36,.07); }
+  .arrow { stroke: #4b5563; stroke-width: 1.6; }
+  .arrow-marker { fill: #4b5563; }
+  .hl .arrow { stroke: var(--accent2); stroke-width: 2; }
+  .lbl { font-size: 11px; fill: var(--muted); }
+  .lbl.hl { fill: var(--accent2); }
+  .note { fill: var(--warn); font-size: 11px; }
+  .card:hover .path { stroke: var(--accent2); }
+</style>
+</head>
+<body>
+  <h1>AeterniTunnel <span class="dot">·</span> 接入模式逻辑图</h1>
+  <div class="sub">三种模式：端口映射（每隧道一个端口）｜vhost 域名反代（共享 80/443）｜Web 管理台（当前 vs 遗留）。悬停节点高亮数据流。</div>
+
+  <div class="cards">
+
+    <!-- 模式一：端口映射 -->
+    <div class="card">
+      <h2><span class="tag">模式一</span> 端口映射（allowPorts）— 任意 TCP，IP:端口 直连</h2>
+      <div class="desc">ATS 在 <b>bindPort（17070）</b> 上与客户端保持一条控制+数据通道。客户端注册隧道时从 <b>allowPorts</b> 范围内申请一个公网端口，ATS 在该端口上监听并把流量经通道转发到内网。每隧道占用 <b>1 个公网端口</b>。留空 = 不限范围。</div>
+      <svg viewBox="0 0 1080 190" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="m1" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+            <path d="M0,0 L8,4 L0,8 Z" class="arrow-marker"/>
+          </marker>
+        </defs>
+        <!-- 用户 -->
+        <g class="node">
+          <rect x="20" y="55" width="150" height="80"/>
+          <text x="95" y="88" text-anchor="middle" class="icon">🖥️</text>
+          <text x="95" y="110" text-anchor="middle" class="t">外部用户</text>
+          <text x="95" y="126" text-anchor="middle" class="s">浏览器 / 任意 TCP 客户端</text>
+        </g>
+        <!-- ATS 端口监听 -->
+        <g class="node">
+          <rect x="280" y="45" width="200" height="100"/>
+          <text x="380" y="80" text-anchor="middle" class="icon">🌐</text>
+          <text x="380" y="102" text-anchor="middle" class="t">ATS · 端口监听 :17061</text>
+          <text x="380" y="118" text-anchor="middle" class="s">公网服务器 · 每隧道 1 端口</text>
+          <text x="380" y="134" text-anchor="middle" class="s">来自 allowPorts 范围</text>
+        </g>
+        <!-- ATC -->
+        <g class="node">
+          <rect x="590" y="55" width="150" height="80"/>
+          <text x="665" y="88" text-anchor="middle" class="icon">📡</text>
+          <text x="665" y="110" text-anchor="middle" class="t">ATC 客户端</text>
+          <text x="665" y="126" text-anchor="middle" class="s">内网主机 · 常驻连接</text>
+        </g>
+        <!-- 内网服务 -->
+        <g class="node">
+          <rect x="850" y="55" width="200" height="80"/>
+          <text x="950" y="88" text-anchor="middle" class="icon">🗄️</text>
+          <text x="950" y="110" text-anchor="middle" class="t">内网服务</text>
+          <text x="950" y="126" text-anchor="middle" class="s">127.0.0.1:8080（SSH/DB/任意）</text>
+        </g>
+        <!-- 箭头 -->
+        <g class="path">
+          <line x1="170" y1="95" x2="278" y2="95" class="arrow" marker-end="url(#m1)"/>
+          <text x="224" y="84" text-anchor="middle" class="lbl">server:17061</text>
+          <line x1="480" y1="95" x2="588" y2="95" class="arrow" marker-end="url(#m1)"/>
+          <text x="534" y="84" text-anchor="middle" class="lbl">加密通道</text>
+          <text x="534" y="108" text-anchor="middle" class="lbl hl">(控制+数据复用)</text>
+          <line x1="740" y1="95" x2="848" y2="95" class="arrow" marker-end="url(#m1)"/>
+          <text x="794" y="84" text-anchor="middle" class="lbl">转发到</text>
+          <text x="794" y="108" text-anchor="middle" class="lbl">127.0.0.1:8080</text>
+        </g>
+      </svg>
+    </div>
+
+    <!-- 模式二：vhost -->
+    <div class="card">
+      <h2><span class="tag alt">模式二</span> vhost 域名反代（vhostHttpPort / vhostHttpsPort + subDomainHost）— 域名访问</h2>
+      <div class="desc">ATS 在 <b>80 / 443</b> 上监听 <b>一个</b> 入口，按 HTTP <b>Host 头</b>（或 TLS SNI）把请求路由到对应隧道。客户端注册隧道时带 <b>Subdomain</b>，若配置了 <b>subDomainHost</b>（如 <code>aeterni.dev</code>）则域名为 <code>{subdomain}.aeterni.dev</code>。一个端口承载无限多个服务，前提是 <b>DNS 把 *.aeterni.dev 解析到服务器</b>。</div>
+      <svg viewBox="0 0 1080 190" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="m2" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+            <path d="M0,0 L8,4 L0,8 Z" class="arrow-marker"/>
+          </marker>
+        </defs>
+        <g class="node">
+          <rect x="20" y="55" width="150" height="80"/>
+          <text x="95" y="88" text-anchor="middle" class="icon">🖥️</text>
+          <text x="95" y="110" text-anchor="middle" class="t">外部用户</text>
+          <text x="95" y="126" text-anchor="middle" class="s">浏览器访问域名</text>
+        </g>
+        <g class="node">
+          <rect x="280" y="45" width="210" height="100"/>
+          <text x="385" y="80" text-anchor="middle" class="icon">🌐</text>
+          <text x="385" y="102" text-anchor="middle" class="t">ATS · vhost :80/:443</text>
+          <text x="385" y="118" text-anchor="middle" class="s">单个入口，Host 头路由</text>
+          <text x="385" y="134" text-anchor="middle" class="s">myapp.aeterni.dev → 隧道</text>
+        </g>
+        <g class="node">
+          <rect x="600" y="55" width="150" height="80"/>
+          <text x="675" y="88" text-anchor="middle" class="icon">📡</text>
+          <text x="675" y="110" text-anchor="middle" class="t">ATC 客户端</text>
+          <text x="675" y="126" text-anchor="middle" class="s">内网主机</text>
+        </g>
+        <g class="node">
+          <rect x="860" y="55" width="190" height="80"/>
+          <text x="955" y="88" text-anchor="middle" class="icon">🗄️</text>
+          <text x="955" y="110" text-anchor="middle" class="t">内网 Web 服务</text>
+          <text x="955" y="126" text-anchor="middle" class="s">127.0.0.1:8080（仅 HTTP）</text>
+        </g>
+        <g class="path">
+          <line x1="170" y1="95" x2="278" y2="95" class="arrow" marker-end="url(#m2)"/>
+          <text x="224" y="84" text-anchor="middle" class="lbl">http://myapp.aeterni.dev</text>
+          <line x1="490" y1="95" x2="598" y2="95" class="arrow" marker-end="url(#m2)"/>
+          <text x="544" y="78" text-anchor="middle" class="lbl">Host 头匹配</text>
+          <text x="544" y="92" text-anchor="middle" class="lbl hl">→ 命中隧道</text>
+          <text x="544" y="116" text-anchor="middle" class="lbl">共享同一条通道</text>
+          <line x1="750" y1="95" x2="858" y2="95" class="arrow" marker-end="url(#m2)"/>
+          <text x="804" y="84" text-anchor="middle" class="lbl">转发</text>
+        </g>
+        <text x="20" y="175" class="note">⚠ 需要 DNS：*.aeterni.dev → 服务器 IP；没有域名 / 只走 IP 直连，此模式不启用（vhostHttpPort / vhostHttpsPort 留 0）。</text>
+      </svg>
+    </div>
+
+    <!-- 模式三：Web 管理台 -->
+    <div class="card">
+      <h2><span class="tag warn">模式三</span> Web 管理台 — 当前 vs 遗留</h2>
+      <div class="desc">当前管理走 <b>Blazor Web 管理台（localhost:5280）</b>：登录 webToken 后查看客户端树、隧道、日志，并可在设置页改 ATS 配置后重启生效。配置里的 <b>webBind（127.0.0.1:7500）</b> 是 Engine 遗留字段，<b>没有任何代码消费它</b>，可忽略；<b>dashboardPort</b>（/api/status）默认不启用，等将来开放 API 再开。</div>
+      <svg viewBox="0 0 1080 190" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="m3" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+            <path d="M0,0 L8,4 L0,8 Z" class="arrow-marker"/>
+          </marker>
+        </defs>
+        <!-- 分支 A：当前 -->
+        <g class="node">
+          <rect x="20" y="25" width="150" height="70"/>
+          <text x="95" y="55" text-anchor="middle" class="icon">🖥️</text>
+          <text x="95" y="75" text-anchor="middle" class="t">管理员浏览器</text>
+          <text x="95" y="89" text-anchor="middle" class="s">登录 webToken</text>
+        </g>
+        <g class="node">
+          <rect x="300" y="20" width="220" height="80"/>
+          <text x="410" y="55" text-anchor="middle" class="icon">🧩</text>
+          <text x="410" y="75" text-anchor="middle" class="t">Blazor Web 管理台 :5280</text>
+          <text x="410" y="91" text-anchor="middle" class="s">当前 · 客户端树/日志/设置</text>
+          <text x="410" y="105" text-anchor="middle" class="s">内嵌读取 ATS 状态 + 下发指令</text>
+        </g>
+        <g class="node">
+          <rect x="640" y="25" width="150" height="70"/>
+          <text x="715" y="55" text-anchor="middle" class="icon">⚙️</text>
+          <text x="715" y="75" text-anchor="middle" class="t">ATS 引擎</text>
+          <text x="715" y="89" text-anchor="middle" class="s">server.toml 配置</text>
+        </g>
+        <g class="path">
+          <line x1="170" y1="60" x2="298" y2="60" class="arrow" marker-end="url(#m3)"/>
+          <text x="234" y="50" text-anchor="middle" class="lbl">localhost:5280</text>
+          <line x1="520" y1="60" x2="638" y2="60" class="arrow" marker-end="url(#m3)"/>
+          <text x="579" y="50" text-anchor="middle" class="lbl hl">内存快照 / 指令</text>
+        </g>
+        <!-- 分支 B：遗留 -->
+        <g class="node warn">
+          <rect x="300" y="125" width="220" height="50"/>
+          <text x="410" y="146" text-anchor="middle" class="t">⚠ 遗留 webBind :7500</text>
+          <text x="410" y="162" text-anchor="middle" class="s">无代码消费，未启用</text>
+        </g>
+        <g class="node warn">
+          <rect x="640" y="120" width="190" height="60"/>
+          <text x="735" y="145" text-anchor="middle" class="t">dashboardPort :0</text>
+          <text x="735" y="161" text-anchor="middle" class="s">/api/status 未启用</text>
+        </g>
+        <g class="path">
+          <line x1="170" y1="95" x2="170" y2="140" stroke="#4b5563" stroke-width="1.6" stroke-dasharray="4 3"/>
+          <line x1="172" y1="150" x2="298" y2="150" class="arrow" marker-end="url(#m3)"/>
+          <line x1="522" y1="150" x2="638" y2="150" class="arrow" marker-end="url(#m3)"/>
+        </g>
+      </svg>
+    </div>
+
+  </div>
+</body>
+</html>

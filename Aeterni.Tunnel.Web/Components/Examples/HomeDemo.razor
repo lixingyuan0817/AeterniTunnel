@@ -1,0 +1,180 @@
+@page "/examples/home"
+@layout ExamplesLayout
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@inject IJSRuntime JS
+
+<PageTitle>首页 · Aeterni Tunnel</PageTitle>
+
+<div class="relative h-screen overflow-hidden bg-[#eef1f8] text-slate-800 transition-colors duration-300 dark:bg-[#05070f] dark:text-slate-100">
+
+    <!-- ═══ 背景层（与登录页同源：光斑 + 网格 + 贪吃蛇 + 点阵） ═══ -->
+    <div class="pointer-events-none fixed inset-0">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+        <div class="absolute inset-0 bg-[linear-gradient(rgba(15,23,42,.04)_1px,transparent_1px),linear-gradient(90deg,rgba(15,23,42,.04)_1px,transparent_1px)] bg-[size:28px_28px] dark:bg-[linear-gradient(rgba(255,255,255,.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.03)_1px,transparent_1px)]"></div>
+        <canvas id="home-snake" class="absolute inset-0 h-full w-full"></canvas>
+        <div class="pixel-dots absolute inset-0"></div>
+    </div>
+
+    <div class="relative z-10 flex h-full flex-col">
+
+        <!-- ═══ 共享顶栏（服务流光随实例运行状态联动） ═══ -->
+        <ExampleHeader Scan="InstanceRunning" />
+
+        <!-- ═══ 主内容 ═══ -->
+        <main class="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 overflow-hidden px-6 py-4">
+
+            <!-- 顶部：实例管理（左）+ 性能仪表 2x2（右） -->
+            <section class="grid shrink-0 grid-cols-1 gap-4 lg:grid-cols-3">
+
+                <!-- 实例管理 -->
+                <div class="stat-card flex flex-col rounded-2xl border border-slate-200/60 bg-white/50 p-4 backdrop-blur-md transition hover:border-[#34c759]/40 dark:border-white/10 dark:bg-white/[.05]">
+                    <div class="flex items-center justify-between">
+                        <p class="text-[11px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">实例管理</p>
+                        <span class="flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-medium @(InstanceRunning ? "border-[#34c759]/30 bg-[#34c759]/10 text-[#16a34a] dark:text-[#4cd964]" : "border-rose-400/30 bg-rose-400/10 text-rose-600 dark:text-rose-400")">
+                            <span class="h-1.5 w-1.5 rounded-full @(InstanceRunning ? "bg-[#34c759] shadow-[0_0_6px_rgba(52,199,89,.8)]" : "bg-rose-400")"></span>
+                            @(InstanceRunning ? "运行中" : "已停止")
+                        </span>
+                    </div>
+                    <p class="mt-2 text-[11px] text-slate-500 dark:text-slate-400">v0.1.0 · 端口 17070 · 1.2.3.4</p>
+                    <div class="mt-auto grid grid-cols-2 gap-2 pt-3">
+                        <button @onclick="() => SetRunning(true)" disabled="@InstanceRunning"
+                                class="rounded-lg border border-[#34c759]/30 bg-[#34c759]/10 py-1.5 text-xs font-medium text-[#16a34a] transition hover:bg-[#34c759]/20 disabled:cursor-not-allowed disabled:opacity-40 dark:text-[#4cd964]">▶ 启动</button>
+                        <button @onclick="() => SetRunning(false)" disabled="@(!InstanceRunning)"
+                                class="rounded-lg border border-rose-400/30 bg-rose-400/10 py-1.5 text-xs font-medium text-rose-600 transition hover:bg-rose-400/20 disabled:cursor-not-allowed disabled:opacity-40 dark:text-rose-400">⏹ 停止</button>
+                        <button title="重启（示例）"
+                                class="rounded-lg border border-amber-400/30 bg-amber-400/10 py-1.5 text-xs font-medium text-amber-600 transition hover:bg-amber-400/20 dark:text-amber-400">↻ 重启</button>
+                        <button title="配置（示例）"
+                                class="rounded-lg border border-slate-200/70 bg-white/60 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-white/90 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">⚙ 配置</button>
+                    </div>
+                </div>
+
+                <!-- 性能仪表 2x2 -->
+                <div class="grid grid-cols-2 gap-4 lg:col-span-2">
+                    <div class="stat-card rounded-2xl border border-slate-200/60 bg-white/50 p-4 backdrop-blur-md transition hover:border-[#34c759]/40 dark:border-white/10 dark:bg-white/[.05]">
+                        <p class="text-[11px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">在线客户端</p>
+                        <p class="mt-0.5 text-2xl font-bold tabular-nums text-slate-800 dark:text-white"><span data-count="3">0</span></p>
+                    </div>
+                    <div class="stat-card rounded-2xl border border-slate-200/60 bg-white/50 p-4 backdrop-blur-md transition hover:border-[#34c759]/40 dark:border-white/10 dark:bg-white/[.05]">
+                        <p class="text-[11px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">隧道总数</p>
+                        <p class="mt-0.5 text-2xl font-bold tabular-nums text-slate-800 dark:text-white"><span data-count="12">0</span></p>
+                    </div>
+                    <div class="stat-card rounded-2xl border border-slate-200/60 bg-white/50 p-4 backdrop-blur-md transition hover:border-[#34c759]/40 dark:border-white/10 dark:bg-white/[.05]">
+                        <p class="text-[11px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">▲ 上行速率</p>
+                        <p class="mt-0.5 text-2xl font-bold tabular-nums text-[#16a34a] dark:text-[#4cd964]"><span data-count="1.2" data-rate="1">0</span><span class="ml-1 text-sm font-medium text-slate-400">MB/s</span></p>
+                    </div>
+                    <div class="stat-card rounded-2xl border border-slate-200/60 bg-white/50 p-4 backdrop-blur-md transition hover:border-[#34c759]/40 dark:border-white/10 dark:bg-white/[.05]">
+                        <p class="text-[11px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">▼ 下行速率</p>
+                        <p class="mt-0.5 text-2xl font-bold tabular-nums text-[#16a34a] dark:text-[#4cd964]"><span data-count="340">0</span><span class="ml-1 text-sm font-medium text-slate-400">KB/s</span></p>
+                    </div>
+                </div>
+            </section>
+
+
+            <!-- 全局流量折线图（缩小版：固定比例，flex-[0.9]） -->
+            <section class="flex min-h-0 flex-[0.9] flex-col">
+                <h2 class="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                    <span class="h-3.5 w-1 rounded-full bg-[#34c759]"></span>全局流量
+                    <span class="ml-auto flex items-center gap-3 text-[11px] font-normal text-slate-500 dark:text-slate-400">
+                        <span class="flex items-center gap-1"><span class="h-1 w-3 rounded-full bg-[#34c759]"></span>上行</span>
+                        <span class="flex items-center gap-1"><span class="h-1 w-3 rounded-full bg-[#22d3ee]"></span>下行</span>
+                        <span id="traffic-cur" class="tabular-nums text-slate-600 dark:text-slate-300">↑0 MB/s ↓0 MB/s</span>
+                    </span>
+                </h2>
+                <div class="flex min-h-0 flex-1 flex-col rounded-2xl border border-slate-200/60 bg-white/50 p-3 backdrop-blur-md dark:border-white/10 dark:bg-white/[.05]">
+                    <svg id="traffic-chart" viewBox="0 0 800 240" preserveAspectRatio="none" class="h-full w-full">
+                        <defs>
+                            <linearGradient id="grad-up" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stop-color="#34c759" stop-opacity=".30" />
+                                <stop offset="100%" stop-color="#34c759" stop-opacity="0" />
+                            </linearGradient>
+                            <linearGradient id="grad-down" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stop-color="#22d3ee" stop-opacity=".24" />
+                                <stop offset="100%" stop-color="#22d3ee" stop-opacity="0" />
+                            </linearGradient>
+                        </defs>
+                        <!-- 虚线网格 -->
+                        <line x1="0" y1="48" x2="800" y2="48" stroke="currentColor" stroke-width="1" stroke-dasharray="4 6" class="text-slate-200/80 dark:text-white/10" />
+                        <line x1="0" y1="96" x2="800" y2="96" stroke="currentColor" stroke-width="1" stroke-dasharray="4 6" class="text-slate-200/80 dark:text-white/10" />
+                        <line x1="0" y1="144" x2="800" y2="144" stroke="currentColor" stroke-width="1" stroke-dasharray="4 6" class="text-slate-200/80 dark:text-white/10" />
+                        <line x1="0" y1="192" x2="800" y2="192" stroke="currentColor" stroke-width="1" stroke-dasharray="4 6" class="text-slate-200/80 dark:text-white/10" />
+                        <!-- 面积渐变填充 -->
+                        <path class="area-up" fill="url(#grad-up)" />
+                        <path class="area-down" fill="url(#grad-down)" />
+                        <!-- 折线 -->
+                        <polyline class="line-up" fill="none" stroke="#34c759" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 0 6px rgba(52,199,89,.45))" />
+                        <polyline class="line-down" fill="none" stroke="#22d3ee" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 0 6px rgba(34,211,238,.4))" />
+                        <!-- 终点发光点（当前值，紧凑版） -->
+                        <circle class="dot-up" r="3" fill="#34c759" style="filter: drop-shadow(0 0 5px rgba(52,199,89,.9))" />
+                        <circle class="dot-down" r="3" fill="#22d3ee" style="filter: drop-shadow(0 0 5px rgba(34,211,238,.85))" />
+                        <circle class="dot-up-halo" r="7" fill="none" stroke="#34c759" stroke-width="1" opacity=".4" />
+                        <circle class="dot-down-halo" r="7" fill="none" stroke="#22d3ee" stroke-width="1" opacity=".4" />
+                    </svg>
+                </div>
+            </section>
+
+            <!-- 实时日志流（无滚动条，按空间截断） -->
+            <section class="shrink-0">
+                <h2 class="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                    <span class="h-3.5 w-1 rounded-full bg-[#34c759]"></span>实时日志
+                </h2>
+                <div class="rounded-2xl border border-slate-200/60 bg-white/50 p-3 backdrop-blur-md dark:border-white/10 dark:bg-white/[.05]">
+                    <div class="space-y-0.5 overflow-hidden font-mono text-[11px] leading-relaxed">
+                        @foreach (var log in Logs)
+                        {
+                            <div class="log-line flex gap-2">
+                                <span class="shrink-0 text-slate-400 dark:text-slate-500">@log.Time</span>
+                                <span class="shrink-0 font-semibold @(log.Level == "INFO" ? "text-[#16a34a] dark:text-[#4cd964]" : log.Level == "WARN" ? "text-amber-500" : "text-red-500")">@log.Level</span>
+                                <span class="break-all text-slate-700 dark:text-slate-300">@log.Message</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+</div>
+
+@code {
+    private sealed record ProxyItem(string Name, string Type, string Group, string Remote, bool Online, string Up, string Down, string Rate);
+
+    private sealed record LogItem(string Time, string Level, string Message);
+
+    private bool InstanceRunning = true;
+
+    private void SetRunning(bool running) => InstanceRunning = running;
+
+    // 示例数据：后续接 /api/status 真实数据
+    private static readonly List<ProxyItem> Proxies = new()
+    {
+        new("mc", "tcp", "mc", "0.0.0.0:17061", true, "1.24 MB", "386 KB", "↑42 KB/s"),
+        new("game", "udp", "mc", "0.0.0.0:17064", true, "512 KB", "2.1 MB", "↑64 KB/s"),
+        new("web", "http", "web", "host://web.example.com", true, "8.6 MB", "12.2 MB", "↑1.2 MB/s"),
+        new("console", "http", "web", "host://console.example.com", false, "—", "—", "离线"),
+        new("file", "tcp", "", "0.0.0.0:17065", true, "45 MB", "128 MB", "↑3.4 MB/s"),
+        new("api", "udp", "", "0.0.0.0:17063", false, "—", "—", "离线"),
+    };
+
+    private static readonly List<LogItem> Logs = new()
+    {
+        new("16:44:18", "INFO", "隧道 mc 注册成功：0.0.0.0:17061"),
+        new("16:44:18", "INFO", "隧道 web 注册成功：host://web.example.com"),
+        new("16:43:52", "WARN", "隧道 api 健康检查失败，已摘除"),
+        new("16:43:40", "INFO", "客户端 agent-LIXINGYUAN 登录成功"),
+        new("16:43:12", "INFO", "隧道 game 注册成功：0.0.0.0:17064"),
+        new("16:42:55", "INFO", "隧道 file 流量突破 100 MB"),
+        new("16:42:30", "INFO", "隧道 console 注册失败：vhost 未启用"),
+        new("16:42:10", "INFO", "ATS 服务端启动：端口 17070"),
+    };
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("aeterniSnake.init", "home-snake");
+            await JS.InvokeVoidAsync("aeterniFx.initHome");
+        }
+    }
+}

@@ -1,0 +1,84 @@
+@inherits LayoutComponentBase
+@inject NavigationManager Nav
+@inject Aeterni.Tunnel.Web.Status.AeterniServerStatusService Status
+
+@* 正式控制台布局：统一背景 + 顶栏（品牌 / 导航 / 明暗 / 登出） *@
+<div class="relative flex h-screen flex-col overflow-hidden bg-[#eef1f8] text-slate-800 transition-colors duration-300 dark:bg-[#05070f] dark:text-slate-100">
+
+    <!-- ═══ 背景层（光斑 + 网格 + 贪吃蛇 + 点阵） ═══ -->
+    <div class="pointer-events-none fixed inset-0">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+        <div class="absolute inset-0 bg-[linear-gradient(rgba(15,23,42,.04)_1px,transparent_1px),linear-gradient(90deg,rgba(15,23,42,.04)_1px,transparent_1px)] bg-[size:28px_28px] dark:bg-[linear-gradient(rgba(255,255,255,.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.03)_1px,transparent_1px)]"></div>
+        <canvas id="console-bg" class="absolute inset-0 h-full w-full"></canvas>
+        <div class="pixel-dots absolute inset-0"></div>
+    </div>
+
+    <!-- ═══ 顶栏 ═══ -->
+    <header class="top-bar relative z-20 flex shrink-0 items-center justify-between overflow-hidden border-b border-slate-200/60 bg-white/45 px-6 py-2.5 backdrop-blur-xl dark:border-white/10 dark:bg-white/[.04]">
+        @* 服务运行流光（ATS 运行时绿色脉冲扫过） *@
+        @if (Status.IsRunning)
+        {
+            <div class="header-scan"></div>
+        }
+        <div class="flex items-center gap-3">
+            <span class="text-lg font-black italic tracking-tight text-slate-800 dark:text-white">AETERNI</span>
+            <span class="rounded-full border border-[#34c759]/30 bg-[#34c759]/10 px-2 py-0.5 text-[10px] font-medium text-[#16a34a] dark:text-[#4cd964]">控制台</span>
+        </div>
+
+        <!-- 页面导航（居中） -->
+        <nav class="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center gap-1">
+            @foreach (var item in NavItems)
+            {
+                <button @onclick="() => Nav.NavigateTo(item.Path)"
+                        class="relative flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-sm transition hover:text-slate-700 dark:hover:text-slate-200 @(IsActive(item.Path) ? "font-medium text-[#16a34a] dark:text-[#4cd964]" : "text-slate-500 dark:text-slate-400")">
+                    @((MarkupString)item.Icon)
+                    @item.Label
+                    @if (IsActive(item.Path))
+                    {
+                        <span class="absolute inset-x-3 -bottom-0.5 h-0.5 rounded-full bg-[#34c759] shadow-[0_0_5px_rgba(52,199,89,.7)]"></span>
+                    }
+                </button>
+            }
+        </nav>
+
+        <div class="flex items-center gap-2">
+            <button title="切换明暗" onclick="aeterniTheme.toggle()"
+                    class="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200/70 bg-white/50 text-slate-600 backdrop-blur-md transition hover:scale-105 hover:bg-white/80 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4 dark:hidden"><circle cx="12" cy="12" r="4.2" /><path stroke-linecap="round" d="M12 2.5v2.4M12 19.1v2.4M2.5 12h2.4M19.1 12h2.4M4.9 4.9l1.7 1.7M17.4 17.4l1.7 1.7M4.9 19.1l1.7-1.7M17.4 6.6l1.7-1.7" /></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="hidden h-4 w-4 dark:block"><path stroke-linecap="round" stroke-linejoin="round" d="M20 13.5A7.5 7.5 0 0 1 10.5 4a7.5 7.5 0 1 0 9.5 9.5Z" /></svg>
+            </button>
+            <button title="退出登录" onclick="window.location.href='/logout'"
+                    class="flex h-9 items-center gap-1.5 rounded-full border border-slate-200/70 bg-white/50 px-3 text-xs text-slate-600 backdrop-blur-md transition hover:scale-105 hover:bg-white/80 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4"><path stroke-linecap="round" stroke-linejoin="round" d="M9 21H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3M16 17l5-5-5-5M21 12H9" /></svg>
+                登出
+            </button>
+        </div>
+    </header>
+
+    @* 内容区：flex-1 约束高度（页面根 h-full 填满此区域，避免 header 挤压溢出） *@
+    <div class="flex min-h-0 flex-1 flex-col">
+        @Body
+    </div>
+</div>
+
+@code {
+    private sealed record NavItem(string Label, string Path, string Icon);
+
+    private static readonly List<NavItem> NavItems = new()
+    {
+        new("首页", "/", """
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10.5 12 3l9 7.5M5 9.5V21h5v-6h4v6h5V9.5" /></svg>
+            """),
+        new("客户端", "/clients", """
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4"><rect x="3" y="5" width="18" height="12" rx="2" /><path stroke-linecap="round" d="M9 21h6M12 17v4" /></svg>
+            """),
+        new("设置", "/settings", """
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4"><circle cx="12" cy="12" r="3.2" /><path stroke-linecap="round" stroke-linejoin="round" d="M12 2.5v2.4M12 19.1v2.4M2.5 12h2.4M19.1 12h2.4M4.9 4.9l1.7 1.7M17.4 17.4l1.7 1.7M4.9 19.1l1.7-1.7M17.4 6.6l1.7-1.7" /></svg>
+            """),
+    };
+
+    private bool IsActive(string path)
+        => path == "/" ? Nav.Uri == "/" : Nav.Uri.StartsWith(path, StringComparison.OrdinalIgnoreCase);
+}

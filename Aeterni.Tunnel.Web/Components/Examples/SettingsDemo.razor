@@ -1,0 +1,276 @@
+@page "/examples/settings"
+@layout ExamplesLayout
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+@inject Aeterni.Tunnel.Web.Auth.AeterniWebAuthService Auth
+
+<PageTitle>设置 · Aeterni Tunnel</PageTitle>
+
+<div class="relative h-screen overflow-hidden bg-[#eef1f8] text-slate-800 transition-colors duration-300 dark:bg-[#05070f] dark:text-slate-100">
+
+    <!-- ═══ 背景层（与首页同源：光斑 + 网格 + 贪吃蛇 + 点阵） ═══ -->
+    <div class="pointer-events-none fixed inset-0">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+        <div class="absolute inset-0 bg-[linear-gradient(rgba(15,23,42,.04)_1px,transparent_1px),linear-gradient(90deg,rgba(15,23,42,.04)_1px,transparent_1px)] bg-[size:28px_28px] dark:bg-[linear-gradient(rgba(255,255,255,.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.03)_1px,transparent_1px)]"></div>
+        <canvas id="settings-snake" class="absolute inset-0 h-full w-full"></canvas>
+        <div class="pixel-dots absolute inset-0"></div>
+    </div>
+
+    <div class="relative z-10 flex h-full flex-col">
+
+        <!-- ═══ 共享顶栏 ═══ -->
+        <ExampleHeader Scan="true" />
+
+        <!-- ═══ 主内容 ═══ -->
+        <main class="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-4 overflow-y-auto px-6 py-4">
+
+            <!-- 标题 -->
+            <div class="flex shrink-0 items-center justify-between">
+                <div>
+                    <h1 class="text-lg font-bold text-slate-800 dark:text-slate-100">设置</h1>
+                    <p class="text-[11px] text-slate-500 dark:text-slate-400">服务端与安全配置 · 示例数据，后续接真实 API</p>
+                </div>
+            </div>
+
+            <!-- 卡片1：基础设置 -->
+            <section class="settings-card rounded-2xl border border-slate-200/60 bg-white/50 p-5 backdrop-blur-md transition hover:border-[#34c759]/40 dark:border-white/10 dark:bg-white/[.05]">
+                <h2 class="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                    <span class="h-3.5 w-1 rounded-full bg-[#34c759]"></span>基础设置
+                </h2>
+                <div class="mt-4 space-y-4">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <label class="text-xs text-slate-500 dark:text-slate-400">服务端监听端口</label>
+                        <input type="number" @bind="ServerPort"
+                               class="w-40 rounded-lg border border-slate-300/80 bg-white/70 px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-[#34c759]/60 focus:ring-2 focus:ring-[#34c759]/20 dark:border-white/10 dark:bg-white/5 dark:text-slate-100 dark:focus:border-[#4cd964]/50 dark:focus:ring-[#4cd964]/15" />
+                    </div>
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <label class="text-xs text-slate-500 dark:text-slate-400">单客户端最大隧道数（maxPortsPerClient）</label>
+                        <input type="number" @bind="MaxPorts"
+                               class="w-40 rounded-lg border border-slate-300/80 bg-white/70 px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-[#34c759]/60 focus:ring-2 focus:ring-[#34c759]/20 dark:border-white/10 dark:bg-white/5 dark:text-slate-100 dark:focus:border-[#4cd964]/50 dark:focus:ring-[#4cd964]/15" />
+                    </div>
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                            <p class="text-xs text-slate-500 dark:text-slate-400">虚拟主机（vhost Host 路由）</p>
+                            <p class="mt-0.5 text-[10px] text-slate-400 dark:text-slate-500">关闭后 http/https 隧道不可注册</p>
+                        </div>
+                        <button @onclick="() => VhostEnabled = !VhostEnabled" type="button"
+                                class="relative h-6 w-11 shrink-0 rounded-full transition-colors @(VhostEnabled ? "bg-[#34c759]" : "bg-slate-300 dark:bg-slate-600")">
+                            <span class="absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all @(VhostEnabled ? "left-[22px]" : "left-0.5")"></span>
+                        </button>
+                    </div>
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                            <p class="text-xs text-slate-500 dark:text-slate-400">分组（group）</p>
+                            <p class="mt-0.5 text-[10px] text-slate-400 dark:text-slate-500">隧道未配置 group 时归入「default」，由服务端固定，仅作展示归类</p>
+                        </div>
+                        <span class="rounded-md border border-slate-300/70 bg-slate-100/70 px-2 py-1 font-mono text-[11px] text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-400">default</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 卡片2：安全 / Token（webToken 与 ATS token 分层独立） -->
+            <section class="settings-card rounded-2xl border border-slate-200/60 bg-white/50 p-5 backdrop-blur-md transition hover:border-[#34c759]/40 dark:border-white/10 dark:bg-white/[.05]">
+                <h2 class="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                    <span class="h-3.5 w-1 rounded-full bg-[#34c759]"></span>安全 / Token
+                </h2>
+
+                <!-- webToken：管理员登录（真实修改：旧-新-确认 → 加盐 SHA256 重存） -->
+                <div class="mt-4">
+                    <div class="flex items-center justify-between gap-2">
+                        <p class="text-xs font-medium text-slate-600 dark:text-slate-300">webToken（管理员登录，加盐 SHA256 存储）</p>
+                        <span class="rounded-md border border-slate-300/70 bg-slate-100/70 px-2 py-0.5 text-[10px] text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-400">@TokenSourceText</span>
+                    </div>
+                    <div class="mt-2 space-y-2">
+                        <input type="password" @bind="OldToken" placeholder="旧 Token（修改时验证）"
+                               class="w-full rounded-lg border border-slate-300/80 bg-white/70 px-3 py-2 text-sm text-slate-800 placeholder-slate-400 outline-none transition focus:border-[#34c759]/60 focus:ring-2 focus:ring-[#34c759]/20 dark:border-white/10 dark:bg-white/5 dark:text-slate-100 dark:placeholder-slate-500 dark:focus:border-[#4cd964]/50 dark:focus:ring-[#4cd964]/15" />
+                        <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                            <input type="password" @bind="NewToken" placeholder="新 Token"
+                                   class="w-full rounded-lg border border-slate-300/80 bg-white/70 px-3 py-2 text-sm text-slate-800 placeholder-slate-400 outline-none transition focus:border-[#34c759]/60 focus:ring-2 focus:ring-[#34c759]/20 dark:border-white/10 dark:bg-white/5 dark:text-slate-100 dark:placeholder-slate-500 dark:focus:border-[#4cd964]/50 dark:focus:ring-[#4cd964]/15" />
+                            <input type="password" @bind="ConfirmToken" placeholder="确认新 Token"
+                                   class="w-full rounded-lg border border-slate-300/80 bg-white/70 px-3 py-2 text-sm text-slate-800 placeholder-slate-400 outline-none transition focus:border-[#34c759]/60 focus:ring-2 focus:ring-[#34c759]/20 dark:border-white/10 dark:bg-white/5 dark:text-slate-100 dark:placeholder-slate-500 dark:focus:border-[#4cd964]/50 dark:focus:ring-[#4cd964]/15" />
+                        </div>
+                        @if (TokenError != null)
+                        {
+                            <p class="text-[11px] text-rose-500">@TokenError</p>
+                        }
+                    </div>
+                </div>
+
+                <!-- ATS token：ATC 认证 -->
+                <div class="mt-5 border-t border-slate-200/50 pt-4 dark:border-white/10">
+                    <div class="flex items-center justify-between gap-2">
+                        <div>
+                            <p class="text-xs font-medium text-slate-600 dark:text-slate-300">ATS token（ATC 客户端认证）</p>
+                            <p class="mt-0.5 text-[10px] text-slate-400 dark:text-slate-500">全服务端唯一 · 所有 ATC 客户端在 agent.toml 中填写同一 token · 与 webToken 分层独立</p>
+                        </div>
+                        <button @onclick="OnRegenerateAtsToken"
+                                class="rounded-lg border border-[#34c759]/30 bg-[#34c759]/10 px-3 py-1.5 text-[11px] font-medium text-[#16a34a] transition hover:bg-[#34c759]/20 dark:text-[#4cd964]">重新生成</button>
+                    </div>
+                    <div class="mt-2 flex items-center gap-2">
+                        <input type="@(ShowAtsToken ? "text" : "password")" readonly value="@AtsToken"
+                               class="w-full rounded-lg border border-slate-300/80 bg-white/70 px-3 py-2 font-mono text-sm text-slate-800 outline-none transition focus:border-[#34c759]/60 dark:border-white/10 dark:bg-white/5 dark:text-slate-100" />
+                        <button @onclick="() => ShowAtsToken = !ShowAtsToken" type="button"
+                                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200/70 bg-white/60 text-slate-500 transition hover:bg-white/90 dark:border-white/10 dark:bg-white/5 dark:text-slate-400 dark:hover:bg-white/10">
+                            @if (ShowAtsToken)
+                            {
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3l18 18M10.6 10.7a3 3 0 0 0 4.2 4.2M9.9 5.2A10.9 10.9 0 0 1 12 5c5.5 0 9 7 9 7a17.6 17.6 0 0 1-3.2 3.9M6.6 6.6A17.6 17.6 0 0 0 3 12s3.5 7 9 7a10.9 10.9 0 0 0 4-.8" /></svg>
+                            }
+                            else
+                            {
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12s3.5-7 9-7 9 7 9 7-3.5 7-9 7-9-7-9-7Z" /><circle cx="12" cy="12" r="2.8" /></svg>
+                            }
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 卡片3：API 开关 -->
+            <section class="settings-card rounded-2xl border border-slate-200/60 bg-white/50 p-5 backdrop-blur-md transition hover:border-[#34c759]/40 dark:border-white/10 dark:bg-white/[.05]">
+                <h2 class="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                    <span class="h-3.5 w-1 rounded-full bg-[#34c759]"></span>API
+                </h2>
+                <div class="mt-4 flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">apiEnabled（暴露 /api/status、/api/health、/api/config）</p>
+                        <p class="mt-0.5 text-[10px] text-slate-400 dark:text-slate-500">开启后所有 API 请求走 webToken 认证，供 CLI / 监控消费</p>
+                    </div>
+                    <button @onclick="() => ApiEnabled = !ApiEnabled" type="button"
+                            class="relative h-6 w-11 shrink-0 rounded-full transition-colors @(ApiEnabled ? "bg-[#34c759]" : "bg-slate-300 dark:bg-slate-600")">
+                        <span class="absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all @(ApiEnabled ? "left-[22px]" : "left-0.5")"></span>
+                    </button>
+                </div>
+            </section>
+
+            <!-- 保存 / 退出登录 -->
+            <div class="flex shrink-0 justify-end gap-2 pb-4">
+                <button @onclick="OnLogout"
+                        class="rounded-lg border border-slate-200/70 bg-white/60 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-white/90 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10">
+                    退出登录
+                </button>
+                <button @onclick="OnSave"
+                        class="rounded-lg bg-[#16a34a] px-8 py-2.5 text-sm font-semibold text-white transition hover:bg-[#15803d] active:scale-[.98] dark:bg-[#34c759] dark:hover:bg-[#4cd964]">
+                    保存
+                </button>
+            </div>
+        </main>
+    </div>
+
+    <!-- 轻提示（示例操作反馈） -->
+    @if (_toast != null)
+    {
+        <div class="ats-toast fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-xl border border-[#34c759]/30 bg-white/80 px-4 py-2 text-xs font-medium text-[#16a34a] shadow-[0_10px_40px_rgba(15,23,42,.15)] backdrop-blur-xl dark:border-[#4cd964]/30 dark:bg-black/60 dark:text-[#4cd964]">
+            @_toast
+        </div>
+    }
+</div>
+
+@code {
+    private string? _toast;
+    private string? TokenError;
+
+    // 基础设置（示例初值）
+    private int ServerPort = 17070;
+    private int MaxPorts = 100;
+    private bool VhostEnabled = true;
+
+    // Token（示例：webToken 分层独立）
+    private string? OldToken;
+    private string? NewToken;
+    private string? ConfirmToken;
+    private bool ShowAtsToken = false;
+    private string AtsToken = "ats_a3f9k2x7q1w5e8r4t6y0u2i9o7p3s5d";
+
+    // API
+    private bool ApiEnabled = true;
+
+    private void OnSave()
+    {
+        TokenError = null;
+
+        // webToken 修改（真实）：旧-新-确认 → 校验旧 token 后重存哈希
+        if (!string.IsNullOrEmpty(NewToken))
+        {
+            if (NewToken != ConfirmToken)
+            {
+                TokenError = "两次输入的新 Token 不一致";
+                return;
+            }
+            if (!Auth.CanChange)
+            {
+                TokenError = "当前 webToken 由环境变量 AETERNI_WEB_TOKEN 控制，不可在界面修改";
+                return;
+            }
+            if (Auth.ChangeToken(OldToken, NewToken))
+            {
+                OldToken = NewToken = ConfirmToken = null;
+                _ = ShowToast("webToken 已更新（当前进程生效，重启后回退配置值）");
+            }
+            else
+            {
+                TokenError = "旧 Token 不正确，修改失败";
+            }
+            return;
+        }
+
+        _ = ShowToast("设置已保存（示例）");
+    }
+
+    // webToken 来源说明（环境变量优先级最高，不可在界面修改）
+    private string TokenSourceText => Auth.Source switch
+    {
+        Aeterni.Tunnel.Web.Auth.AeterniWebAuthService.EnvSource => "环境变量 AETERNI_WEB_TOKEN",
+        Aeterni.Tunnel.Web.Auth.AeterniWebAuthService.ConfigSource => "配置 Aeterni:WebToken",
+        _ => "首启随机生成",
+    };
+
+    // 退出登录：整页跳 /logout（静态 SSR 清除认证 Cookie）
+    private void OnLogout() => Nav.NavigateTo("/logout", forceLoad: true);
+
+    private void OnRegenerateAtsToken()
+    {
+        AtsToken = $"ats_{Guid.NewGuid():N}"[..32];
+        ShowAtsToken = true;
+        _ = ShowToast("ATS token 已重新生成（示例）");
+    }
+
+    private async Task ShowToast(string msg)
+    {
+        _toast = msg;
+        StateHasChanged();
+        await Task.Delay(2500);
+        if (_toast == msg)
+        {
+            _toast = null;
+            StateHasChanged();
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("aeterniSnake.init", "settings-snake");
+            // JS 旧缓存保护：fx.js 未加载新版本时静默降级（仅跳过入场动画），避免电路异常
+            if (await FxReady("initSettings"))
+            {
+                await JS.InvokeVoidAsync("aeterniFx.initSettings");
+            }
+        }
+    }
+
+    private async Task<bool> FxReady(string fn)
+    {
+        try
+        {
+            return await JS.InvokeAsync<bool>("eval", $"typeof aeterniFx !== 'undefined' && typeof aeterniFx.{fn} === 'function'");
+        }
+        catch (JSException)
+        {
+            return false;
+        }
+    }
+}

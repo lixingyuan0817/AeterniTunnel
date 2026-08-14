@@ -1,0 +1,25 @@
+# ── Build ──────────────────────────────────────────────
+bin/
+obj/
+TestResults/
+*.user
+
+# ── NuGet 本地缓存（沙盒/CI 测试用，不入库） ───────────
+.nuget-packages/
+.nuget-http-cache/
+
+# ── 密钥与配置：server.toml 含 ATS token / webToken 哈希，绝不入库 ──
+# 首次启动会自动生成（Program.cs BuildServerHost），ATC 在 agent.toml 里配同一 token
+**/server.toml
+
+# ── Node ────────────────────────────────────────────────
+node_modules/
+
+# ── 代理工具 ──────────────────────────────────────────
+.reasonix/
+
+# ── IDE / OS ──────────────────────────────────────────
+.vs/
+.idea/
+.vscode/
+.DS_Store

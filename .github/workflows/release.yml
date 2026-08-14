@@ -1,0 +1,127 @@
+name: Release
+
+# 触发：推送 v* 标签（如 git tag v1.0.0 && git push origin v1.0.0）→ 构建产物并发布到 Release
+# 也可手动触发（workflow_dispatch）仅构建验证，不上传
+# 产物策略：
+#   - Web 管理台：仅 linux-x64 self-contained 单文件（Blazor InteractiveServer 不支持 NativeAOT）
+#   - CLI 客户端（ATC）：三平台 NativeAOT（win-x64 / linux-x64 / osx-arm64）
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '版本号（手动构建时用于产物命名）'
+        required: false
+        default: 'manual'
+
+permissions:
+  contents: write
+
+env:
+  # 注意：不要用 VERSION 作为变量名——MSBuild 会把环境变量映射为 $(Version) 属性，
+  # 'v0.1.0'/'manual' 不是合法 NuGet 版本字符串会导致 restore 失败
+  RELEASE_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || github.event.inputs.version }}
+
+jobs:
+  web:
+    name: Web (linux-x64 单文件)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        # 固定 10.0.302：10.0.400 在 runner 上有 NuGet restore 回归（最小 csproj 也 MSB4181 失败）
+        with:
+          dotnet-version: '10.0.302'
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: Aeterni.Tunnel.Web/package-lock.json
+
+      - name: Install frontend deps
+        working-directory: Aeterni.Tunnel.Web
+        run: npm ci
+
+      - name: Test
+        run: dotnet test AeterniTunnel.slnx -c Release
+
+      - name: Publish Web (linux-x64, self-contained single-file)
+        run: |
+          dotnet publish Aeterni.Tunnel.Web/Aeterni.Tunnel.Web.csproj -c Release -r linux-x64 --self-contained true -p:PublishAot=false -p:PublishSingleFile=true -o publish/out
+
+      - name: Package (tar.gz)
+        shell: bash
+        run: |
+          mkdir -p dist
+          cd publish/out
+          mv Aeterni.Tunnel.Web aeterni-tunnel
+          tar czf ../../dist/aeterni-tunnel-${RELEASE_VERSION}-linux-x64.tar.gz ./*
+          cd ../..
+          ls -lh dist
+
+      - name: Upload to Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          fail_on_unmatched_files: true
+          generate_release_notes: true
+
+  cli:
+    name: CLI ${{ matrix.rid }} (AOT)
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            rid: linux-x64
+          - os: macos-14
+            rid: osx-arm64
+          - os: windows-latest
+            rid: win-x64
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.302'
+
+      - name: Publish CLI (NativeAOT)
+        run: |
+          dotnet publish Aeterni.Tunnel.Cli/Aeterni.Tunnel.Cli.csproj -c Release -r ${{ matrix.rid }} --self-contained true -p:PublishAot=true -o publish/out
+
+      - name: Package (tar.gz)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          mkdir -p dist
+          cd publish/out
+          mv Aeterni.Tunnel.Cli aeterni-client
+          tar czf ../../dist/aeterni-client-${RELEASE_VERSION}-${{ matrix.rid }}.tar.gz ./*
+          cd ../..
+          ls -lh dist
+
+      - name: Package (zip)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          mkdir dist
+          cd publish/out
+          mv Aeterni.Tunnel.Cli.exe aeterni-client.exe
+          Compress-Archive -Path ./* -DestinationPath ../../dist/aeterni-client-$env:RELEASE_VERSION-${{ matrix.rid }}.zip
+          Get-ChildItem ../../dist | Select-Object Name, Length
+
+      - name: Upload to Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          fail_on_unmatched_files: true
+          generate_release_notes: true

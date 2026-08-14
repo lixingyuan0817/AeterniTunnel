@@ -1,0 +1,297 @@
+@import "tailwindcss";
+
+/* 暗色模式：class 策略（html.dark 控制，支持手动切换/系统偏好） */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ── Tailwind v4 CSS-first 配置 ───────────────────────────
+   @theme 定义设计令牌（颜色/字体/断点），自动生成对应工具类
+   @source 声明要扫描的内容文件（Blazor 组件），生成用到的工具类
+────────────────────────────────────────────────────────── */
+@source "../../Components";
+@source "../../Pages";
+
+@theme {
+  /* 品牌色：Aeterni Tunnel（苹果绿） */
+  --color-ats: #34c759;          /* iOS green */
+  --color-ats-dark: #248a3d;
+  --color-ats-light: #6ee7b7;
+  --color-console: #0a0f1a;      /* 终端深底 */
+
+  --font-mono: "Cascadia Mono", "JetBrains Mono", Consolas, monospace;
+}
+
+/* 自定义层（可选） */
+@layer base {
+  body {
+    @apply bg-console text-slate-100 font-mono;
+  }
+}
+
+/* ── 示例设计：全屏背景动画（毛玻璃光源） ─────────────── */
+/* 亮色下光斑较淡，暗色下更浓（.dark 后代覆盖） */
+@layer utilities {
+  .orb {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(90px);
+    opacity: .55;
+    will-change: transform;
+  }
+  .orb-1 {
+    width: 480px; height: 480px;
+    left: -140px; top: -140px;
+    background: radial-gradient(circle, rgba(52, 199, 89, .14), transparent 62%);
+    animation: orb-float-1 16s ease-in-out infinite;
+  }
+  .dark .orb-1 {
+    background: radial-gradient(circle, rgba(76, 217, 100, .3), transparent 62%);
+  }
+  .orb-2 {
+    width: 440px; height: 440px;
+    right: -120px; top: 28%;
+    background: radial-gradient(circle, rgba(36, 138, 61, .12), transparent 62%);
+    animation: orb-float-2 20s ease-in-out infinite;
+  }
+  .dark .orb-2 {
+    background: radial-gradient(circle, rgba(52, 199, 89, .26), transparent 62%);
+  }
+  .orb-3 {
+    width: 380px; height: 380px;
+    left: 24%; bottom: -160px;
+    background: radial-gradient(circle, rgba(110, 231, 183, .1), transparent 62%);
+    animation: orb-float-3 18s ease-in-out infinite;
+  }
+  .dark .orb-3 {
+    background: radial-gradient(circle, rgba(76, 217, 100, .22), transparent 62%);
+  }
+}
+
+/* 像素点阵（背景装饰） */
+.pixel-dots {
+  background-image: radial-gradient(rgba(52, 199, 89, .06) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+.dark .pixel-dots {
+  background-image: radial-gradient(rgba(76, 217, 100, .08) 1px, transparent 1px);
+}
+
+/* 像素辉光（硬阴影堆叠，无模糊 → 像素边缘） */
+.pixel-glow {
+  text-shadow:
+    0 3px 0 rgba(52, 199, 89, .16),
+    0 -3px 0 rgba(52, 199, 89, .16),
+    3px 0 0 rgba(52, 199, 89, .16),
+    -3px 0 0 rgba(52, 199, 89, .16),
+    0 6px 0 rgba(36, 138, 61, .1),
+    6px 0 0 rgba(36, 138, 61, .1),
+    0 -6px 0 rgba(36, 138, 61, .1),
+    -6px 0 0 rgba(36, 138, 61, .1),
+    0 9px 0 rgba(52, 199, 89, .05),
+    -9px 0 0 rgba(52, 199, 89, .05);
+}
+
+/* 明暗过渡平滑 */
+html { transition: background-color .3s ease, color .3s ease; }
+html *, html *::before, html *::after { transition: background-color .25s ease, border-color .25s ease, color .2s ease; }
+
+/* Aeterni 设置页输入框统一样式 */
+@layer components {
+    .field {
+        @apply w-40 rounded-lg border border-slate-300/80 bg-white/70 px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-[#34c759]/60 focus:ring-2 focus:ring-[#34c759]/20 dark:border-white/10 dark:bg-white/5 dark:text-slate-100 dark:focus:border-[#4cd964]/50 dark:focus:ring-[#4cd964]/15;
+    }
+}
+
+/* 轻提示（示例操作反馈）：上浮淡入 */
+.ats-toast {
+  animation: toast-in .35s ease-out;
+}
+@keyframes toast-in {
+  0%   { opacity: 0; transform: translate(-50%, 12px) scale(.95); }
+  100% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+}
+
+/* 顶栏服务运行流光（一道绿光从左向右扫过，循环） */
+.header-scan {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 45%;
+  pointer-events: none;
+  background: linear-gradient(90deg,
+    transparent,
+    rgba(52, 199, 89, .10) 30%,
+    rgba(52, 199, 89, .22) 50%,
+    rgba(52, 199, 89, .10) 70%,
+    transparent);
+  transform: translateX(-130%);
+  animation: header-scan 4.5s linear infinite;
+}
+@keyframes header-scan {
+  0%   { transform: translateX(-130%); }
+  35%  { transform: translateX(330%); }
+  100% { transform: translateX(330%); }
+}
+
+/* 光斑漂移动画 */
+@keyframes orb-float-1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50%      { transform: translate(90px, 70px) scale(1.18); }
+}
+@keyframes orb-float-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50%      { transform: translate(-85px, 55px) scale(.88); }
+}
+@keyframes orb-float-3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50%      { transform: translate(65px, -70px) scale(1.12); }
+}
+
+/* Logo 玻璃文字扫光（渐变位移循环） */
+@keyframes text-shimmer {
+  0%   { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+.text-shimmer {
+  animation: text-shimmer 6s linear infinite;
+}
+
+/* ═══ Banner：Aniplex 片头动画（完全照原版 CodePen 复刻） ═══ */
+.ats-logo {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-style: italic;
+  font-weight: 900;
+  --box-size: calc(1.25em);
+  --perspective-dist: 2em;
+  --c1: #16a34a; --c2: #22c55e; --c3: #4ade80; --c4: #6ee7b7;
+  --c5: #4ade80; --c6: #22c55e; --c7: #16a34a;
+  animation: middle2left 1.6s linear 0s forwards;
+}
+/* 暗色模式：边框提亮（避免深绿在近黑背景上发黑） */
+.dark .ats-logo {
+  --c1: #4ade80; --c2: #6ee7b7; --c3: #86efac; --c4: #a7f3d0;
+  --c5: #86efac; --c6: #6ee7b7; --c7: #4ade80;
+}
+.letter-box {
+  position: relative;
+  margin: 2px;
+}
+.letter {
+  opacity: 0;
+  font-style: italic;
+  font-weight: 900;
+  width: var(--box-size);
+  height: var(--box-size);
+  line-height: var(--box-size);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #0f172a;               /* 亮色 */
+}
+.dark .letter {
+  color: #f1f5f9;               /* 暗色 */
+}
+.box {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: var(--box-size);
+  height: var(--box-size);
+  background: transparent;
+}
+
+/* 静态方位（原版 #one~#seven） */
+.lb1 .box { transform: perspective(var(--perspective-dist)) scale(1) rotateY(0); }
+.lb2 .box { transform: perspective(var(--perspective-dist)) scale(1.08) rotateY(45deg); }
+.lb3 .box { transform: perspective(var(--perspective-dist)) scale(1.16) rotateY(50deg); }
+.lb4 .box { transform: perspective(var(--perspective-dist)) scale(1.25) rotateY(80deg); }
+.lb5 .box { transform: perspective(var(--perspective-dist)) scale(1.16) rotateY(-50deg); }
+.lb6 .box { transform: perspective(var(--perspective-dist)) scale(1.08) rotateY(-45deg); }
+.lb7 .box { transform: perspective(var(--perspective-dist)) scale(1) rotateY(0); }
+
+/* 方块滚动动画（轻微提速：2s→1.6s，stagger 0.16→0.13） */
+.animate-7 { animation: box-7 1.6s linear 0s forwards; }
+.animate-6 { animation: box-6 1.6s linear 0.13s forwards; }
+.animate-5 { animation: box-5 1.6s linear 0.26s forwards; }
+.animate-4 { animation: box-4 1.6s linear 0.38s forwards; }
+.animate-3 { animation: box-3 1.6s linear 0.51s forwards; }
+.animate-2 { animation: box-2 1.6s linear 0.64s forwards; }
+.animate-1 { animation: box-1 1.6s linear 0.77s forwards; }
+
+/* 字母翻转（同步轻微提速） */
+.animate-L1 { animation: rL 0.8s linear 0s forwards; animation-iteration-count: 3; }
+.animate-L2 { animation: rL 0.74s linear 0.17s forwards; animation-iteration-count: 3; }
+.animate-L3 { animation: rL 0.69s linear 0.34s forwards; animation-iteration-count: 3; }
+.animate-L4 { animation: rL 0.63s linear 0.5s forwards; animation-iteration-count: 2; }
+.animate-L5 { animation: rL 0.58s linear 0.67s forwards; animation-iteration-count: 2; }
+.animate-L6 { animation: rL 0.52s linear 0.84s forwards; animation-iteration-count: 2; }
+.animate-L7 { animation: rL 0.46s linear 1.0s forwards; animation-iteration-count: 2; }
+
+@keyframes middle2left {
+  0%   { transform: translateX(calc(calc(var(--box-size) + 4px) * 4)); }
+  100% { transform: translateX(0); }
+}
+@keyframes rL {
+  0%   { opacity: 1; transform: rotateY(0deg); }
+  50%  { opacity: 1; transform: rotateY(180deg); }
+  100% { opacity: 1; transform: rotateY(360deg); }
+}
+
+@keyframes box-1 {
+  0%   { transform: perspective(var(--perspective-dist)) scale(1) rotateY(45deg); border: 3px solid var(--c1); }
+  25%  { transform: perspective(var(--perspective-dist)) rotateY(90deg); border: 3px solid var(--c1); }
+  55%  { transform: perspective(var(--perspective-dist)) rotateY(180deg); border: 3px solid var(--c1); }
+  100% { transform: perspective(var(--perspective-dist)) rotateY(360deg); border: 3px solid transparent; }
+}
+@keyframes box-2 {
+  0%   { transform: translateX(calc(calc(var(--box-size) + 2px) * -1)) perspective(var(--perspective-dist)) scale(1) rotateY(45deg); border: 3px solid var(--c1); }
+  50%  { transform: translateX(calc(calc(var(--box-size) + 4px))) perspective(var(--perspective-dist)) scale(1.08) rotateY(-70deg); border: 3px solid var(--c1); }
+  100% { transform: perspective(var(--perspective-dist)) scale(1.08) rotateY(45deg); border: 3px solid transparent; }
+}
+@keyframes box-3 {
+  0%   { transform: translateX(calc(calc(var(--box-size) + 4px) * -2)) perspective(var(--perspective-dist)) scale(1) rotateY(45deg); border: 3px solid var(--c1); }
+  50%  { transform: translateX(calc(calc(var(--box-size) + 4px) * -1)) perspective(var(--perspective-dist)) scale(1.08) rotateY(-50deg); border: 3px solid var(--c1); }
+  75%  { transform: perspective(var(--perspective-dist)) scale(1.16) rotateY(90deg); border: 3px solid var(--c1); }
+  100% { transform: perspective(var(--perspective-dist)) scale(1.16) rotateY(50deg); border: 3px solid transparent; }
+}
+@keyframes box-4 {
+  0%   { transform: translateX(calc(calc(var(--box-size) + 4px) * -3)) perspective(var(--perspective-dist)) scale(1) rotateY(45deg); border: 3px solid var(--c1); }
+  33.33%  { transform: translateX(calc(calc(var(--box-size) + 4px) * -2)) perspective(var(--perspective-dist)) scale(1.08) rotateY(-45deg); border: 3px solid var(--c1); }
+  66.66%  { transform: translateX(calc(calc(var(--box-size) + 4px) * -1)) perspective(var(--perspective-dist)) scale(1.08) rotateY(50deg); border: 3px solid var(--c1); }
+  100% { transform: perspective(var(--perspective-dist)) scale(1.25) rotateY(-80deg); border: 3px solid transparent; }
+}
+@keyframes box-5 {
+  0%   { transform: translateX(calc(calc(var(--box-size) + 4px) * -4)) perspective(var(--perspective-dist)) scale(1) rotateY(45deg); border: 3px solid var(--c1); }
+  25%  { transform: translateX(calc(calc(var(--box-size) + 4px) * -3)) perspective(var(--perspective-dist)) scale(1.08) rotateY(45deg); border: 3px solid var(--c1); }
+  50%  { transform: translateX(calc(calc(var(--box-size) + 4px) * -2)) perspective(var(--perspective-dist)) scale(1.16) rotateY(-50deg); border: 3px solid var(--c1); }
+  75%  { transform: translateX(calc(calc(var(--box-size) + 4px) * -1)) perspective(var(--perspective-dist)) scale(1.25) rotateY(-80deg); border: 3px solid var(--c1); }
+  85%  { transform: perspective(var(--perspective-dist)) scale(1.25) rotateY(-20deg); border: 3px solid var(--c1); }
+  100% { transform: perspective(var(--perspective-dist)) scale(1.16) rotateY(-50deg); border: 3px solid transparent; }
+}
+@keyframes box-6 {
+  0%   { transform: translateX(calc(calc(var(--box-size) + 4px) * -5)) perspective(var(--perspective-dist)) scale(1) rotateY(45deg); border: 3px solid var(--c1); }
+  20%  { transform: translateX(calc(calc(var(--box-size) + 4px) * -4)) perspective(var(--perspective-dist)) scale(1.08) rotateY(45deg); border: 3px solid var(--c1); }
+  40%  { transform: translateX(calc(calc(var(--box-size) + 4px) * -3)) perspective(var(--perspective-dist)) scale(1.16) rotateY(-50deg); border: 3px solid var(--c1); }
+  60%  { transform: translateX(calc(calc(var(--box-size) + 4px) * -2)) perspective(var(--perspective-dist)) scale(1.25) rotateY(-80deg); border: 3px solid var(--c1); }
+  80%  { transform: translateX(calc(calc(var(--box-size) + 4px) * -1)) perspective(var(--perspective-dist)) scale(1.16) rotateY(50deg); border: 3px solid var(--c1); }
+  100% { transform: perspective(var(--perspective-dist)) scale(1.08) rotateY(-45deg); border: 3px solid transparent; }
+}
+@keyframes box-7 {
+  0%   { transform: translateX(calc(calc(var(--box-size) + 4px) * -6)) perspective(var(--perspective-dist)) scale(1) rotateY(45deg); border: 3px solid var(--c7); }
+  16.66% { transform: translateX(calc(calc(var(--box-size) + 4px) * -5)) perspective(var(--perspective-dist)) scale(1.08) rotateY(45deg); border: 3px solid var(--c7); }
+  33.33% { transform: translateX(calc(calc(var(--box-size) + 4px) * -4)) perspective(var(--perspective-dist)) scale(1.16) rotateY(-50deg); border: 3px solid var(--c7); }
+  50%  { transform: translateX(calc(calc(var(--box-size) + 4px) * -3)) perspective(var(--perspective-dist)) scale(1.25) rotateY(-80deg); border: 3px solid var(--c7); }
+  66.66% { transform: translateX(calc(calc(var(--box-size) + 4px) * -2)) perspective(var(--perspective-dist)) scale(1.16) rotateY(50deg); border: 3px solid var(--c7); }
+  83.33% { transform: translateX(calc(calc(var(--box-size) + 4px) * -1)) perspective(var(--perspective-dist)) scale(1.08) rotateY(-45deg); border: 3px solid var(--c7); }
+  100% { transform: translateX(0); border: 3px solid transparent; }
+}
+
+/* TUNNEL 小字（GSAP 逐个上浮淡入；opacity 由 GSAP 控制，避免初始隐藏不出现） */
+.ats-sub-letter {
+  font-style: italic;
+  color: #475569;            /* 亮色：次要文字 */
+}
+.dark .ats-sub-letter {
+  color: #94a3b8;            /* 暗色：柔和灰 */
+}

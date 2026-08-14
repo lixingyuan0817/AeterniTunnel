@@ -1,0 +1,19 @@
+@* 设置字段行：左侧标签 + 提示，右侧控件（右列固定宽度，全页对齐） *@
+<div class="grid grid-cols-1 items-center gap-2 sm:grid-cols-[minmax(0,1fr)_16rem]">
+    <div class="min-w-0">
+        <p class="text-xs text-slate-500 dark:text-slate-400">@Label</p>
+        @if (!string.IsNullOrEmpty(Hint))
+        {
+            <p class="mt-0.5 text-[10px] text-slate-400 dark:text-slate-500">@Hint</p>
+        }
+    </div>
+    <div class="flex min-w-0 items-center justify-end gap-2 [&_.field]:w-full">@ChildContent</div>
+</div>
+
+@code {
+    [Parameter] public string Label { get; set; } = "";
+
+    [Parameter] public string? Hint { get; set; }
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

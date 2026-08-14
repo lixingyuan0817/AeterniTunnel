@@ -1,0 +1,429 @@
+@page "/examples/clients"
+@layout ExamplesLayout
+@using Microsoft.AspNetCore.Authorization
+@using Aeterni.Tunnel.Engine.Server
+@using Aeterni.Tunnel.Web.Status
+@attribute [Authorize]
+@inject IJSRuntime JS
+@inject AeterniServerStatusService Status
+
+@implements IDisposable
+
+<PageTitle>客户端 · Aeterni Tunnel</PageTitle>
+
+<div class="relative h-screen overflow-hidden bg-[#eef1f8] text-slate-800 transition-colors duration-300 dark:bg-[#05070f] dark:text-slate-100">
+
+    <!-- ═══ 背景层（与首页同源：光斑 + 网格 + 贪吃蛇 + 点阵） ═══ -->
+    <div class="pointer-events-none fixed inset-0">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+        <div class="absolute inset-0 bg-[linear-gradient(rgba(15,23,42,.04)_1px,transparent_1px),linear-gradient(90deg,rgba(15,23,42,.04)_1px,transparent_1px)] bg-[size:28px_28px] dark:bg-[linear-gradient(rgba(255,255,255,.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.03)_1px,transparent_1px)]"></div>
+        <canvas id="clients-snake" class="absolute inset-0 h-full w-full"></canvas>
+        <div class="pixel-dots absolute inset-0"></div>
+    </div>
+
+    <div class="relative z-10 flex h-full flex-col">
+
+        <!-- ═══ 共享顶栏 ═══ -->
+        <ExampleHeader Scan="true" />
+
+        <!-- ═══ 主内容：统计条 + 左侧树 / 右侧详情 ═══ -->
+        <main class="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-4 overflow-hidden px-6 py-4">
+
+            <!-- 标题 -->
+            <div class="flex shrink-0 items-center justify-between">
+                <div>
+                    <h1 class="text-lg font-bold text-slate-800 dark:text-slate-100">客户端</h1>
+                    <p class="text-[11px] text-slate-500 dark:text-slate-400">主机 → 分组 → 隧道 · 真实数据（每 3 秒刷新）· 接入 token 见 agent.toml</p>
+                </div>
+            </div>
+
+            <!-- 统计卡（真实统计） -->
+            <section class="grid shrink-0 grid-cols-2 gap-4 lg:grid-cols-4">
+                <div class="stat-card rounded-2xl border border-slate-200/60 bg-white/50 p-4 backdrop-blur-md transition hover:border-[#34c759]/40 dark:border-white/10 dark:bg-white/[.05]">
+                    <p class="text-[11px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">在线客户端</p>
+                    <p class="mt-0.5 text-2xl font-bold tabular-nums text-[#16a34a] dark:text-[#4cd964]">@_snapshot.Clients.Count(c => c.Online)</p>
+                </div>
+                <div class="stat-card rounded-2xl border border-slate-200/60 bg-white/50 p-4 backdrop-blur-md transition hover:border-[#34c759]/40 dark:border-white/10 dark:bg-white/[.05]">
+                    <p class="text-[11px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">隧道总数</p>
+                    <p class="mt-0.5 text-2xl font-bold tabular-nums text-slate-800 dark:text-white">@_snapshot.Clients.Sum(c => c.Proxies.Count)</p>
+                </div>
+                <div class="stat-card rounded-2xl border border-slate-200/60 bg-white/50 p-4 backdrop-blur-md transition hover:border-[#34c759]/40 dark:border-white/10 dark:bg-white/[.05]">
+                    <p class="text-[11px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">分组</p>
+                    <p class="mt-0.5 text-2xl font-bold tabular-nums text-slate-800 dark:text-white">@_snapshot.Clients.SelectMany(c => c.Proxies).Select(p => GroupName(p.Group)).Distinct().Count()</p>
+                </div>
+                <div class="stat-card rounded-2xl border border-slate-200/60 bg-white/50 p-4 backdrop-blur-md transition hover:border-[#34c759]/40 dark:border-white/10 dark:bg-white/[.05]">
+                    <p class="text-[11px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">已断开</p>
+                    <p class="mt-0.5 text-2xl font-bold tabular-nums text-amber-500">@_snapshot.Clients.Count(c => !c.Online)</p>
+                </div>
+            </section>
+
+            <!-- 主从布局：左侧树 / 右侧详情 -->
+            <div class="flex min-h-0 flex-1 gap-4 pb-4">
+
+                <!-- ═══ 左侧：树（主机 → 分组 → 隧道） ═══ -->
+                <aside class="flex w-72 shrink-0 flex-col rounded-2xl border border-slate-200/60 bg-white/50 p-3 backdrop-blur-md dark:border-white/10 dark:bg-white/[.05]">
+                    <p class="mb-1.5 flex items-center gap-1.5 px-2 text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-3 w-3"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
+                        隧道树
+                    </p>
+                    <div class="min-h-0 flex-1 space-y-0.5 overflow-y-auto">
+                        @if (_snapshot.Clients.Count == 0)
+                        {
+                            <div class="flex h-full flex-col items-center justify-center gap-2 px-2 text-center text-[11px] text-slate-400 dark:text-slate-500">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-6 w-6"><path stroke-linecap="round" stroke-linejoin="round" d="M13 2 4.7 13.3c-.4.6.1 1.4.8 1.4H11l-1.6 7.1c-.3 1.3 1.4 2 2.1.9L18.4 11c.4-.6-.1-1.4-.8-1.4H13L14.6 2.5c.3-1.3-1.4-2-2.1-.9Z" /></svg>
+                                等待 ATC 接入<br />（agent.toml 配置 server 地址与 token）
+                            </div>
+                        }
+                        @foreach (var c in _snapshot.Clients)
+                        {
+                            <div>
+                                <!-- 第一层：主机 -->
+                                <button @onclick="() => ToggleClient(c.ClientId)"
+                                        class="tree-item flex w-full items-center gap-1.5 rounded-lg px-2 py-1.5 text-left text-xs transition hover:bg-white/70 dark:hover:bg-white/10 @(IsSelectedClient(c) ? "bg-[#34c759]/15 font-medium text-[#16a34a] dark:text-[#4cd964]" : "text-slate-700 dark:text-slate-200")">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-3 w-3 shrink-0 transition-transform @(IsExpanded(c) ? "rotate-90" : "")"><path stroke-linecap="round" stroke-linejoin="round" d="m9 6 6 6-6 6" /></svg>
+                                    <span class="h-1.5 w-1.5 shrink-0 rounded-full @(c.Online ? "bg-[#34c759] shadow-[0_0_5px_rgba(52,199,89,.8)]" : "bg-slate-400 dark:bg-slate-600")"></span>
+                                    <span class="min-w-0 flex-1">
+                                        <span class="block truncate font-medium">@(string.IsNullOrEmpty(c.Hostname) ? c.ClientId : c.Hostname)</span>
+                                        @if (c.Hostname.Length > 0 && c.Hostname != c.ClientId)
+                                        {
+                                            <span class="block truncate font-mono text-[9px] text-slate-400 dark:text-slate-500">@c.ClientId</span>
+                                        }
+                                    </span>
+                                    <span class="ml-auto flex shrink-0 items-center gap-1 text-[9px] @(c.Online ? "text-[#16a34a] dark:text-[#4cd964]" : "text-slate-400 dark:text-slate-500")">
+                                        @(c.Online ? "在线" : "已断开")
+                                    </span>
+                                </button>
+
+                                <!-- 第二层 + 第三层：分组 → 隧道 -->
+                                @if (IsExpanded(c))
+                                {
+                                    if (c.Online)
+                                    {
+                                        foreach (var g in GroupsOf(c))
+                                        {
+                                            <div>
+                                                <button @onclick="() => SelectGroup(c.ClientId, g.Key)"
+                                                        class="tree-item flex w-full items-center gap-1.5 rounded-lg py-1 pl-7 pr-2 text-left text-[11px] transition hover:bg-white/70 dark:hover:bg-white/10 @(IsSelectedGroup(c, g.Key) ? "bg-[#34c759]/15 font-medium text-[#16a34a] dark:text-[#4cd964]" : "text-slate-500 dark:text-slate-400")">
+                                                    <span class="h-1 w-1 shrink-0 rounded-full bg-[#34c759]"></span>
+                                                    <span class="truncate">@g.Key</span>
+                                                    <span class="ml-auto shrink-0 tabular-nums text-[9px] text-slate-300 dark:text-slate-600">@g.Count()</span>
+                                                </button>
+                                                @foreach (var p in g)
+                                                {
+                                                    <button @onclick="() => SelectTunnel(c.ClientId, g.Key, p.ProxyId)"
+                                                            class="tree-item flex w-full items-center gap-1.5 rounded-lg py-1 pl-12 pr-2 text-left text-[11px] transition hover:bg-white/70 dark:hover:bg-white/10 @(IsSelectedTunnel(c, g.Key, p) ? "bg-[#34c759]/15 font-medium text-[#16a34a] dark:text-[#4cd964]" : "text-slate-600 dark:text-slate-300")">
+                                                        <span class="shrink-0 font-mono text-[9px] uppercase @TypeColor(p.Type)">@p.Type</span>
+                                                        <span class="truncate">@p.ProxyId</span>
+                                                    </button>
+                                                }
+                                            </div>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <p class="py-1 pl-7 text-[10px] text-slate-400 dark:text-slate-500">已断开 · 隧道已随连接下线</p>
+                                    }
+                                }
+                            </div>
+                        }
+                    </div>
+                </aside>
+
+                <!-- ═══ 右侧：选中项详情 + 操作 ═══ -->
+                <section class="detail-panel min-w-0 flex-1 overflow-y-auto rounded-2xl border border-slate-200/60 bg-white/50 p-5 backdrop-blur-md dark:border-white/10 dark:bg-white/[.05]">
+                    @if (_sel == null)
+                    {
+                        <div class="flex h-full items-center justify-center text-sm text-slate-400 dark:text-slate-500">从左侧选择一个主机 / 分组 / 隧道</div>
+                    }
+                    else if (_sel.Kind == SelKind.Client && SelClient is { } sc)
+                    {
+                        <div class="flex h-full flex-col">
+                            <!-- 头部 -->
+                            <div class="flex items-center justify-between gap-2">
+                                <div class="min-w-0">
+                                    <p class="truncate font-mono text-base font-semibold text-slate-800 dark:text-slate-100">@sc.ClientId</p>
+                                    <p class="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">@(string.IsNullOrEmpty(sc.Hostname) ? "主机名未知" : sc.Hostname)</p>
+                                </div>
+                                <span class="shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-medium @(sc.Online ? "border-[#34c759]/30 bg-[#34c759]/10 text-[#16a34a] dark:text-[#4cd964]" : "border-slate-300/70 bg-slate-100/70 text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-400")">
+                                    @(sc.Online ? "在线" : "已断开")
+                                </span>
+                            </div>
+
+                            <!-- 信息 -->
+                            <div class="mt-4 grid grid-cols-2 gap-x-6 gap-y-2.5 text-[11px]">
+                                <div class="flex items-center justify-between gap-2"><span class="text-slate-400 dark:text-slate-500">隧道数</span><span class="tabular-nums text-slate-600 dark:text-slate-300">@sc.Proxies.Count 条</span></div>
+                                <div class="flex items-center justify-between gap-2"><span class="text-slate-400 dark:text-slate-500">分组</span><span class="tabular-nums text-slate-600 dark:text-slate-300">@sc.Proxies.Select(p => GroupName(p.Group)).Distinct().Count() 个</span></div>
+                            </div>
+
+                            @if (sc.Online)
+                            {
+                                <!-- 分组概览 chips -->
+                                <div class="mt-4">
+                                    <p class="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">分组</p>
+                                    <div class="mt-2 flex flex-wrap gap-2">
+                                        @foreach (var g in GroupsOf(sc))
+                                        {
+                                            <span class="rounded-lg border border-slate-200/70 bg-white/60 px-2.5 py-1 text-[11px] text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
+                                                @g.Key <span class="tabular-nums text-slate-400 dark:text-slate-500">· @g.Count() 条</span>
+                                            </span>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="mt-4 rounded-xl border border-dashed border-slate-300/70 bg-slate-100/50 px-3 py-2.5 text-[11px] text-slate-400 dark:border-white/10 dark:bg-white/[.03] dark:text-slate-500">
+                                    连接已断开，隧道已随连接下线
+                                </div>
+                            }
+
+                            <!-- 操作 -->
+                            <div class="mt-auto flex items-center gap-2 border-t border-slate-200/50 pt-4 dark:border-white/10">
+                                <button @onclick="() => OnDetail(sc.ClientId)"
+                                        class="rounded-lg border border-slate-200/70 bg-white/60 px-4 py-1.5 text-[11px] font-medium text-slate-600 transition hover:bg-white/90 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10">查看详情</button>
+                            </div>
+                        </div>
+                    }
+                    else if (_sel.Kind == SelKind.Group && SelClient is { } gc && SelGroupProxies is { } gp)
+                    {
+                        <div class="flex h-full flex-col">
+                            <!-- 头部 -->
+                            <div class="flex items-center justify-between gap-2">
+                                <div class="min-w-0">
+                                    <p class="truncate text-base font-semibold text-slate-800 dark:text-slate-100">@_sel.GroupKey</p>
+                                    <p class="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">分组 · 属于 @(string.IsNullOrEmpty(gc.Hostname) ? gc.ClientId : gc.Hostname)</p>
+                                </div>
+                                <span class="shrink-0 rounded-full border border-[#34c759]/30 bg-[#34c759]/10 px-2 py-0.5 text-[10px] font-medium text-[#16a34a] dark:text-[#4cd964]">@gp.Count() 条隧道</span>
+                            </div>
+
+                            <!-- 组内隧道列表 -->
+                            <div class="mt-4 space-y-1.5">
+                                @foreach (var p in gp)
+                                {
+                                    <div class="flex items-center gap-2 rounded-xl border border-slate-200/50 bg-white/40 px-3 py-2 backdrop-blur-md dark:border-white/10 dark:bg-white/[.04]">
+                                        <span class="h-1.5 w-1.5 shrink-0 rounded-full bg-[#34c759] shadow-[0_0_5px_rgba(52,199,89,.7)]"></span>
+                                        <span class="min-w-0 flex-1 truncate text-xs font-medium text-slate-700 dark:text-slate-200">@p.ProxyId</span>
+                                        <span class="shrink-0 rounded border px-1 py-0.5 text-[9px] font-semibold @TypeBadge(p.Type)">@p.Type.ToUpperInvariant()</span>
+                                        <span class="hidden truncate font-mono text-[10px] text-slate-400 dark:text-slate-500 md:block">@p.RemoteAddr</span>
+                                        <span class="shrink-0 text-[10px] tabular-nums text-[#16a34a] dark:text-[#4cd964]">@RateText(gc.ClientId, p.ProxyId)</span>
+                                    </div>
+                                }
+                            </div>
+
+                            <!-- 操作 -->
+                            <div class="mt-auto flex items-center gap-2 border-t border-slate-200/50 pt-4 dark:border-white/10">
+                                <button @onclick="() => OnCreateTunnel(gc.ClientId, _sel.GroupKey)"
+                                        class="rounded-lg bg-[#16a34a] px-4 py-1.5 text-[11px] font-semibold text-white transition hover:bg-[#15803d] active:scale-[.98] dark:bg-[#34c759] dark:hover:bg-[#4cd964]">＋ 新建隧道</button>
+                            </div>
+                        </div>
+                    }
+                    else if (_sel.Kind == SelKind.Tunnel && SelClient is { } tc && SelTunnel is { } p)
+                    {
+                        <div class="flex h-full flex-col">
+                            <!-- 头部 -->
+                            <div class="flex items-center justify-between gap-2">
+                                <div class="flex min-w-0 items-center gap-2">
+                                    <p class="truncate text-base font-semibold text-slate-800 dark:text-slate-100">@p.ProxyId</p>
+                                    <span class="shrink-0 rounded-md border px-1.5 py-0.5 text-[10px] font-semibold @TypeBadge(p.Type)">@p.Type.ToUpperInvariant()</span>
+                                </div>
+                                <span class="shrink-0 flex items-center gap-1.5 rounded-full border border-[#34c759]/30 bg-[#34c759]/10 px-2 py-0.5 text-[10px] font-medium text-[#16a34a] dark:text-[#4cd964]">
+                                    <span class="h-1.5 w-1.5 rounded-full bg-[#34c759] shadow-[0_0_5px_rgba(52,199,89,.7)]"></span>
+                                    在线
+                                </span>
+                            </div>
+
+                            <!-- 信息 -->
+                            <div class="mt-4 grid grid-cols-2 gap-x-6 gap-y-2.5 text-[11px]">
+                                <div class="flex items-center justify-between gap-2"><span class="text-slate-400 dark:text-slate-500">分组</span><span class="text-slate-600 dark:text-slate-300">@GroupName(p.Group)</span></div>
+                                <div class="flex items-center justify-between gap-2"><span class="text-slate-400 dark:text-slate-500">所属主机</span><span class="truncate text-slate-600 dark:text-slate-300">@(string.IsNullOrEmpty(tc.Hostname) ? tc.ClientId : tc.Hostname)</span></div>
+                                <div class="flex items-center justify-between gap-2"><span class="text-slate-400 dark:text-slate-500">远端地址</span><span class="truncate font-mono text-slate-600 dark:text-slate-300">@p.RemoteAddr</span></div>
+                                <div class="flex items-center justify-between gap-2"><span class="text-slate-400 dark:text-slate-500">速率</span><span class="text-[#16a34a] dark:text-[#4cd964]">@RateText(tc.ClientId, p.ProxyId)</span></div>
+                                <div class="flex items-center justify-between gap-2"><span class="text-slate-400 dark:text-slate-500">▲ 上行累计</span><span class="tabular-nums text-slate-600 dark:text-slate-300">@BytesText(p.UpBytes)</span></div>
+                                <div class="flex items-center justify-between gap-2"><span class="text-slate-400 dark:text-slate-500">▼ 下行累计</span><span class="tabular-nums text-slate-600 dark:text-slate-300">@BytesText(p.DownBytes)</span></div>
+                            </div>
+
+                            <!-- 操作：删除 = 服务端下发指令 → 客户端本地删除并回注销（真实指令闭环） -->
+                            <div class="mt-auto flex items-center gap-2 border-t border-slate-200/50 pt-4 dark:border-white/10">
+                                <button @onclick="() => OnDeleteTunnel(tc.ClientId, p.ProxyId)"
+                                        class="rounded-lg border border-rose-400/30 bg-rose-400/10 px-4 py-1.5 text-[11px] font-medium text-rose-600 transition hover:bg-rose-400/20 dark:text-rose-400">删除隧道</button>
+                                <button @onclick="() => OnEditTunnel(p.ProxyId)"
+                                        class="rounded-lg border border-slate-200/70 bg-white/60 px-4 py-1.5 text-[11px] font-medium text-slate-600 transition hover:bg-white/90 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10">编辑</button>
+                            </div>
+                        </div>
+                    }
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- 轻提示（示例操作反馈） -->
+    @if (_toast != null)
+    {
+        <div class="ats-toast fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-xl border border-[#34c759]/30 bg-white/80 px-4 py-2 text-xs font-medium text-[#16a34a] shadow-[0_10px_40px_rgba(15,23,42,.15)] backdrop-blur-xl dark:border-[#4cd964]/30 dark:bg-black/60 dark:text-[#4cd964]">
+            @_toast
+        </div>
+    }
+</div>
+
+@code {
+    private enum SelKind { Client, Group, Tunnel }
+
+    // 选中项用标识而非引用：快照轮询刷新后引用会变，实时按标识解析最新状态
+    private sealed record Selection(SelKind Kind, string ClientId, string? GroupKey, string? TunnelName);
+
+    private StatusResponse _snapshot = new();
+    private IReadOnlyDictionary<string, (float Up, float Down)> _rates = new Dictionary<string, (float, float)>();
+    private string? _toast;
+    private Selection? _sel;
+    private HashSet<string> _expanded = new();
+    private Timer? _timer;
+
+    // ── 轮询真实快照（3s；含速率差分） ──
+    protected override void OnInitialized()
+    {
+        Refresh();
+        _timer = new Timer(_ =>
+        {
+            try { InvokeAsync(Refresh); }
+            catch { /* 电路可能已断开 */ }
+        }, null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(3));
+    }
+
+    private void Refresh()
+    {
+        (_snapshot, _rates) = Status.GetSnapshotWithRates();
+        StateHasChanged();
+    }
+
+    public void Dispose() => _timer?.Dispose();
+
+    // ── 树选中状态解析（按标识实时解析，跟随最新快照） ──
+    private StatusClient? SelClient => _sel == null ? null : _snapshot.Clients.FirstOrDefault(c => c.ClientId == _sel.ClientId);
+
+    private StatusProxy? SelTunnel => SelClient?.Proxies.FirstOrDefault(p => p.ProxyId == _sel?.TunnelName);
+
+    private IGrouping<string, StatusProxy>? SelGroupProxies =>
+        _sel is { Kind: SelKind.Group, GroupKey: not null } s && SelClient is { } sc
+            ? GroupsOf(sc).FirstOrDefault(g => g.Key == s.GroupKey)
+            : null;
+
+    private static string GroupName(string group) => string.IsNullOrWhiteSpace(group) ? "default" : group;
+
+    private static IEnumerable<IGrouping<string, StatusProxy>> GroupsOf(StatusClient c) =>
+        c.Proxies.GroupBy(p => GroupName(p.Group));
+
+    private bool IsExpanded(StatusClient c) => _expanded.Contains(c.ClientId);
+
+    // 点击主机 = 选中 + 展开/折叠
+    private void ToggleClient(string clientId)
+    {
+        _sel = new Selection(SelKind.Client, clientId, null, null);
+        if (!_expanded.Add(clientId)) _expanded.Remove(clientId);
+    }
+
+    private void SelectGroup(string clientId, string groupKey) => _sel = new Selection(SelKind.Group, clientId, groupKey, null);
+
+    private void SelectTunnel(string clientId, string groupKey, string tunnelName) => _sel = new Selection(SelKind.Tunnel, clientId, groupKey, tunnelName);
+
+    private bool IsSelectedClient(StatusClient c) => _sel is { Kind: SelKind.Client } && _sel.ClientId == c.ClientId;
+
+    private bool IsSelectedGroup(StatusClient c, string g) => _sel is { Kind: SelKind.Group } && _sel.ClientId == c.ClientId && _sel.GroupKey == g;
+
+    private bool IsSelectedTunnel(StatusClient c, string g, StatusProxy p) => _sel is { Kind: SelKind.Tunnel } && _sel.ClientId == c.ClientId && _sel.GroupKey == g && _sel.TunnelName == p.ProxyId;
+
+    // ── 操作 ──
+    private void OnDetail(string clientId) => _ = ShowToast($"查看 {clientId} 详情（示例）");
+
+    private void OnCreateTunnel(string clientId, string? groupKey) => _ = ShowToast($"在分组 {groupKey} 新建隧道（示例：AddProxyCommand 未实现）");
+
+    private void OnEditTunnel(string tunnelName) => _ = ShowToast($"编辑隧道 {tunnelName}（示例）");
+
+    // 删除隧道（真实）：服务端下发 RemoveProxyCommand → 客户端本地删除并回注销 → 快照刷新后消失
+    private async Task OnDeleteTunnel(string clientId, string tunnelName)
+    {
+        var listener = Status.Listener;
+        if (listener is null)
+        {
+            _ = ShowToast("ATS 未运行");
+            return;
+        }
+        var ok = await listener.RemoveProxyAsync(clientId, tunnelName);
+        _ = ShowToast(ok ? $"已下发删除指令：{tunnelName}" : $"客户端 {clientId} 不在线，无法下发");
+    }
+
+    // ── 格式化 ──
+    private static string BytesText(long bytes) => bytes switch
+    {
+        >= 1024 * 1024 * 1024 => $"{bytes / 1024f / 1024 / 1024:F2} GB",
+        >= 1024 * 1024 => $"{bytes / 1024f / 1024:F2} MB",
+        >= 1024 => $"{bytes / 1024f:F1} KB",
+        _ => $"{bytes} B",
+    };
+
+    private string RateText(string clientId, string proxyId)
+    {
+        var key = $"{clientId}|{proxyId}";
+        if (!_rates.TryGetValue(key, out var r))
+            return "—";
+        var up = r.Up >= 1024 ? $"{r.Up / 1024f:F1} KB/s" : $"{r.Up:F0} B/s";
+        var down = r.Down >= 1024 ? $"{r.Down / 1024f:F1} KB/s" : $"{r.Down:F0} B/s";
+        return $"↑{up} ↓{down}";
+    }
+
+    private static string TypeColor(string type) => type switch
+    {
+        "tcp" => "text-cyan-500",
+        "udp" => "text-violet-500",
+        "http" => "text-sky-500",
+        "https" => "text-amber-500",
+        _ => "text-slate-400",
+    };
+
+    private static string TypeBadge(string type) => type switch
+    {
+        "tcp" => "border-cyan-400/30 bg-cyan-400/10 text-cyan-600 dark:text-cyan-400",
+        "udp" => "border-violet-400/30 bg-violet-400/10 text-violet-600 dark:text-violet-400",
+        "http" => "border-sky-400/30 bg-sky-400/10 text-sky-600 dark:text-sky-400",
+        "https" => "border-amber-400/30 bg-amber-400/10 text-amber-600 dark:text-amber-400",
+        _ => "border-slate-300/70 bg-slate-100/70 text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-400",
+    };
+
+    private async Task ShowToast(string msg)
+    {
+        _toast = msg;
+        StateHasChanged();
+        await Task.Delay(2500);
+        if (_toast == msg)
+        {
+            _toast = null;
+            StateHasChanged();
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("aeterniSnake.init", "clients-snake");
+            // JS 旧缓存保护：fx.js 未加载新版本时静默降级（仅跳过入场动画），避免电路异常
+            if (await FxReady("initClients"))
+            {
+                await JS.InvokeVoidAsync("aeterniFx.initClients");
+            }
+        }
+    }
+
+    private async Task<bool> FxReady(string fn)
+    {
+        try
+        {
+            return await JS.InvokeAsync<bool>("eval", $"typeof aeterniFx !== 'undefined' && typeof aeterniFx.{fn} === 'function'");
+        }
+        catch (JSException)
+        {
+            return false;
+        }
+    }
+}

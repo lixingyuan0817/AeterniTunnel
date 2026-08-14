@@ -1,0 +1,200 @@
+/* ── 状态显示控制（Blazor 模板逻辑，保留） ── */
+.components-reconnect-first-attempt-visible,
+.components-reconnect-repeated-attempt-visible,
+.components-reconnect-failed-visible,
+.components-pause-visible,
+.components-resume-failed-visible,
+.components-rejoining-animation {
+    display: none;
+}
+
+#components-reconnect-modal.components-reconnect-show .components-reconnect-first-attempt-visible,
+#components-reconnect-modal.components-reconnect-show .components-rejoining-animation,
+#components-reconnect-modal.components-reconnect-paused .components-pause-visible,
+#components-reconnect-modal.components-reconnect-resume-failed .components-resume-failed-visible,
+#components-reconnect-modal.components-reconnect-retrying,
+#components-reconnect-modal.components-reconnect-retrying .components-reconnect-repeated-attempt-visible,
+#components-reconnect-modal.components-reconnect-retrying .components-rejoining-animation,
+#components-reconnect-modal.components-reconnect-failed,
+#components-reconnect-modal.components-reconnect-failed .components-reconnect-failed-visible {
+    display: block;
+}
+
+/* ── 遮罩：深色毛玻璃 ── */
+#components-reconnect-modal::backdrop {
+    background: rgba(10, 10, 28, .45);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    animation: components-reconnect-modal-fadeInOpacity .5s ease-in-out;
+    opacity: 1;
+}
+
+/* ── 卡片：毛玻璃 + 粉紫微光 ── */
+#components-reconnect-modal {
+    width: 22rem;
+    margin: 22vh auto;
+    padding: 0;
+    border: 0;
+    border-radius: 1.25rem;
+    background: rgba(255, 255, 255, .72);
+    -webkit-backdrop-filter: blur(24px);
+    backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, .55);
+    box-shadow: 0 24px 60px rgba(126, 34, 206, .16), inset 0 1px 0 rgba(255, 255, 255, .75);
+    color: #334155;
+    opacity: 0;
+    transition: display .5s allow-discrete, overlay .5s allow-discrete;
+    animation: components-reconnect-modal-fadeOutOpacity .5s both;
+
+    &[open] {
+        animation: components-reconnect-modal-slideUp 1.5s cubic-bezier(.05, .89, .25, 1.02) .3s,
+            components-reconnect-modal-fadeInOpacity .5s ease-in-out .3s;
+        animation-fill-mode: both;
+    }
+}
+
+.dark #components-reconnect-modal {
+    background: rgba(255, 255, 255, .07);
+    border-color: rgba(255, 255, 255, .1);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, .5), inset 0 1px 0 rgba(255, 255, 255, .12);
+    color: #e2e8f0;
+}
+
+/* ── 容器与文案 ── */
+.components-reconnect-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    padding: 2.25rem 2rem;
+}
+
+#components-reconnect-modal p {
+    margin: 0;
+    text-align: center;
+    font-size: .875rem;
+    line-height: 1.6;
+    color: #64748b;
+}
+
+.dark #components-reconnect-modal p {
+    color: #94a3b8;
+}
+
+/* 品牌小字（苹果绿渐变） */
+.components-reconnect-brand {
+    font-size: .7rem;
+    font-weight: 700;
+    letter-spacing: .38em;
+    text-transform: uppercase;
+    background: linear-gradient(135deg, #4cd964, #16a34a);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    margin-bottom: -.25rem;
+}
+
+/* ── 按钮：苹果绿纯色 ── */
+#components-reconnect-modal button {
+    border: 0;
+    border-radius: .75rem;
+    background: #34c759;
+    color: #fff;
+    padding: 8px 30px;
+    font-size: .875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color .2s;
+}
+
+    #components-reconnect-modal button:hover {
+        background-color: #4cd964;
+    }
+
+    #components-reconnect-modal button:active {
+        background-color: #248a3d;
+    }
+
+/* ── 转圈动画：淡粉紫 ── */
+.components-rejoining-animation {
+    position: relative;
+    width: 80px;
+    height: 80px;
+}
+
+    .components-rejoining-animation div {
+        position: absolute;
+        border: 3px solid rgba(76, 217, 100, .5);
+        opacity: 1;
+        border-radius: 50%;
+        animation: components-rejoining-animation 1.5s cubic-bezier(0, 0.2, 0.8, 1) infinite;
+    }
+
+        .components-rejoining-animation div:nth-child(2) {
+            animation-delay: -0.5s;
+        }
+
+@keyframes components-rejoining-animation {
+    0% {
+        top: 40px;
+        left: 40px;
+        width: 0;
+        height: 0;
+        opacity: 0;
+    }
+
+    4.9% {
+        top: 40px;
+        left: 40px;
+        width: 0;
+        height: 0;
+        opacity: 0;
+    }
+
+    5% {
+        top: 40px;
+        left: 40px;
+        width: 0;
+        height: 0;
+        opacity: 1;
+    }
+
+    100% {
+        top: 0px;
+        left: 0px;
+        width: 80px;
+        height: 80px;
+        opacity: 0;
+    }
+}
+
+/* ── 出入场动画（保留模板） ── */
+@keyframes components-reconnect-modal-slideUp {
+    0% {
+        transform: translateY(30px) scale(0.95);
+    }
+
+    100% {
+        transform: translateY(0);
+    }
+}
+
+@keyframes components-reconnect-modal-fadeInOpacity {
+    0% {
+        opacity: 0;
+    }
+
+    100% {
+        opacity: 1;
+    }
+}
+
+@keyframes components-reconnect-modal-fadeOutOpacity {
+    0% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: 0;
+    }
+}

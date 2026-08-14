@@ -1,0 +1,9 @@
+@inject NavigationManager Nav
+
+@* 未认证访问受保护页：整页跳转登录（forceLoad 重建电路，让 Cookie 认证状态生效） *@
+@code {
+    protected override void OnInitialized()
+    {
+        Nav.NavigateTo("/login", forceLoad: true);
+    }
+}

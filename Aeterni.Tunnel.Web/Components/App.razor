@@ -1,0 +1,49 @@
+﻿@inject IHttpContextAccessor HttpContextAccessor
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <base href="/" />
+    <ResourcePreloader />
+    @* 仅引用 Tailwind 编译产物；app.css 为源码入口（含 @import "tailwindcss"），浏览器直接加载会触发 404 *@
+    <link rel="stylesheet" href="css/app.tailwind.css" />
+    <link rel="stylesheet" href="@Assets["Aeterni.Tunnel.Web.styles.css"]" />
+    <ImportMap />
+    <HeadOutlet @rendermode="InteractiveServer" />
+
+    @* 主题：首帧前应用（防闪烁）+ 全局切换函数 *@
+    <script>
+        (function () {
+            var t = localStorage.getItem('ats-theme');
+            if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            }
+        })();
+        window.aeterniTheme = {
+            toggle: function () {
+                var dark = document.documentElement.classList.toggle('dark');
+                localStorage.setItem('ats-theme', dark ? 'dark' : 'light');
+                return dark;
+            }
+        };
+    </script>
+</head>
+
+<body>
+    @{
+        // /login、/logout 走静态 SSR（登录/登出需在 HTTP 请求内写/清 Cookie；交互电路内无 HttpContext）
+        var path = HttpContextAccessor.HttpContext?.Request.Path.Value ?? "";
+        var staticSsr = path.StartsWith("/login", StringComparison.OrdinalIgnoreCase)
+            || path.StartsWith("/logout", StringComparison.OrdinalIgnoreCase);
+    }
+    <Routes @rendermode="staticSsr ? null : InteractiveServer" />
+    <ReconnectModal />
+    <script src="@Assets["js/vendor/gsap.min.js"]"></script>
+    <script src="@Assets["js/aeterni-fx.js"]"></script>
+    <script src="@Assets["js/aeterni-snake.js"]"></script>
+    <script src="@Assets["_framework/blazor.web.js"]"></script>
+</body>
+
+</html>

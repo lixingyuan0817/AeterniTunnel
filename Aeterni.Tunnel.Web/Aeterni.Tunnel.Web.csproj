@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 内嵌 ATS 引擎：配置（server.toml）、宿主等能力经 Engine 复用 -->
+    <ProjectReference Include="..\Aeterni.Tunnel.Engine\Aeterni.Tunnel.Engine.csproj" />
+  </ItemGroup>
+
+  <!-- Tailwind v4：构建/发布前自动编译 CSS（依赖：npm install 一次） -->
+  <Target Name="TailwindBuild" BeforeTargets="BeforeBuild;BeforePublish">
+    <Exec Command="npm run css:build" Condition="Exists('package.json')" />
+  </Target>
+
+</Project>

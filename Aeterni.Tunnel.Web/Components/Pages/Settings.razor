@@ -1,0 +1,291 @@
+@page "/settings"
+@layout ConsoleLayout
+@using Microsoft.AspNetCore.Authorization
+@using Aeterni.Tunnel.Engine.Config
+@using Aeterni.Tunnel.Engine.Server
+@using Aeterni.Tunnel.Web.Auth
+@using Aeterni.Tunnel.Web.Status
+@attribute [Authorize]
+@inject AeterniWebAuthService Auth
+@inject AeterniServerStatusService Status
+
+<PageTitle>设置 · Aeterni Tunnel</PageTitle>
+
+<div class="relative z-10 flex h-full flex-col">
+
+    <main class="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-4 overflow-y-auto px-6 py-4">
+
+        <!-- 标题 -->
+        <div class="flex shrink-0 items-center justify-between">
+            <div>
+                <h1 class="text-lg font-bold text-slate-800 dark:text-slate-100">设置</h1>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400">server.toml 全配置管理 · 保存后 ATS 立即重启生效</p>
+            </div>
+        </div>
+
+        <!-- ═══ 卡片1：ATS 监听与认证 ═══ -->
+        <section class="settings-card rounded-2xl border border-slate-200/60 bg-white/50 p-5 backdrop-blur-md transition hover:border-[#34c759]/40 dark:border-white/10 dark:bg-white/[.05]">
+            <h2 class="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                <span class="h-3.5 w-1 rounded-full bg-[#34c759]"></span>ATS 监听与认证
+            </h2>
+            <div class="mt-4 space-y-3.5">
+                <FieldRow Label="ATS 监听端口（bindPort）" Hint="ATC 客户端连接端口">
+                    <input type="number" @bind="BindPort" min="1" max="65535" class="field" />
+                </FieldRow>
+                <FieldRow Label="ATS token（ATC 认证）" Hint="agent.toml 填写同一值 · 修改后旧 ATC 将无法接入">
+                    <input type="text" @bind="Token" class="field font-mono text-xs" />
+                </FieldRow>
+                <FieldRow Label="单客户端最大隧道数（maxPortsPerClient）" Hint="0 = 不限；vhost 隧道不计">
+                    <input type="number" @bind="MaxPortsPerClient" min="0" max="10000" class="field" />
+                </FieldRow>
+                <FieldRow Label="端口白名单（allowPorts）" Hint="逗号分隔端口或区间，如 7071-7171,17061；空 = 不限（客户端可注册任意端口）">
+                    <input type="text" @bind="AllowPortsText" placeholder="7071-7171,17061" class="field" />
+                </FieldRow>
+            </div>
+        </section>
+
+        <!-- ═══ 卡片2：vhost 与 Web ═══ -->
+        <section class="settings-card rounded-2xl border border-slate-200/60 bg-white/50 p-5 backdrop-blur-md transition hover:border-[#34c759]/40 dark:border-white/10 dark:bg-white/[.05]">
+            <h2 class="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                <span class="h-3.5 w-1 rounded-full bg-[#34c759]"></span>vhost 与 Web
+            </h2>
+            <div class="mt-4 space-y-3.5">
+                <FieldRow Label="HTTP vhost 端口（vhostHttpPort）" Hint="0 = 禁用 · HTTP Host 路由">
+                    <input type="number" @bind="VhostHttpPort" min="0" max="65535" class="field" />
+                </FieldRow>
+                <FieldRow Label="HTTPS vhost 端口（vhostHttpsPort）" Hint="0 = 禁用 · SNI 路由 · 需 TLS 证书（证书接入未启用，配置后 ATS 可能启动失败）">
+                    <input type="number" @bind="VhostHttpsPort" min="0" max="65535" class="field" />
+                </FieldRow>
+                <FieldRow Label="泛域名后缀（subDomainHost）" Hint="如 tunnel.example.com，空 = 不启用泛域名">
+                    <input type="text" @bind="SubDomainHost" placeholder="tunnel.example.com" class="field" />
+                </FieldRow>
+                <FieldRow Label="Web 绑定地址（webBind）" Hint="预留字段（当前管理界面用 ASP.NET 端口）">
+                    <input type="text" @bind="WebBind" class="field font-mono text-xs" />
+                </FieldRow>
+            </div>
+        </section>
+
+        <!-- ═══ 卡片3：日志 ═══ -->
+        <section class="settings-card rounded-2xl border border-slate-200/60 bg-white/50 p-5 backdrop-blur-md transition hover:border-[#34c759]/40 dark:border-white/10 dark:bg-white/[.05]">
+            <h2 class="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                <span class="h-3.5 w-1 rounded-full bg-[#34c759]"></span>日志
+            </h2>
+            <div class="mt-4 space-y-3.5">
+                <FieldRow Label="级别（log.level）">
+                    <select @bind="LogLevel" class="field">
+                        @foreach (var lv in new[] { "debug", "info", "warn", "error" })
+                        {
+                            <option value="@lv">@lv</option>
+                        }
+                    </select>
+                </FieldRow>
+                <FieldRow Label="单文件上限 MB（log.maxSizeMb）">
+                    <input type="number" @bind="LogMaxSizeMb" min="1" max="10240" class="field" />
+                </FieldRow>
+            </div>
+        </section>
+
+        <!-- 保存 / 预留说明 -->
+        <div class="flex shrink-0 flex-col gap-2 pb-4">
+            @if (_cfgError != null)
+            {
+                <p class="text-[11px] text-rose-500">@_cfgError</p>
+            }
+            @if (_cfgSaved != null)
+            {
+                <p class="text-[11px] text-[#16a34a] dark:text-[#4cd964]">@_cfgSaved</p>
+            }
+            <div class="flex items-center justify-end gap-2">
+                <button @onclick="OnSaveConfig"
+                        class="rounded-lg bg-[#16a34a] px-8 py-2.5 text-sm font-semibold text-white transition hover:bg-[#15803d] active:scale-[.98] dark:bg-[#34c759] dark:hover:bg-[#4cd964]">
+                    保存并重启 ATS
+                </button>
+            </div>
+            <p class="text-[10px] text-slate-400 dark:text-slate-500">预留未接入：dashboard 端口 / API 开关（API 暂不开放，见 README）· 修改端口/token 后已连 ATC 将重连</p>
+        </div>
+
+        <!-- ═══ 卡片4：安全 / webToken（真实修改） ═══ -->
+        <section class="settings-card rounded-2xl border border-slate-200/60 bg-white/50 p-5 backdrop-blur-md transition hover:border-[#34c759]/40 dark:border-white/10 dark:bg-white/[.05]">
+            <h2 class="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                <span class="h-3.5 w-1 rounded-full bg-[#34c759]"></span>安全 / webToken
+            </h2>
+
+            <div class="mt-4">
+                <div class="flex items-center justify-between gap-2">
+                    <p class="text-xs font-medium text-slate-600 dark:text-slate-300">webToken（管理员登录，加盐 SHA256 存储）</p>
+                    <span class="rounded-md border border-slate-300/70 bg-slate-100/70 px-2 py-0.5 text-[10px] text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-400">@TokenSourceText</span>
+                </div>
+                <div class="mt-2 space-y-2">
+                    <input type="password" @bind="OldToken" placeholder="旧 Token（修改时验证）" class="field w-full" />
+                    <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                        <input type="password" @bind="NewToken" placeholder="新 Token" class="field w-full" />
+                        <input type="password" @bind="ConfirmToken" placeholder="确认新 Token" class="field w-full" />
+                    </div>
+                    @if (TokenError != null)
+                    {
+                        <p class="text-[11px] text-rose-500">@TokenError</p>
+                    }
+                    @if (_saved != null)
+                    {
+                        <p class="text-[11px] text-[#16a34a] dark:text-[#4cd964]">@_saved</p>
+                    }
+                    <button @onclick="OnSaveToken"
+                            class="rounded-lg bg-[#16a34a] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#15803d] active:scale-[.98] dark:bg-[#34c759] dark:hover:bg-[#4cd964]">
+                        修改 webToken
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══ 卡片5：接入说明 ═══ -->
+        <section class="settings-card rounded-2xl border border-slate-200/60 bg-white/50 p-5 backdrop-blur-md dark:border-white/10 dark:bg-white/[.05]">
+            <h2 class="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                <span class="h-3.5 w-1 rounded-full bg-[#34c759]"></span>接入信息
+            </h2>
+            <ul class="mt-3 space-y-1.5 text-[11px] text-slate-500 dark:text-slate-400">
+                <li>· ATC 接入：agent.toml 配置 server 地址 + port（bindPort）+ token（本页 ATS token）</li>
+                <li>· 重置 webToken：<code class="font-mono">dotnet run -- --reset-token</code>（打印新明文并写回 server.toml）</li>
+                <li>· webToken 来源优先级：AETERNI_WEB_TOKEN 环境变量 &gt; server.toml &gt; appsettings</li>
+            </ul>
+        </section>
+    </main>
+</div>
+
+@code {
+    // ── ATS 配置表单（server.toml） ──
+    private int BindPort = 17070;
+    private string Token = "";
+    private int MaxPortsPerClient;
+    private string AllowPortsText = "";
+    private int VhostHttpPort;
+    private int VhostHttpsPort;
+    private string SubDomainHost = "";
+    private string WebBind = "127.0.0.1:7500";
+    private string LogLevel = "info";
+    private int LogMaxSizeMb = 10;
+    private string? _cfgError;
+    private string? _cfgSaved;
+
+    // ── webToken ──
+    private string? OldToken;
+    private string? NewToken;
+    private string? ConfirmToken;
+    private string? TokenError;
+    private string? _saved;
+
+    protected override void OnInitialized() => LoadFromDisk();
+
+    // 从 server.toml 读取并填充表单（初始化与保存成功后回显）
+    private void LoadFromDisk()
+    {
+        var cfg = Status.LoadConfig();
+        BindPort = cfg.BindPort;
+        Token = cfg.Token;
+        MaxPortsPerClient = cfg.MaxPortsPerClient;
+        AllowPortsText = cfg.AllowPorts is null ? "" : string.Join(", ", cfg.AllowPorts.Select(p => p.Start == p.End ? p.Start.ToString() : $"{p.Start}-{p.End}"));
+        VhostHttpPort = cfg.VhostHttpPort;
+        VhostHttpsPort = cfg.VhostHttpsPort;
+        SubDomainHost = cfg.SubDomainHost;
+        WebBind = cfg.WebBind;
+        LogLevel = cfg.Log.Level;
+        LogMaxSizeMb = cfg.Log.MaxSizeMb;
+    }
+
+    private async Task OnSaveConfig()
+    {
+        _cfgError = null;
+        _cfgSaved = null;
+
+        if (BindPort is < 1 or > 65535)
+        {
+            _cfgError = "bindPort 需在 1-65535 之间";
+            return;
+        }
+        var allowPorts = ParsePorts(AllowPortsText);
+        if (allowPorts is null)
+        {
+            _cfgError = "端口白名单格式错误（示例：10000-10100,17061）";
+            return;
+        }
+
+        var cfg = Status.LoadConfig(); // 保留 webToken / dashboard / apiEnabled 等未暴露字段
+        cfg.BindPort = BindPort;
+        cfg.Token = Token.Trim();
+        cfg.MaxPortsPerClient = MaxPortsPerClient;
+        cfg.AllowPorts = allowPorts;
+        cfg.VhostHttpPort = VhostHttpPort;
+        cfg.VhostHttpsPort = VhostHttpsPort;
+        cfg.SubDomainHost = SubDomainHost.Trim();
+        cfg.WebBind = string.IsNullOrWhiteSpace(WebBind) ? "127.0.0.1:7500" : WebBind.Trim();
+        cfg.Log.Level = LogLevel;
+        cfg.Log.MaxSizeMb = LogMaxSizeMb;
+
+        var ok = await Status.SaveConfig(cfg);
+        if (ok)
+        {
+            LoadFromDisk(); // 保存成功 → 重新读取回显（allowPorts 等）
+            _cfgSaved = $"已保存并重启 ATS（bindPort={BindPort}，token 已更新）";
+        }
+        else
+        {
+            _cfgSaved = null;
+        }
+    }
+
+    // 端口或区间列表（"7071-7171,17061"），写回 server.toml 时区间以字符串形式序列化
+    private static List<PortRange>? ParsePorts(string text)
+    {
+        text = text.Trim();
+        if (text.Length == 0) return new List<PortRange>();
+        var list = new List<PortRange>();
+        foreach (var part in text.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            var dash = part.IndexOf('-');
+            if (dash > 0 && int.TryParse(part[..dash], out var s) && int.TryParse(part[(dash + 1)..], out var e) && s >= 1 && e <= 65535 && s <= e)
+                list.Add(new PortRange(s, e));
+            else if (int.TryParse(part, out var single) && single >= 1 && single <= 65535)
+                list.Add(new PortRange(single, single));
+            else
+                return null;
+        }
+        return list;
+    }
+
+    private string TokenSourceText => Auth.Source switch
+    {
+        AeterniWebAuthService.EnvSource => "环境变量 AETERNI_WEB_TOKEN（不可在界面修改）",
+        AeterniWebAuthService.ConfigSource => "配置 Aeterni:WebToken",
+        _ => "server.toml",
+    };
+
+    private void OnSaveToken()
+    {
+        TokenError = null;
+        _saved = null;
+
+        if (string.IsNullOrEmpty(NewToken))
+        {
+            TokenError = "请输入新 Token";
+            return;
+        }
+        if (NewToken != ConfirmToken)
+        {
+            TokenError = "两次输入的新 Token 不一致";
+            return;
+        }
+        if (!Auth.CanChange)
+        {
+            TokenError = "当前 webToken 由环境变量 AETERNI_WEB_TOKEN 控制，不可在界面修改";
+            return;
+        }
+        if (Auth.ChangeToken(OldToken, NewToken))
+        {
+            OldToken = NewToken = ConfirmToken = null;
+            _saved = "webToken 已更新（server.toml 已写回，重启保留）";
+        }
+        else
+        {
+            TokenError = "旧 Token 不正确，修改失败";
+        }
+    }
+}

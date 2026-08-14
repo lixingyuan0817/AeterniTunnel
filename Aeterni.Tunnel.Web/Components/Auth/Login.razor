@@ -1,0 +1,149 @@
+@page "/login"
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Authentication.Cookies
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@using System.Security.Claims
+@attribute [AllowAnonymous]
+@inject IHttpContextAccessor HttpContextAccessor
+@inject Aeterni.Tunnel.Web.Auth.AeterniWebAuthService Auth
+@inject IJSRuntime JS
+
+@* 正式登录页：静态 SSR（App.razor 对 /login 关闭交互渲染，登录在 HTTP 请求内写 Cookie） *@
+<PageTitle>登录 · Aeterni Tunnel</PageTitle>
+
+<div class="relative min-h-screen overflow-hidden bg-[#eef1f8] text-slate-800 antialiased transition-colors duration-300 dark:bg-[#05070f] dark:text-slate-100">
+
+    <!-- ═══ 全屏背景动画层（与示例登录页同源） ═══ -->
+    <div class="pointer-events-none absolute inset-0">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+        <div class="absolute inset-0 bg-[linear-gradient(rgba(15,23,42,.05)_1px,transparent_1px),linear-gradient(90deg,rgba(15,23,42,.05)_1px,transparent_1px)] bg-[size:28px_28px] dark:bg-[linear-gradient(rgba(255,255,255,.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.035)_1px,transparent_1px)]"></div>
+        <canvas id="login-bg" class="absolute inset-0 h-full w-full"></canvas>
+        <div class="pixel-dots absolute inset-0"></div>
+        <div class="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#eef1f8] to-transparent dark:from-[#05070f]"></div>
+    </div>
+
+    <div class="relative z-10 flex min-h-screen flex-col">
+
+        <!-- ═══ 右上角：明暗切换 ═══ -->
+        <div class="absolute right-5 top-5">
+            <button type="button" title="切换明暗" onclick="aeterniTheme.toggle()"
+                    class="theme-toggle flex h-10 w-10 items-center justify-center rounded-full border border-white/40 bg-white/50 text-slate-600 shadow-sm backdrop-blur-md transition hover:scale-105 hover:bg-white/70 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-5 w-5 dark:hidden">
+                    <circle cx="12" cy="12" r="4.2" />
+                    <path stroke-linecap="round" d="M12 2.5v2.4M12 19.1v2.4M2.5 12h2.4M19.1 12h2.4M4.9 4.9l1.7 1.7M17.4 17.4l1.7 1.7M4.9 19.1l1.7-1.7M17.4 6.6l1.7-1.7" />
+                </svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="hidden h-5 w-5 dark:block">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M20 13.5A7.5 7.5 0 0 1 10.5 4a7.5 7.5 0 1 0 9.5 9.5Z" />
+                </svg>
+            </button>
+        </div>
+
+        <!-- ═══ 上半部分：Logo（AETERNI 方块飞入 + TUNNEL 小字淡入） ═══ -->
+        <div class="flex flex-1 flex-col items-center justify-center px-6 pt-10">
+            <h1 class="select-none text-center text-5xl font-black tracking-tight md:text-6xl">
+                <div class="ats-logo">
+                    @{
+                        var brand = "AETERNI";
+                    }
+                    @for (var i = 0; i < brand.Length; i++)
+                    {
+                        <div class="letter-box lb@(i + 1)">
+                            <span class="letter animate-L@(i + 1)">@brand[i]</span>
+                            <div class="box animate-@(i + 1)"></div>
+                        </div>
+                    }
+                </div>
+            </h1>
+            <p class="ats-sub mt-10 flex justify-center text-2xl font-semibold italic tracking-[.3em] md:text-3xl">
+                @foreach (var ch in "TUNNEL")
+                {
+                    <span class="ats-sub-letter">@ch</span>
+                }
+            </p>
+        </div>
+
+        <!-- ═══ 下半部分：登录卡（真实认证：webToken → Cookie） ═══ -->
+        <div class="flex flex-1 items-start justify-center px-6 pb-20">
+            <div class="login-card w-full max-w-sm rounded-2xl border border-slate-200/60 bg-white/50 p-8 shadow-[0_24px_60px_rgba(15,23,42,.1),inset_0_1px_0_rgba(255,255,255,.7)] backdrop-blur-md dark:border-white/10 dark:bg-white/[.05] dark:shadow-[0_24px_60px_rgba(0,0,0,.45),inset_0_1px_0_rgba(255,255,255,.1)]">
+                <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-100">登录</h2>
+                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">请输入访问 Token 继续</p>
+
+                <EditForm class="mt-6 space-y-4" Model="Input" method="post" FormName="login" Enhance="false">
+                    @* Enhance=false：禁用增强表单提交（fetch+JSON 交换），走原生 POST + 302，避免静态 SSR 端点不支持增强交换 *@
+                    @* 静态 SSR 下 EditForm 不创建 EditContext，@bind 不生成 name——故手动指定 name/value 供 [SupplyParameterFromForm] 绑定 *@
+                    <input type="password" id="token-input" name="Input.Token" value="@Input!.Token" autocomplete="off" placeholder="访问 Token"
+                           class="w-full rounded-lg border border-slate-300/80 bg-white/70 px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 outline-none transition focus:border-[#34c759]/60 focus:bg-white focus:ring-2 focus:ring-[#34c759]/20 dark:border-white/10 dark:bg-white/5 dark:text-slate-100 dark:placeholder-slate-500 dark:focus:border-[#4cd964]/50 dark:focus:bg-white/10 dark:focus:ring-[#4cd964]/15" />
+
+                    @if (_error != null)
+                    {
+                        <p class="text-[11px] text-rose-500">@_error</p>
+                    }
+
+                    <button type="submit"
+                            class="w-full rounded-lg bg-[#16a34a] py-2.5 text-sm font-semibold text-white transition hover:bg-[#15803d] active:scale-[.98] dark:bg-[#34c759] dark:hover:bg-[#4cd964]">
+                        进入控制台
+                    </button>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromForm]
+    private LoginInput? Input { get; set; }
+
+    private sealed class LoginInput
+    {
+        public string? Token { get; set; }
+    }
+
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // 渲染前兜底：GET 时无表单数据，Input 为 null（表单回发时框架会用表单数据重建）
+        Input ??= new();
+
+        var http = HttpContextAccessor.HttpContext;
+        if (http is null)
+            return;
+
+        // 已登录访问登录页 → 直接进控制台
+        if (http.User.Identity?.IsAuthenticated == true)
+        {
+            http.Response.Redirect("/");
+            return;
+        }
+
+        // 仅处理表单回发（POST）
+        if (!HttpMethods.IsPost(http.Request.Method) || Input is null)
+            return;
+
+        if (Auth.Validate(Input.Token?.Trim()))
+        {
+            var identity = new ClaimsIdentity(
+                [new Claim(ClaimTypes.Name, "admin"), new Claim(ClaimTypes.Role, "admin")],
+                CookieAuthenticationDefaults.AuthenticationScheme);
+            await http.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity));
+            http.Response.Redirect("/");
+        }
+        else
+        {
+            _error = "Token 错误，请重试";
+        }
+    }
+
+    // 首次渲染后启动背景贪吃蛇 + GSAP 页面动画（静态 SSR 下同样触发）
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("aeterniSnake.init", "login-bg");
+            await JS.InvokeVoidAsync("aeterniFx.init");
+        }
+    }
+}

@@ -1,0 +1,214 @@
+﻿@page "/"
+@layout ConsoleLayout
+@using Microsoft.AspNetCore.Authorization
+@using Aeterni.Tunnel.Engine.Server
+@using Aeterni.Tunnel.Web.Status
+@attribute [Authorize]
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+@inject AeterniServerStatusService Status
+
+@implements IDisposable
+
+<PageTitle>控制台 · Aeterni Tunnel</PageTitle>
+
+<div class="relative z-10 flex h-full flex-col">
+
+    <main class="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 overflow-y-auto px-6 py-4">
+
+        <!-- 标题 + ATS 状态 -->
+        <div class="flex shrink-0 items-center justify-between">
+            <div>
+                <h1 class="text-lg font-bold text-slate-800 dark:text-slate-100">控制台</h1>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400">Aeterni Tunnel · ATS 运行状态与全局概览</p>
+            </div>
+            <span class="flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-medium @(Status.IsRunning ? "border-[#34c759]/30 bg-[#34c759]/10 text-[#16a34a] dark:text-[#4cd964]" : "border-rose-400/30 bg-rose-400/10 text-rose-600 dark:text-rose-400")">
+                <span class="h-1.5 w-1.5 rounded-full @(Status.IsRunning ? "bg-[#34c759] shadow-[0_0_5px_rgba(52,199,89,.8)]" : "bg-rose-500")"></span>
+                @(Status.IsRunning ? "ATS 运行中" : "ATS 未运行")
+            </span>
+        </div>
+
+        <!-- 统计卡（真实统计） -->
+        <section class="grid shrink-0 grid-cols-2 gap-4 lg:grid-cols-4">
+            <div class="stat-card rounded-2xl border border-slate-200/60 bg-white/50 p-4 backdrop-blur-md transition hover:border-[#34c759]/40 dark:border-white/10 dark:bg-white/[.05]">
+                <p class="text-[11px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">在线客户端</p>
+                <p class="mt-0.5 text-2xl font-bold tabular-nums text-[#16a34a] dark:text-[#4cd964]">@_snapshot.Clients.Count(c => c.Online)</p>
+            </div>
+            <div class="stat-card rounded-2xl border border-slate-200/60 bg-white/50 p-4 backdrop-blur-md transition hover:border-[#34c759]/40 dark:border-white/10 dark:bg-white/[.05]">
+                <p class="text-[11px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">隧道总数</p>
+                <p class="mt-0.5 text-2xl font-bold tabular-nums text-slate-800 dark:text-white">@_snapshot.Clients.Sum(c => c.Proxies.Count)</p>
+            </div>
+            <div class="stat-card rounded-2xl border border-slate-200/60 bg-white/50 p-4 backdrop-blur-md transition hover:border-[#34c759]/40 dark:border-white/10 dark:bg-white/[.05]">
+                <p class="text-[11px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">分组</p>
+                <p class="mt-0.5 text-2xl font-bold tabular-nums text-slate-800 dark:text-white">@_snapshot.Clients.SelectMany(c => c.Proxies).Select(p => GroupName(p.Group)).Distinct().Count()</p>
+            </div>
+            <div class="stat-card rounded-2xl border border-slate-200/60 bg-white/50 p-4 backdrop-blur-md transition hover:border-[#34c759]/40 dark:border-white/10 dark:bg-white/[.05]">
+                <p class="text-[11px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">已断开</p>
+                <p class="mt-0.5 text-2xl font-bold tabular-nums text-amber-500">@_snapshot.Clients.Count(c => !c.Online)</p>
+            </div>
+        </section>
+
+        <!-- ATS 管理 -->
+        <section class="rounded-2xl border border-slate-200/60 bg-white/50 p-4 backdrop-blur-md dark:border-white/10 dark:bg-white/[.05]">
+            <div class="flex items-center justify-between">
+                <p class="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">ATS 管理</p>
+                <button @onclick="OnRestartAts"
+                        class="rounded-lg border border-[#34c759]/30 bg-[#34c759]/10 px-3 py-1.5 text-[11px] font-medium text-[#16a34a] transition hover:bg-[#34c759]/20 dark:text-[#4cd964]">
+                    重启 ATS
+                </button>
+            </div>
+            <div class="mt-3 grid grid-cols-2 gap-x-6 gap-y-2.5 text-[11px]">
+                <div class="flex items-center justify-between gap-2">
+                    <span class="text-slate-400 dark:text-slate-500">状态</span>
+                    <span class="flex items-center gap-1.5 font-medium @(Status.IsRunning ? "text-[#16a34a] dark:text-[#4cd964]" : "text-rose-500")">
+                        <span class="h-1.5 w-1.5 rounded-full @(Status.IsRunning ? "bg-[#34c759] shadow-[0_0_5px_rgba(52,199,89,.8)]" : "bg-rose-500")"></span>
+                        @(Status.IsRunning ? "运行中" : "未运行")
+                    </span>
+                </div>
+                <div class="flex items-center justify-between gap-2">
+                    <span class="text-slate-400 dark:text-slate-500">监听端口</span>
+                    <span class="font-mono text-slate-700 dark:text-slate-200">@(Status.BindPort > 0 ? Status.BindPort.ToString() : "—")</span>
+                </div>
+                <div class="flex items-center justify-between gap-2">
+                    <span class="text-slate-400 dark:text-slate-500">配置文件</span>
+                    <span class="font-mono text-slate-600 dark:text-slate-300">server.toml</span>
+                </div>
+                <div class="flex items-center justify-between gap-2">
+                    <span class="text-slate-400 dark:text-slate-500">端口修改</span>
+                    <button @onclick="NavToSettings" class="text-[#16a34a] hover:underline dark:text-[#4cd964]">设置页 →</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 客户端概览（在线主机列表） -->
+        <section class="rounded-2xl border border-slate-200/60 bg-white/50 p-4 backdrop-blur-md dark:border-white/10 dark:bg-white/[.05]">
+            <p class="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">在线主机</p>
+            @if (_snapshot.Clients.Any(c => c.Online))
+            {
+                <div class="mt-2 flex flex-wrap gap-2">
+                    @foreach (var c in _snapshot.Clients.Where(c => c.Online))
+                    {
+                        <button @onclick="() => NavToClients(c.ClientId)"
+                                class="flex items-center gap-1.5 rounded-lg border border-slate-200/70 bg-white/60 px-2.5 py-1.5 text-[11px] text-slate-600 transition hover:border-[#34c759]/40 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
+                            <span class="h-1.5 w-1.5 rounded-full bg-[#34c759] shadow-[0_0_4px_rgba(52,199,89,.7)]"></span>
+                            <span class="font-medium">@(string.IsNullOrEmpty(c.Hostname) ? c.ClientId : c.Hostname)</span>
+                            <span class="tabular-nums text-slate-400 dark:text-slate-500">@c.Proxies.Count 隧道</span>
+                        </button>
+                    }
+                </div>
+            }
+            else
+            {
+                <p class="mt-2 text-[11px] text-slate-400 dark:text-slate-500">暂无在线主机 · ATC 接入后自动出现在这里（server.toml 的 token 配置到 agent.toml）</p>
+            }
+        </section>
+
+        <!-- ATS 日志流（真实） -->
+        <section class="flex min-h-0 flex-1 flex-col rounded-2xl border border-slate-200/60 bg-white/50 p-4 backdrop-blur-md dark:border-white/10 dark:bg-white/[.05]">
+            <div class="flex items-center justify-between">
+                <p class="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">ATS 日志流</p>
+                <span class="text-[10px] tabular-nums text-slate-400 dark:text-slate-500">@_logs.Count 条</span>
+            </div>
+            <div class="mt-2 min-h-0 flex-1 space-y-1 overflow-y-auto pb-2 font-mono text-[10px] leading-relaxed">
+                @if (_logs.Count == 0)
+                {
+                    <p class="text-slate-400 dark:text-slate-600">等待 ATS 事件…</p>
+                }
+                @foreach (var line in _logs)
+                {
+                    <p class="break-all text-slate-500 dark:text-slate-400">@line</p>
+                }
+            </div>
+        </section>
+    </main>
+</div>
+
+<!-- 轻提示 -->
+@if (_toast != null)
+{
+    <div class="ats-toast fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-xl border border-[#34c759]/30 bg-white/80 px-4 py-2 text-xs font-medium text-[#16a34a] shadow-[0_10px_40px_rgba(15,23,42,.15)] backdrop-blur-xl dark:border-[#4cd964]/30 dark:bg-black/60 dark:text-[#4cd964]">
+        @_toast
+    </div>
+}
+
+@code {
+    private StatusResponse _snapshot = new();
+    private IReadOnlyList<string> _logs = Array.Empty<string>();
+    private string? _toast;
+    private Timer? _timer;
+
+    protected override void OnInitialized()
+    {
+        Refresh();
+        _timer = new Timer(_ =>
+        {
+            try { InvokeAsync(Refresh); }
+            catch { /* 电路可能已断开 */ }
+        }, null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(3));
+    }
+
+    private void Refresh()
+    {
+        _snapshot = Status.GetSnapshot();
+        _logs = Status.RecentLogs;
+        StateHasChanged();
+    }
+
+    public void Dispose() => _timer?.Dispose();
+
+    private static string GroupName(string group) => string.IsNullOrWhiteSpace(group) ? "default" : group;
+
+    private void NavToClients(string clientId)
+    {
+        // 跳转客户端页并选中该主机（查询参数，Clients 页读取）
+        Nav.NavigateTo($"/clients?host={Uri.EscapeDataString(clientId)}");
+    }
+
+    private void NavToSettings() => Nav.NavigateTo("/settings");
+
+    // 用当前端口重启 ATS（服务运行异常/配置热恢复场景）
+    private async Task OnRestartAts()
+    {
+        if (Status.BindPort <= 0)
+        {
+            _ = ShowToast("ATS 未配置端口");
+            return;
+        }
+        await Status.RestartAsync(Status.BindPort);
+        _ = ShowToast($"ATS 已重启（bindPort={Status.BindPort}）");
+    }
+
+    private async Task ShowToast(string msg)
+    {
+        _toast = msg;
+        StateHasChanged();
+        await Task.Delay(2500);
+        if (_toast == msg)
+        {
+            _toast = null;
+            StateHasChanged();
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("aeterniSnake.init", "console-bg");
+            if (await FxReady("initHome"))
+                await JS.InvokeVoidAsync("aeterniFx.initHome");
+        }
+    }
+
+    private async Task<bool> FxReady(string fn)
+    {
+        try
+        {
+            return await JS.InvokeAsync<bool>("eval", $"typeof aeterniFx !== 'undefined' && typeof aeterniFx.{fn} === 'function'");
+        }
+        catch (JSException)
+        {
+            return false;
+        }
+    }
+}

@@ -1,0 +1,18 @@
+@page "/logout"
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Authentication.Cookies
+@using Microsoft.AspNetCore.Authorization
+@attribute [AllowAnonymous]
+@inject IHttpContextAccessor HttpContextAccessor
+
+@* 登出：静态 SSR，HTTP 请求内清除认证 Cookie 并回登录页 *@
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        var http = HttpContextAccessor.HttpContext;
+        if (http is null)
+            return;
+        await http.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+        http.Response.Redirect("/login");
+    }
+}
