@@ -247,7 +247,8 @@
                                 Background="Transparent" BorderBrush="{DynamicResource InputBorderBrush}"
                                 BorderThickness="1.5" VerticalAlignment="Center">
                             <Path x:Name="CheckPath" Data="M 2.5,8 L 6,11.5 L 13.5,4.5"
-                                  Stroke="White" StrokeThickness="2" StrokeLineCap="Round"
+                                  Stroke="White" StrokeThickness="1.6" StrokeLineCap="Round"
+                                  Stretch="None" HorizontalAlignment="Center" VerticalAlignment="Center"
                                   IsVisible="False" />
                         </Border>
                         <ContentPresenter Grid.Column="1" VerticalAlignment="Center"
