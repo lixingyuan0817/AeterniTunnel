@@ -7,10 +7,11 @@ using Aeterni.Tunnel.Cli.Tui;
 // ═══════════════════════════════════════════════════════════
 // Aeterni Tunnel CLI —— ATC 客户端
 // 用法：
-//   命令行模式：agent --server 1.2.3.4:7000 --token secret [--tls] --proxy tcp:25565:25566
-//   配置文件模式：agent --config agent.toml [--tls]   （改配置自动热更新）
-//   proxy 格式：tcp:本地端口:公网端口 | udp:本地端口:公网端口
-//              http:本地端口:域名 | https:本地端口:域名
+//   命令行模式：aeterni-client --server 1.2.3.4:7000 --token secret [--tls] --tunnel tcp:25565:25566
+//   配置文件模式：aeterni-client --config agent.toml [--tls]   （改配置自动热更新）
+//   tunnel 格式：tcp:本地端口:公网端口 | udp:本地端口:公网端口
+//               http:本地端口:域名 | https:本地端口:域名
+//   （agent 子命令可省略：--server/--config 开头即 agent 模式）
 // ═══════════════════════════════════════════════════════════
 
 if (args.Length == 0 || args[0] is "help" or "--help" or "-h")
@@ -23,9 +24,14 @@ if (args[0] == "agent")
 {
     await RunAgentAsync(args[1..]);
 }
+else if (args[0].StartsWith('-'))
+{
+    // 省略 agent 子命令：--server/--config/--tunnel 开头直接进入 agent 模式
+    await RunAgentAsync(args);
+}
 else
 {
-    Console.WriteLine($"未知子命令：{args[0]}");
+    Console.WriteLine($"未知子命令：{args[0]}（可省略 agent，直接用 --server 或 --config）");
     PrintHelp();
 }
 
@@ -35,19 +41,20 @@ static void PrintHelp()
         Aeterni Tunnel CLI —— ATC 客户端
 
         用法：
-          Aeterni.Tunnel.Cli agent --server 主机:端口 --token 令牌 [选项] --proxy 类型:本地端口:公网端口
-          Aeterni.Tunnel.Cli agent --config agent.toml [--tls]
+          aeterni-client --server 主机:端口 --token 令牌 [选项] --tunnel 类型:本地端口:公网端口
+          aeterni-client --config agent.toml [--tls]
+          aeterni-client agent ...（agent 子命令可省略，如上）
 
-        agent 选项：
+        选项：
           --server <host:port>   ATS 服务端地址（如 1.2.3.4:7000）
           --token <token>        认证令牌（与 ATS 一致）
           --tls                  启用 TLS 加密传输
-          --proxy <spec>         隧道定义，可多次指定（见下）
+          --tunnel <spec>        隧道定义，可多次指定（见下）
           --config <file>        配置文件模式（agent.toml，支持热更新）
           --tui                  终端界面（实时状态表 + 日志窗口）
           -h, --help             帮助
 
-        proxy 格式：
+        tunnel 格式：
           tcp:本地端口:公网端口       TCP 隧道（如 tcp:25565:25566）
           udp:本地端口:公网端口       UDP 隧道（如 udp:19132:19133）
           http:本地端口:域名         HTTP vhost（如 http:8080:web.example.com）
@@ -63,7 +70,7 @@ async Task RunAgentAsync(string[] args)
     var configPath = GetValue(args, "--config");
 
     AgentOptions options;
-    List<ProxyDefinition> proxies;
+    List<ProxyDefinition> tunnels;
 
     if (configPath is not null)
     {
@@ -75,8 +82,8 @@ async Task RunAgentAsync(string[] args)
         }
         options = ConfigLoader.ToAgentOptions(cfg);
         if (useTls) options = options with { UseTls = true };
-        proxies = ConfigLoader.ToProxyDefinitions(cfg);
-        Console.WriteLine($"[agent] 配置文件模式：{configPath}（{proxies.Count} 条隧道，修改文件自动热更新）");
+        tunnels = ConfigLoader.ToProxyDefinitions(cfg);
+        Console.WriteLine($"[agent] 配置文件模式：{configPath}（{tunnels.Count} 条隧道，修改文件自动热更新）");
     }
     else
     {
@@ -88,10 +95,10 @@ async Task RunAgentAsync(string[] args)
         }
         var (host, port) = ParseHostPort(server);
         options = new AgentOptions(host, port, token, ClientId: "", UseTls: useTls);
-        proxies = ParseProxies(args);
-        if (proxies.Count == 0)
+        tunnels = ParseTunnels(args);
+        if (tunnels.Count == 0)
         {
-            Console.Error.WriteLine("[agent] 未指定任何隧道：--proxy tcp:25565:25566（或使用 --config）");
+            Console.Error.WriteLine("[agent] 未指定任何隧道：--tunnel tcp:25565:25566（或使用 --config）");
             return;
         }
     }
@@ -99,8 +106,8 @@ async Task RunAgentAsync(string[] args)
     await using var agent = new AgentHost(options);
 
     // 两种模式下都需要先注册隧道（AgentTui 内部 StartAsync 前）
-    foreach (var p in proxies)
-        agent.AddProxy(p);
+    foreach (var t in tunnels)
+        agent.AddProxy(t);
 
     var useTui = args.Contains("--tui");
 
@@ -188,15 +195,16 @@ static (string Host, int Port) ParseHostPort(string spec)
     return (spec[..idx], port);
 }
 
-static List<ProxyDefinition> ParseProxies(string[] args)
+/// <summary>解析 --tunnel 参数（兼容旧 --proxy 别名）→ 隧道定义列表</summary>
+static List<ProxyDefinition> ParseTunnels(string[] args)
 {
     var list = new List<ProxyDefinition>();
     for (var i = 0; i < args.Length; i++)
     {
-        if (args[i] != "--proxy" || i + 1 >= args.Length) continue;
+        if (args[i] is not ("--tunnel" or "--proxy") || i + 1 >= args.Length) continue;
         var spec = args[i + 1];
         var parts = spec.Split(':');
-        if (parts.Length < 3) { Console.Error.WriteLine($"[agent] 无效的 proxy：{spec}"); continue; }
+        if (parts.Length < 3) { Console.Error.WriteLine($"[agent] 无效的隧道定义：{spec}"); continue; }
 
         var type = parts[0];
         var localPort = int.Parse(parts[1]);
