@@ -9,6 +9,9 @@ public partial class MainWindow : Window
 {
     private readonly MainWindowViewModel _vm;
 
+    /// <summary>内容根（启动过渡淡入用）</summary>
+    public Control ContentRoot => MainRoot;
+
     public MainWindow()
     {
         InitializeComponent();

@@ -9,9 +9,9 @@
         Title="AETERNI TUNNEL · ATC"
         Width="1000" Height="660" MinWidth="880" MinHeight="580"
         WindowStartupLocation="CenterScreen"
-        Background="{DynamicResource BgBrush}">
+        TransparencyLevelHint="Blur" Background="#D905070F">
 
-    <Grid RowDefinitions="Auto,*,Auto">
+    <Grid x:Name="MainRoot" RowDefinitions="Auto,*,Auto">
 
         <!-- ═══ 顶栏：品牌 + 页面导航 + 主题/状态/连接 ═══ -->
         <Border Grid.Row="0" BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="0,0,0,1" Padding="16,10">

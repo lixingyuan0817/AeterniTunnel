@@ -22,11 +22,13 @@ public partial class SplashWindow : Window
     private readonly Action _onDone;
     private readonly DateTime _start = DateTime.UtcNow;
 
+    /// <summary>内容根（启动过渡淡出用）</summary>
+    public Control ContentRoot => RootPanel;
+
     public SplashWindow(Action onDone)
     {
         InitializeComponent();
         _onDone = onDone;
-
         const string brand = "AETERNI";
         for (var i = 0; i < brand.Length; i++)
         {
