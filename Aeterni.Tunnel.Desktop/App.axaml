@@ -134,6 +134,38 @@
                     <BrushTransition Property="Background" Duration="0:0:0.18" />
                 </Transitions>
             </Setter>
+            <!-- 自定义模板：摆脱 Fluent 默认蓝色焦点（模板内部样式优先于外层属性） -->
+            <Setter Property="Template">
+                <ControlTemplate TargetType="TextBox">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{TemplateBinding CornerRadius}">
+                        <Grid>
+                            <ScrollViewer x:Name="PART_TextScrollViewer"
+                                          Margin="{TemplateBinding Padding}"
+                                          HorizontalScrollBarVisibility="Hidden"
+                                          VerticalScrollBarVisibility="Auto"
+                                          IsTabStop="False" Focusable="False">
+                                <TextPresenter x:Name="PART_TextPresenter"
+                                               Text="{TemplateBinding Text, Mode=TwoWay}"
+                                               CaretBrush="{TemplateBinding CaretBrush}"
+                                               SelectionBrush="{TemplateBinding SelectionBrush}"
+                                               TextWrapping="{TemplateBinding TextWrapping}"
+                                               TextAlignment="{TemplateBinding TextAlignment}"
+                                               PasswordChar="{TemplateBinding PasswordChar}" />
+                            </ScrollViewer>
+                            <TextBlock x:Name="PART_Watermark"
+                                       Margin="{TemplateBinding Padding}"
+                                       IsHitTestVisible="False"
+                                       Text="{TemplateBinding Watermark}"
+                                       Foreground="{TemplateBinding Foreground}"
+                                       Opacity="0.45" FontSize="{TemplateBinding FontSize}"
+                                       VerticalAlignment="Center" />
+                        </Grid>
+                    </Border>
+                </ControlTemplate>
+            </Setter>
         </Style>
 
         <!-- 输入框焦点：绿色边框 + 背景微亮（替代默认 Fluent 蓝） -->
