@@ -24,6 +24,8 @@ public sealed class LogItemViewModel
 
     public string Text { get; }
 
+    public string TimeText { get; }
+
     public IBrush Brush { get; }
 
     public LogLevel Level { get; }
@@ -38,17 +40,18 @@ public sealed class LogItemViewModel
         _ => "INF",
     };
 
-    public LogItemViewModel(string text, IBrush brush, LogLevel level)
+    public LogItemViewModel(string text, string timeText, IBrush brush, LogLevel level)
     {
         Text = text;
+        TimeText = timeText;
         Brush = brush;
         Level = level;
     }
 
-    public static LogItemViewModel Create(string text)
+    public static LogItemViewModel Create(DateTime time, string text)
     {
         var (brush, level) = Classify(text);
-        return new LogItemViewModel(text, brush, level);
+        return new LogItemViewModel(text, time.ToString("HH:mm:ss"), brush, level);
     }
 
     /// <summary>按内容关键词分类：失败/异常→错误，警告/超时→警告，成功/登录→成功，连接/重连→信息，其余→杂项</summary>

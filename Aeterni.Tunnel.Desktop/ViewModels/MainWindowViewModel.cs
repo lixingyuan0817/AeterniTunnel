@@ -402,7 +402,7 @@ public sealed class MainWindowViewModel : ObservableBase, IAsyncDisposable
 
     private void AddLog(string line)
     {
-        Logs.Add(LogItemViewModel.Create($"[{DateTime.Now:HH:mm:ss}] {line}"));
+        Logs.Add(LogItemViewModel.Create(DateTime.Now, line));
         while (Logs.Count > 500)
             Logs.RemoveAt(0);
     }

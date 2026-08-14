@@ -103,12 +103,14 @@
                             <ItemsControl ItemsSource="{Binding Logs}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="vm:LogItemViewModel">
-                                        <StackPanel Orientation="Horizontal" Spacing="8">
-                                            <TextBlock Text="{Binding LevelText}" Foreground="{Binding Brush}"
-                                                       FontFamily="Menlo, Consolas, monospace" FontSize="10" Width="28" />
-                                            <TextBlock Text="{Binding Text}" Foreground="{Binding Brush}"
-                                                       FontFamily="Menlo, Consolas, monospace" FontSize="11" Margin="0,1" />
-                                        </StackPanel>
+                                        <Grid ColumnDefinitions="58,34,*" ColumnSpacing="6">
+                                            <TextBlock Text="{Binding TimeText}" Foreground="{Binding Brush}"
+                                                       FontFamily="Menlo, Consolas, monospace" FontSize="10" />
+                                            <TextBlock Grid.Column="1" Text="{Binding LevelText}" Foreground="{Binding Brush}"
+                                                       FontFamily="Menlo, Consolas, monospace" FontSize="10" />
+                                            <TextBlock Grid.Column="2" Text="{Binding Text}" Foreground="{Binding Brush}"
+                                                       FontFamily="Menlo, Consolas, monospace" FontSize="11" TextWrapping="Wrap" />
+                                        </Grid>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
