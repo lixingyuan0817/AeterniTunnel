@@ -57,6 +57,7 @@ public sealed class AgentSession : IAsyncDisposable
 
     private async Task ConnectCoreAsync(CancellationToken ct = default)
     {
+        LogLine?.Invoke($"正在连接 {_options.ServerAddr}:{_options.ServerPort}{(string.IsNullOrEmpty(_options.ClientId) ? "" : $"（{_options.ClientId}）")}…");
         var transport = TcpTlsTransport.Client(
             _options.ServerAddr, _options.ServerPort, _options.UseTls,
             validateCertificate: _options.ValidateCertificate);

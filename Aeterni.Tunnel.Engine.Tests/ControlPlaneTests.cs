@@ -40,13 +40,13 @@ public class ControlPlaneTests
         listener.Start();
         await using var _ = listener;
 
-        var loginTcs = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var logs = new System.Collections.Concurrent.ConcurrentQueue<string>();
         var agent = await ConnectAgentAsync(listener, TestToken, "agent-1",
-            a => a.LogLine += s => loginTcs.TrySetResult(s));
+            a => a.LogLine += s => logs.Enqueue(s));
         await using var _2 = agent;
 
-        var loggedIn = await loginTcs.Task.WaitAsync(TimeSpan.FromSeconds(15));
-        Assert.Contains("登录成功", loggedIn);
+        // 等"登录成功"日志（"正在连接"之后出现）
+        await WaitForLogAsync(logs, "登录成功", TimeSpan.FromSeconds(15));
 
         // 注册代理成功，返回远程地址
         await agent.RegisterProxyAsync("p1", LinkType.Tcp, "127.0.0.1", 25565, remotePort: proxyPort);
@@ -79,16 +79,29 @@ public class ControlPlaneTests
             Token: "wrong-token",
             ClientId: "agent-bad",
             HeartbeatInterval: TimeSpan.FromMilliseconds(500)));
-        agent.LogLine += s => loginTcs.TrySetResult(s);
+        var logs = new System.Collections.Concurrent.ConcurrentQueue<string>();
+        agent.LogLine += s => { logs.Enqueue(s); loginTcs.TrySetResult(s); };
         await using var _2 = agent;
 
         // 握手校验：token 不匹配 → ConnectAsync 抛异常（不再误判"已连接"）
         await Assert.ThrowsAsync<InvalidOperationException>(() => agent.ConnectAsync());
         Assert.False(agent.IsConnected);
 
-        // 日志含失败原因
-        var log = await loginTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
-        Assert.Contains("登录失败", log);
+        // 日志含失败原因（"正在连接"之后应有"登录失败"）
+        await WaitForLogAsync(logs, "登录失败", TimeSpan.FromSeconds(5));
+        Assert.Contains(logs, x => x.Contains("登录失败"));
+    }
+
+    private static async Task WaitForLogAsync(System.Collections.Concurrent.ConcurrentQueue<string> logs, string needle, TimeSpan timeout)
+    {
+        var deadline = DateTime.UtcNow + timeout;
+        while (DateTime.UtcNow < deadline)
+        {
+            if (logs.Any(x => x.Contains(needle)))
+                return;
+            await Task.Delay(50);
+        }
+        Assert.Contains(logs, x => x.Contains(needle));
     }
 
     [Fact]

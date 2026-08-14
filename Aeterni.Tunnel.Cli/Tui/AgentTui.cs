@@ -14,7 +14,7 @@ public static class AgentTui
 {
     private const int LogKeepLines = 12;
 
-    /// <summary>进入 TUI（内部 StartAsync → 渲染循环 → Ctrl+C 后 StopAsync）</summary>
+    /// <summary>进入 TUI：先渲染界面（立即显示），连接在后台进行；Ctrl+C 退出后 StopAsync</summary>
     public static async Task RunAsync(AgentHost agent, CancellationToken ct)
     {
         // TUI 需要真实终端：输出被重定向（管道/文件）时无法渲染，明确提示后退出
@@ -38,11 +38,26 @@ public static class AgentTui
             while (logs.Count > LogKeepLines) logs.TryDequeue(out _);
         };
 
-        await agent.StartAsync(ct);
-
         var sampler = new TrafficRateSampler();
-        await RenderLoop.RunAsync(() => BuildFrame(agent, registered, logs, sampler), ct);
 
+        // 先启动渲染循环（界面立即出现，无需等连接/超时）
+        var renderTask = RenderLoop.RunAsync(() => BuildFrame(agent, registered, logs, sampler), ct);
+
+        // 后台连接：StartAsync 内部处理失败（握手超时/拒绝 → 后台重连循环），不阻塞渲染
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await agent.StartAsync(ct);
+            }
+            catch (Exception ex)
+            {
+                // 理论不应发生（StartAsync 已捕获连接异常）；兜底记录
+                agent.LogLine?.Invoke($"启动异常：{ex.Message}");
+            }
+        });
+
+        await renderTask;             // Ctrl+C 退出
         await agent.StopAsync();
     }
 
