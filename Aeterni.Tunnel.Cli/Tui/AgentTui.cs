@@ -192,6 +192,11 @@ public static class AgentTui
         AgentHost agent, string cmd,
         ConcurrentDictionary<string, (bool Ok, string? Msg)> registered)
     {
+        // ① C# 风格调用：atc.Tunnel.Add("mc", "tcp", "25565", "6071")
+        if (TryParseAtcCall(cmd, out var obj, out var method, out var args))
+            return await ExecuteAtcCallAsync(agent, obj, method, args, registered);
+
+        // ② 旧命令兼容
         var parts = cmd.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length == 0)
             return true;
@@ -199,7 +204,7 @@ public static class AgentTui
         switch (parts[0].ToLowerInvariant())
         {
             case "help":
-                WriteResult("[bold]命令：[/] add <tcp|udp|http|https>:<本地端口>:<公网端口|域名> · remove <名称> · list/status · quit/exit");
+                WriteResult("[bold]命令：[/] atc.Tunnel.Add/Remove/List · atc.Status · atc.Quit（或旧式 add/remove/list/quit）");
                 return true;
 
             case "add":
@@ -221,20 +226,93 @@ public static class AgentTui
                 return false;
 
             default:
-                WriteResult($"[red]未知命令：{Markup.Escape(parts[0])}[/]（输入 help 查看）");
+                WriteResult($"[red]未知命令：{Markup.Escape(parts[0])}[/]（输入 [cyan]atc.Help()[/] 查看）");
+                return true;
+        }
+    }
+
+    // ═════════ C# 风格 REPL（atc.* 方法调用，自研解析——AOT 友好） ═════════
+
+    /// <summary>解析 atc.<对象>.<方法>("arg1", "arg2", ...) 调用</summary>
+    private static bool TryParseAtcCall(string input, out string obj, out string method, out List<string> args)
+    {
+        obj = ""; method = ""; args = [];
+        var trimmed = input.Trim().TrimEnd(';').Trim();
+        var m = System.Text.RegularExpressions.Regex.Match(trimmed, @"^atc\.([\w.]+)\.(\w+)\s*\((.*)\)$");
+        if (!m.Success)
+            return false;
+        obj = m.Groups[1].Value;
+        method = m.Groups[2].Value;
+        args = m.Groups[3].Value
+            .Split(',')
+            .Select(a => a.Trim().Trim('"', '\''))
+            .Where(a => a.Length > 0)
+            .ToList();
+        return true;
+    }
+
+    private static async Task<bool> ExecuteAtcCallAsync(
+        AgentHost agent, string obj, string method, List<string> args,
+        ConcurrentDictionary<string, (bool Ok, string? Msg)> registered)
+    {
+        switch ($"{obj}.{method}")
+        {
+            case "Tunnel.Add":
+                await AddTunnelAsync(agent, args.ToArray());
+                return true;
+
+            case "Tunnel.Remove":
+                await RemoveTunnelAsync(agent, args.FirstOrDefault() ?? "");
+                return true;
+
+            case "Tunnel.List":
+            case "Status":
+                return true;   // 重绘即刷新
+
+            case "Quit":
+            case "Exit":
+                return false;
+
+            case "Help":
+                WriteResult("[bold]atc 调用：[/] atc.Tunnel.Add(\"名称\",\"类型\",\"本地端口\",\"公网端口|域名\") · atc.Tunnel.Remove(\"名称\") · atc.Tunnel.List() · atc.Status() · atc.Quit()");
+                return true;
+
+            default:
+                WriteResult($"[red]未知调用：atc.{Markup.Escape(obj)}.{Markup.Escape(method)}(…)[/]（输入 atc.Help() 查看）");
                 return true;
         }
     }
 
     private static async Task AddTunnelAsync(AgentHost agent, string[] args)
     {
+        // 支持两种形式：
+        //   atc 风格：("名称", "类型", "本地端口", "公网端口|域名") 或 ("类型", "本地端口", "公网端口|域名")
+        //   旧命令：  add <类型>:<本地端口>:<公网端口|域名>
         if (args.Length == 0)
         {
-            WriteResult("[red]用法：add <tcp|udp|http|https>:<本地端口>:<公网端口|域名>[/]（如 add tcp:25565:6071）");
+            WriteResult("[red]用法：atc.Tunnel.Add(\"名称\",\"类型\",\"本地端口\",\"公网端口|域名\")[/]");
             return;
         }
 
-        var def = ParseTunnelSpec(args[0], agent.Proxies.Count);
+        ProxyDefinition? def;
+        if (args.Length == 1 && args[0].Contains(':'))
+        {
+            def = ParseTunnelSpec(args[0], agent.Proxies.Count);
+        }
+        else if (args.Length == 3)
+        {
+            def = BuildTunnelDef($"p{agent.Proxies.Count}", args[0], args[1], args[2]);
+        }
+        else if (args.Length == 4)
+        {
+            def = BuildTunnelDef(args[0], args[1], args[2], args[3]);
+        }
+        else
+        {
+            WriteResult("[red]参数数量不对：atc.Tunnel.Add(\"名称\",\"类型\",\"本地端口\",\"公网端口|域名\")[/]");
+            return;
+        }
+
         if (def is null)
             return;
 
@@ -289,6 +367,33 @@ public static class AgentTui
         AnsiConsole.MarkupLine($"  {markup}");
         AnsiConsole.Cursor.Move(CursorDirection.Up, 1);
         RenderInputLine("");
+    }
+
+    /// <summary>按分离参数构建隧道定义（atc.Tunnel.Add 风格）</summary>
+    private static ProxyDefinition? BuildTunnelDef(string name, string type, string localPort, string remoteOrDomain)
+    {
+        if (!int.TryParse(localPort, out var lp))
+        {
+            WriteResult($"[red]无效的本地端口：{Markup.Escape(localPort)}[/]");
+            return null;
+        }
+        if (type is "tcp" or "udp")
+        {
+            if (!int.TryParse(remoteOrDomain, out var rp))
+            {
+                WriteResult($"[red]无效的公网端口：{Markup.Escape(remoteOrDomain)}[/]");
+                return null;
+            }
+            return new ProxyDefinition(name, type == "tcp" ? LinkType.Tcp : LinkType.Udp,
+                "127.0.0.1", lp, RemotePort: rp);
+        }
+        if (type is "http" or "https")
+        {
+            return new ProxyDefinition(name, type == "http" ? LinkType.Http : LinkType.Https,
+                "127.0.0.1", lp, Domain: remoteOrDomain);
+        }
+        WriteResult($"[red]未知隧道类型：{Markup.Escape(type)}[/]（支持 tcp/udp/http/https）");
+        return null;
     }
 
     private static ProxyDefinition? ParseTunnelSpec(string spec, int index)
