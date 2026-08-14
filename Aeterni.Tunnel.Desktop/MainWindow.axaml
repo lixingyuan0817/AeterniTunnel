@@ -8,6 +8,7 @@
         x:DataType="vm:MainWindowViewModel"
         Title="AETERNI TUNNEL · ATC"
         Width="1000" Height="660" MinWidth="880" MinHeight="580"
+        WindowStartupLocation="CenterScreen"
         Background="{DynamicResource BgBrush}">
 
     <Grid RowDefinitions="Auto,*,Auto">

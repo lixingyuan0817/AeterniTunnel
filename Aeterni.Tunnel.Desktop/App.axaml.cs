@@ -28,7 +28,7 @@ public partial class App : Application
                     splash.Transitions.Add(new DoubleTransition
                     {
                         Property = Visual.OpacityProperty,
-                        Duration = TimeSpan.FromMilliseconds(260),
+                        Duration = TimeSpan.FromMilliseconds(300),
                     });
                     splash.Opacity = 0;
 
@@ -37,14 +37,14 @@ public partial class App : Application
                     main.Transitions.Add(new DoubleTransition
                     {
                         Property = Visual.OpacityProperty,
-                        Duration = TimeSpan.FromMilliseconds(400),
+                        Duration = TimeSpan.FromMilliseconds(450),
                     });
                     main.Opacity = 0;
                     desktop.MainWindow = main;
                     main.Show();
                     main.Opacity = 1;
 
-                    await Task.Delay(260);   // 等 splash 淡出完成
+                    await Task.Delay(300);   // 等 splash 淡出完成（与 main 淡入重叠，衔接连续）
                     splash.Close();
                 }));
             splash.Show();
