@@ -22,6 +22,8 @@ public partial class App : Application
             splash = new SplashWindow(() =>
                 Dispatcher.UIThread.Post(async () =>
                 {
+                    // 先让主窗口就位（设为主窗口并显示），再关 splash——
+                    // OnMainWindowClose 模式下若先关 splash（此时无主窗口），应用会直接退出
                     splash.Transitions ??= new Transitions();
                     splash.Transitions.Add(new DoubleTransition
                     {
@@ -29,8 +31,6 @@ public partial class App : Application
                         Duration = TimeSpan.FromMilliseconds(260),
                     });
                     splash.Opacity = 0;
-                    await Task.Delay(260);
-                    splash.Close();
 
                     var main = new MainWindow();
                     main.Transitions ??= new Transitions();
@@ -43,6 +43,9 @@ public partial class App : Application
                     desktop.MainWindow = main;
                     main.Show();
                     main.Opacity = 1;
+
+                    await Task.Delay(260);   // 等 splash 淡出完成
+                    splash.Close();
                 }));
             splash.Show();
         }
