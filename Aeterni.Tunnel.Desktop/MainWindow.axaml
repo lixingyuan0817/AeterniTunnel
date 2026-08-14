@@ -9,7 +9,7 @@
         Title="AETERNI TUNNEL · ATC"
         Width="1000" Height="660" MinWidth="880" MinHeight="580"
         WindowStartupLocation="CenterScreen"
-        TransparencyLevelHint="Blur" Background="#D905070F">
+        TransparencyLevelHint="AcrylicBlur,Blur" Background="#8C05070F">
 
     <Grid x:Name="MainRoot" RowDefinitions="Auto,*,Auto">
 

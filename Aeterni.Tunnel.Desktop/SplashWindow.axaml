@@ -4,7 +4,7 @@
         Title="AETERNI TUNNEL" Width="560" SizeToContent="Height"
         WindowStartupLocation="CenterScreen" CanResize="False"
         SystemDecorations="None" ShowInTaskbar="False"
-        TransparencyLevelHint="Blur" Background="#CC05070F">
+        TransparencyLevelHint="AcrylicBlur,Blur" Background="#7A05070F">
     <Border x:Name="RootPanel" Margin="48,36" CornerRadius="16">
         <StackPanel Spacing="22" HorizontalAlignment="Center">
             <!-- AETERNI 字母框（由 code-behind 生成并驱动动画） -->
