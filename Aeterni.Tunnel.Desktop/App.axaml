@@ -287,9 +287,6 @@
         <Style Selector="ScrollBar /template/ Thumb:pointerover">
             <Setter Property="Background" Value="{DynamicResource ScrollThumbHoverBrush}" />
         </Style>
-        <Style Selector="ScrollBar /template/ Track">
-            <Setter Property="Background" Value="Transparent" />
-        </Style>
         <!-- 隐藏两端箭头按钮（简洁；拖拽 + 滚轮仍可用） -->
         <Style Selector="ScrollBar /template/ RepeatButton">
             <Setter Property="IsVisible" Value="False" />
