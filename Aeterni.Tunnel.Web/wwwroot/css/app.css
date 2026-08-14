@@ -15,15 +15,17 @@
   --color-ats: #34c759;          /* iOS green */
   --color-ats-dark: #248a3d;
   --color-ats-light: #6ee7b7;
-  --color-console: #0a0f1a;      /* 终端深底 */
+  --color-console: #05070f;      /* 终端深底（更深，提升对比） */
 
-  --font-mono: "Cascadia Mono", "JetBrains Mono", Consolas, monospace;
+  /* 字体：正文用 UI 字体（清晰可读），等宽留给数据/日志 */
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif;
+  --font-mono: "Cascadia Mono", "JetBrains Mono", Consolas, "Courier New", monospace;
 }
 
 /* 自定义层（可选） */
 @layer base {
   body {
-    @apply bg-console text-slate-100 font-mono;
+    @apply bg-console text-white font-sans font-medium text-[17px];
   }
 }
 
