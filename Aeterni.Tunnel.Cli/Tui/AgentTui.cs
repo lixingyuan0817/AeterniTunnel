@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Text;
 using Aeterni.Tunnel.Engine.Hosting;
 using Aeterni.Tunnel.Engine.Protocol;
 using Spectre.Console;
@@ -6,17 +7,16 @@ using Spectre.Console;
 namespace Aeterni.Tunnel.Cli.Tui;
 
 /// <summary>
-/// ATC 交互式 TUI：Figlet 品牌 + 连接状态 + 隧道状态表 + 实时日志窗 + 命令输入。
-/// 命令：add（添加隧道）/ remove（移除）/ list（刷新）/ help / quit。
-/// 连接在后台进行（握手失败自动重连），界面立即显示。
+/// ATC 全屏交互式 TUI：占满终端，自适应尺寸。
+/// 布局：上部隧道状态表 + 中部日志 + 底部命令输入行。
+/// 实时刷新（后台 1s 覆盖重绘，无频闪），输入支持 Tab 补全命令，Ctrl+C 退出。
 /// </summary>
 public static class AgentTui
 {
-    private const int LogKeepLines = 18;
+    private static readonly string[] Commands = ["add", "remove", "list", "status", "help", "quit", "exit"];
 
     public static async Task RunAsync(AgentHost agent, CancellationToken ct)
     {
-        // TUI 需要真实终端：输出被重定向（管道/文件）时无法渲染，明确提示后退出
         if (Console.IsOutputRedirected)
         {
             Console.Error.WriteLine("[agent] TUI 需要真实终端（当前输出被重定向）。请使用 --config 配置文件模式。");
@@ -34,93 +34,156 @@ public static class AgentTui
         agent.LogLine += s =>
         {
             logs.Enqueue($"{DateTime.Now:HH:mm:ss} {s}");
-            while (logs.Count > LogKeepLines) logs.TryDequeue(out _);
+            while (logs.Count > 64) logs.TryDequeue(out _);
         };
 
-        // 后台连接：StartAsync 内部处理失败（握手超时/拒绝 → 后台重连循环），不阻塞交互
+        // 后台连接（失败自动重连，不阻塞界面）
         _ = Task.Run(async () =>
         {
             try { await agent.StartAsync(ct); }
             catch (Exception ex) { Console.Error.WriteLine($"[agent] 启动异常：{ex.Message}"); }
         });
 
-        // 命令循环
+        // 隐藏光标（自绘界面）
+        try { AnsiConsole.Cursor.Hide(); } catch (IOException) { }
+
+        var input = new StringBuilder();
         var running = true;
-        while (running && !ct.IsCancellationRequested)
+        var lastRender = 0L;
+
+        try
         {
-            Render(agent, registered, logs);
-            var cmd = AnsiConsole.Prompt(new TextPrompt<string>("[bold green]ats[/]›").AllowEmpty());
-            running = await ExecuteAsync(agent, cmd, registered);
+            while (running && !ct.IsCancellationRequested)
+            {
+                // 定时刷新（1s）+ 处理按键
+                if (Console.KeyAvailable)
+                {
+                    var key = Console.ReadKey(intercept: true);
+                    switch (key.Key)
+                    {
+                        case ConsoleKey.Enter:
+                            running = await ExecuteAsync(agent, input.ToString(), registered);
+                            input.Clear();
+                            RenderAll(agent, registered, logs, input.ToString());
+                            break;
+                        case ConsoleKey.Backspace when input.Length > 0:
+                            input.Length--;
+                            RenderInputLine(input.ToString());
+                            break;
+                        case ConsoleKey.Tab:
+                            TabComplete(input);
+                            RenderInputLine(input.ToString());
+                            break;
+                        case ConsoleKey.C when key.Modifiers.HasFlag(ConsoleModifiers.Control):
+                            running = false;
+                            break;
+                        default:
+                            if (!char.IsControl(key.KeyChar))
+                            {
+                                input.Append(key.KeyChar);
+                                RenderInputLine(input.ToString());
+                            }
+                            break;
+                    }
+                }
+                else
+                {
+                    var now = Environment.TickCount64;
+                    if (now - lastRender >= 1000)
+                    {
+                        lastRender = now;
+                        RenderAll(agent, registered, logs, input.ToString());
+                    }
+                    Thread.Sleep(40);
+                }
+            }
+        }
+        finally
+        {
+            try { AnsiConsole.Cursor.Show(); } catch (IOException) { }
+            Console.WriteLine();
         }
 
-        AnsiConsole.MarkupLine("[grey]正在退出…[/]");
         await agent.StopAsync();
     }
 
-    // ═════════ 渲染 ═════════
+    // ═════════ 渲染（全屏覆盖，无频闪） ═════════
 
-    private static void Render(
+    private static void RenderAll(
         AgentHost agent,
         ConcurrentDictionary<string, (bool Ok, string? Msg)> registered,
-        ConcurrentQueue<string> logs)
+        ConcurrentQueue<string> logs,
+        string input)
     {
-        AnsiConsole.Clear();
+        var height = Format.TerminalHeight();
+        var width = Format.TerminalWidth();
 
-        // ① 品牌 + 连接状态
-        AnsiConsole.Write(new FigletText("AETERNI").Color(Color.Green));
-        var state = agent.IsConnected
-            ? "[green]● 已连接[/]"
-            : "[yellow]○ 重连中[/]";
-        AnsiConsole.MarkupLine($"  [dim]TUNNEL · Agent[/]   {state}   隧道 [bold]{agent.Proxies.Count}[/] 条");
+        AnsiConsole.Write("\x1b[H");   // 光标归位，覆盖重绘（不清屏 → 不闪）
 
-        // ② 隧道状态表
-        var table = new Table
+        // ① 品牌 + 状态行
+        var state = agent.IsConnected ? "[green]● 已连接[/]" : "[yellow]○ 重连中[/]";
+        AnsiConsole.MarkupLine($"  [bold green]AETERNI[/] [dim]TUNNEL · Agent[/]  {state}  隧道 [bold]{agent.Proxies.Count}[/] 条");
+        AnsiConsole.MarkupLine($"  [dim]{new string('─', Math.Max(20, width - 4))}[/]");
+
+        // ② 隧道状态表（按剩余高度截断）
+        var tableHeight = Math.Min(agent.Proxies.Count + 3, Math.Max(4, height - 8));
+        RenderTable(agent, registered, tableHeight);
+
+        // ③ 日志窗（填满剩余）
+        var logRows = Math.Max(1, height - tableHeight - 6);
+        var logLines = logs.TakeLast(logRows).ToArray();
+        if (logLines.Length == 0) logLines = ["[dim]（等待日志…）[/]"];
+        AnsiConsole.MarkupLine($"  [dim]{new string('─', Math.Max(20, width - 4))}[/]");
+        foreach (var line in logLines)
         {
-            Border = TableBorder.Rounded,
-            Expand = true,
-        };
-        table.Title = new TableTitle(" 隧道 ");
-        table.AddColumn(new TableColumn("名称").Centered());
-        table.AddColumn(new TableColumn("类型").Centered());
-        table.AddColumn(new TableColumn("远程地址"));
-        table.AddColumn(new TableColumn("↑ 累计").Centered());
-        table.AddColumn(new TableColumn("↓ 累计").Centered());
-        table.AddColumn(new TableColumn("状态").Centered());
+            var clipped = line.Length > width - 4 ? line[..(width - 4)] : line;
+            AnsiConsole.MarkupLine($"  {Markup.Escape(clipped)}");
+        }
 
-        foreach (var p in agent.Proxies)
+        // 清除下方残留
+        AnsiConsole.Write("\x1b[J");
+        RenderInputLine(input);
+    }
+
+    private static void RenderTable(
+        AgentHost agent,
+        ConcurrentDictionary<string, (bool Ok, string? Msg)> registered,
+        int maxRows)
+    {
+        var rows = agent.Proxies.Take(Math.Max(0, maxRows - 2)).ToList();
+        if (rows.Count == 0)
+        {
+            AnsiConsole.MarkupLine("  [dim]（暂无隧道——输入 [cyan]add tcp:25565:6071[/] 添加）[/]");
+            return;
+        }
+
+        // 表头
+        AnsiConsole.MarkupLine("  [bold]名称[/]    [bold]类型[/]  [bold]远程地址[/]            [bold]↑ 流量[/]  [bold]↓ 流量[/]  [bold]状态[/]");
+        foreach (var p in rows)
         {
             (bool Ok, string? Msg) reg = registered.TryGetValue(p.ProxyId, out var r) ? r : (false, null);
             (long Up, long Down) traffic = agent.GetTraffic().TryGetValue(p.ProxyId, out var t) ? t : (0L, 0L);
-
             var remote = p.RemotePort is not null ? $"0.0.0.0:{p.RemotePort}" : p.Domain ?? "-";
             var status = !agent.IsConnected
-                ? "[grey]○ 未连接[/]"
+                ? "[grey]未连接[/]"
                 : reg.Ok
                     ? "[green]● 在线[/]"
                     : reg.Msg is not null
-                        ? $"[red]● 失败[/] [dim]{Markup.Escape(reg.Msg)}[/]"
+                        ? $"[red]● 失败[/]"
                         : "[grey]○ 注册中[/]";
 
-            table.AddRow(
-                Markup.Escape(p.ProxyId),
-                p.LinkType.ToString().ToLowerInvariant(),
-                Markup.Escape(remote),
-                $"↑{Format.Bytes(traffic.Up)}",
-                $"↓{Format.Bytes(traffic.Down)}",
-                status);
+            AnsiConsole.MarkupLine($"  {Markup.Escape(p.ProxyId),-6}  {p.LinkType.ToString().ToLowerInvariant(),-5}  {Markup.Escape(remote),-20}  ↑{Format.Bytes(traffic.Up),-7}  ↓{Format.Bytes(traffic.Down),-7}  {status}");
         }
-        AnsiConsole.Write(table);
+        if (rows.Count < agent.Proxies.Count)
+            AnsiConsole.MarkupLine($"  [dim]… 还有 {agent.Proxies.Count - rows.Count} 条未显示[/]");
+    }
 
-        // ③ 日志窗
-        var logPanel = new Panel(string.Join("\n", logs.Select(Markup.Escape)))
-        {
-            Header = new PanelHeader(" 日志 "),
-            Border = BoxBorder.Rounded,
-        };
-        AnsiConsole.Write(logPanel);
-
-        // ④ 命令提示
-        AnsiConsole.MarkupLine("[dim]help 查看命令 · add tcp:25565:6071 添加隧道 · quit 退出[/]");
+    private static void RenderInputLine(string input)
+    {
+        var row = Format.TerminalHeight();
+        AnsiConsole.Write($"\x1b[{row};1H\x1b[2K");
+        var display = input.Length > 80 ? input[^80..] : input;
+        AnsiConsole.Markup($"[bold green]ats›[/] {Markup.Escape(display)}");
     }
 
     // ═════════ 命令 ═════════
@@ -136,31 +199,21 @@ public static class AgentTui
         switch (parts[0].ToLowerInvariant())
         {
             case "help":
-                AnsiConsole.MarkupLine("""
-                    [bold]命令：[/]
-                      [cyan]add <类型>:<本地端口>:<公网端口|域名>[/]   添加隧道
-                         tcp:25565:6071 · udp:19132:6072 · http:8080:web.example.com · https:8443:web.example.com
-                      [cyan]remove <名称>[/]       移除隧道（如 remove p0）
-                      [cyan]list[/] / [cyan]status[/]   刷新状态
-                      [cyan]quit[/] / [cyan]exit[/]     退出
-                    """);
-                Pause();
+                WriteResult("[bold]命令：[/] add <tcp|udp|http|https>:<本地端口>:<公网端口|域名> · remove <名称> · list/status · quit/exit");
                 return true;
 
             case "add":
                 await AddTunnelAsync(agent, parts[1..]);
-                Pause();
                 return true;
 
             case "remove":
             case "rm":
                 await RemoveTunnelAsync(agent, parts.ElementAtOrDefault(1) ?? "");
-                Pause();
                 return true;
 
             case "list":
             case "status":
-                return true;   // 重绘即刷新
+                return true;
 
             case "quit":
             case "exit":
@@ -168,8 +221,7 @@ public static class AgentTui
                 return false;
 
             default:
-                AnsiConsole.MarkupLine($"[red]未知命令：{parts[0]}[/]（输入 [cyan]help[/] 查看）");
-                Pause();
+                WriteResult($"[red]未知命令：{Markup.Escape(parts[0])}[/]（输入 help 查看）");
                 return true;
         }
     }
@@ -178,7 +230,7 @@ public static class AgentTui
     {
         if (args.Length == 0)
         {
-            AnsiConsole.MarkupLine("[red]用法：add <类型>:<本地端口>:<公网端口|域名>[/]（如 [cyan]add tcp:25565:6071[/]）");
+            WriteResult("[red]用法：add <tcp|udp|http|https>:<本地端口>:<公网端口|域名>[/]（如 add tcp:25565:6071）");
             return;
         }
 
@@ -186,7 +238,6 @@ public static class AgentTui
         if (def is null)
             return;
 
-        // 等待该隧道注册结果（事件 + 超时）
         var tcs = new TaskCompletionSource<(bool Ok, string? Msg)>(TaskCreationOptions.RunContinuationsAsynchronously);
         Action<string, bool, string?> handler = null!;
         handler = (id, ok, msg) =>
@@ -199,88 +250,92 @@ public static class AgentTui
         };
         agent.ProxyRegistered += handler;
 
-        try
-        {
-            await agent.AddProxyAsync(def);
-        }
+        try { await agent.AddProxyAsync(def); }
         catch (Exception ex)
         {
-            AnsiConsole.MarkupLine($"[red]添加失败：{Markup.Escape(ex.Message)}[/]");
+            WriteResult($"[red]添加失败：{Markup.Escape(ex.Message)}[/]");
             return;
         }
 
-        // 等注册结果（连接中/重连时可能超时——加入待注册列表）
-        (bool Ok, string? Msg) result;
         try
         {
-            result = await tcs.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            var (ok, msg) = await tcs.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            WriteResult(ok
+                ? $"[green]✔ 隧道 [bold]{def.ProxyId}[/] 添加成功：{Markup.Escape(msg ?? "")}[/]"
+                : $"[red]✘ 隧道 [bold]{def.ProxyId}[/] 注册失败：{Markup.Escape(msg ?? "未知错误")}[/]");
         }
         catch (TimeoutException)
         {
-            AnsiConsole.MarkupLine($"[yellow]隧道 [bold]{def.ProxyId}[/] 已加入待注册列表[/]（当前未连接，连接成功后自动注册）");
-            return;
+            WriteResult($"[yellow]隧道 [bold]{def.ProxyId}[/] 已加入待注册列表[/]（当前未连接，连接成功后自动注册）");
         }
-
-        AnsiConsole.MarkupLine(result.Ok
-            ? $"[green]✔ 隧道 [bold]{def.ProxyId}[/] 添加成功：{Markup.Escape(result.Msg ?? "")}[/]"
-            : $"[red]✘ 隧道 [bold]{def.ProxyId}[/] 注册失败：{Markup.Escape(result.Msg ?? "未知错误")}[/]");
     }
 
     private static async Task RemoveTunnelAsync(AgentHost agent, string proxyId)
     {
         if (string.IsNullOrWhiteSpace(proxyId))
         {
-            AnsiConsole.MarkupLine("[red]用法：remove <名称>[/]（如 [cyan]remove p0[/]）");
+            WriteResult("[red]用法：remove <名称>[/]（如 remove p0）");
             return;
         }
         await agent.RemoveProxyAsync(proxyId);
-        AnsiConsole.MarkupLine($"[green]✔ 隧道 [bold]{Markup.Escape(proxyId)}[/] 已移除[/]");
+        WriteResult($"[green]✔ 隧道 [bold]{Markup.Escape(proxyId)}[/] 已移除[/]");
     }
 
-    /// <summary>解析隧道定义：tcp:25565:6071 / udp:19132:6072 / http:8080:web.example.com / https:8443:web.example.com</summary>
+    /// <summary>命令结果输出（显示在日志区顶部，随下次刷新融入日志窗）</summary>
+    private static void WriteResult(string markup)
+    {
+        // 在日志区上方插入一行结果（利用终端顶部空行）
+        AnsiConsole.Write($"\x1b[{Format.TerminalHeight() - 1};1H\x1b[2K");
+        AnsiConsole.MarkupLine($"  {markup}");
+        AnsiConsole.Cursor.Move(CursorDirection.Up, 1);
+        RenderInputLine("");
+    }
+
     private static ProxyDefinition? ParseTunnelSpec(string spec, int index)
     {
         var parts = spec.Split(':');
         if (parts.Length < 3)
         {
-            AnsiConsole.MarkupLine($"[red]无效的隧道定义：{Markup.Escape(spec)}[/]");
+            WriteResult($"[red]无效的隧道定义：{Markup.Escape(spec)}[/]");
             return null;
         }
-
         var type = parts[0];
         if (!int.TryParse(parts[1], out var localPort))
         {
-            AnsiConsole.MarkupLine($"[red]无效的本地端口：{Markup.Escape(parts[1])}[/]");
+            WriteResult($"[red]无效的本地端口：{Markup.Escape(parts[1])}[/]");
             return null;
         }
         var name = $"p{index}";
-
         if (type is "tcp" or "udp")
         {
             if (!int.TryParse(parts[2], out var remotePort))
             {
-                AnsiConsole.MarkupLine($"[red]无效的公网端口：{Markup.Escape(parts[2])}[/]");
+                WriteResult($"[red]无效的公网端口：{Markup.Escape(parts[2])}[/]");
                 return null;
             }
-            return new ProxyDefinition(name,
-                type == "tcp" ? LinkType.Tcp : LinkType.Udp,
+            return new ProxyDefinition(name, type == "tcp" ? LinkType.Tcp : LinkType.Udp,
                 "127.0.0.1", localPort, RemotePort: remotePort);
         }
-
         if (type is "http" or "https")
         {
-            return new ProxyDefinition(name,
-                type == "http" ? LinkType.Http : LinkType.Https,
+            return new ProxyDefinition(name, type == "http" ? LinkType.Http : LinkType.Https,
                 "127.0.0.1", localPort, Domain: parts[2]);
         }
-
-        AnsiConsole.MarkupLine($"[red]未知隧道类型：{Markup.Escape(type)}[/]（支持 tcp/udp/http/https）");
+        WriteResult($"[red]未知隧道类型：{Markup.Escape(type)}[/]（支持 tcp/udp/http/https）");
         return null;
     }
 
-    private static void Pause()
+    /// <summary>Tab 补全：匹配命令前缀</summary>
+    private static void TabComplete(StringBuilder input)
     {
-        AnsiConsole.Markup("[dim]按回车继续…[/]");
-        Console.ReadLine();
+        var text = input.ToString();
+        if (text.Contains(' '))
+            return; // 只补全命令名
+        var match = Commands.FirstOrDefault(c => c.StartsWith(text, StringComparison.OrdinalIgnoreCase));
+        if (match is not null)
+        {
+            input.Clear();
+            input.Append(match);
+        }
     }
 }
