@@ -53,7 +53,7 @@ public static class AgentTui
             catch (Exception ex)
             {
                 // 理论不应发生（StartAsync 已捕获连接异常）；兜底记录
-                agent.LogLine?.Invoke($"启动异常：{ex.Message}");
+                Console.Error.WriteLine($"[agent] 启动异常：{ex.Message}");
             }
         });
 
