@@ -4,7 +4,7 @@ name: Release
 # 也可手动触发（workflow_dispatch）仅构建验证，不上传
 # 产物策略：
 #   - Web 管理台：仅 linux-x64 self-contained 单文件（Blazor InteractiveServer 不支持 NativeAOT）
-#   - CLI 客户端（ATC）：三平台 NativeAOT（win-x64 / linux-x64 / osx-arm64）
+#   - Desktop 客户端（ATC）：三平台 NativeAOT（win-x64 / linux-x64 / osx-arm64）
 on:
   push:
     tags: ['v*']
@@ -63,6 +63,60 @@ jobs:
           tar czf ../../dist/aeterni-tunnel-${RELEASE_VERSION}-linux-x64.tar.gz ./*
           cd ../..
           ls -lh dist
+
+      - name: Upload to Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          fail_on_unmatched_files: true
+          generate_release_notes: true
+
+  desktop:
+    name: Desktop ${{ matrix.rid }} (AOT)
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            rid: linux-x64
+          - os: macos-14
+            rid: osx-arm64
+          - os: windows-latest
+            rid: win-x64
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.302'
+
+      - name: Publish Desktop (NativeAOT)
+        run: |
+          dotnet publish Aeterni.Tunnel.Desktop/Aeterni.Tunnel.Desktop.csproj -c Release -r ${{ matrix.rid }} -p:PublishAot=true -o publish/out
+
+      - name: Package (tar.gz)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          mkdir -p dist
+          cd publish/out
+          mv Aeterni.Tunnel.Desktop aeterni-client
+          tar czf ../../dist/aeterni-client-${RELEASE_VERSION}-${{ matrix.rid }}.tar.gz ./*
+          cd ../..
+          ls -lh dist
+
+      - name: Package (zip)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          mkdir dist
+          cd publish/out
+          mv Aeterni.Tunnel.Desktop.exe aeterni-client.exe
+          Compress-Archive -Path ./* -DestinationPath ../../dist/aeterni-client-$env:RELEASE_VERSION-${{ matrix.rid }}.zip
+          Get-ChildItem ../../dist | Select-Object Name, Length
 
       - name: Upload to Release
         if: startsWith(github.ref, 'refs/tags/')

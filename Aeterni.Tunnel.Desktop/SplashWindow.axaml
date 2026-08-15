@@ -3,7 +3,7 @@
         x:Class="Aeterni.Tunnel.Desktop.SplashWindow"
         Title="AETERNI TUNNEL" Width="560" SizeToContent="Height"
         WindowStartupLocation="CenterScreen" CanResize="False"
-        SystemDecorations="None" ShowInTaskbar="False"
+        WindowDecorations="None" ShowInTaskbar="False"
         TransparencyLevelHint="AcrylicBlur,Blur" Background="#7A05070F">
     <Border x:Name="RootPanel" Margin="48,36" CornerRadius="16">
         <StackPanel Spacing="22" HorizontalAlignment="Center">
