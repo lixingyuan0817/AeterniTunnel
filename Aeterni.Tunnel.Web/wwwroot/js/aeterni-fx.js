@@ -76,7 +76,7 @@
         // 性能仪表卡
         gsap.from('.stat-card', { y: 18, opacity: 0, duration: .6, ease: 'power2.out', stagger: .08, delay: .2 });
 
-        // 代理卡片墙（弹性入场）
+        // 隧道卡片墙（弹性入场）
         gsap.from('.proxy-card', { y: 24, opacity: 0, scale: .95, duration: .6, ease: 'back.out(1.4)', stagger: .07, delay: .5 });
 
         // 日志行

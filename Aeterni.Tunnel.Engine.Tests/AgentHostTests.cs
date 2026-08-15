@@ -45,7 +45,7 @@ public class AgentHostTests
         await WaitUntilAsync(5, () => HasProxy(listener, "svc"));
     }
 
-    /// <summary>断线自动重连：服务端重启后 AgentSession 重连并重注册代理（真实链路）</summary>
+    /// <summary>断线自动重连：服务端重启后 AgentSession 重连并重注册隧道（真实链路）</summary>
     [Fact]
     public async Task AutoReconnect_AfterServerRestart()
     {
@@ -80,7 +80,7 @@ public class AgentHostTests
         await WaitUntilAsync(10, () => HasProxy(listener2, "p1"));
     }
 
-    /// <summary>配置热更新：增量增删代理（FR-015）</summary>
+    /// <summary>配置热更新：增量增删隧道（FR-015）</summary>
     [Fact]
     public async Task Reload_IncrementalAddRemoveUpdate()
     {

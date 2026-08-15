@@ -59,7 +59,7 @@ public class RobustnessTests
         await loginTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
         Assert.True(agent.IsConnected);
 
-        // 注册代理（事件订阅放在最前，持续收集所有注册结果）
+        // 注册隧道（事件订阅放在最前，持续收集所有注册结果）
         var regEvents = new List<(string, bool, string?)>();
         agent.ProxyRegistered += (id, ok, addr) =>
         {

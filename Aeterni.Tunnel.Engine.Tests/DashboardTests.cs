@@ -165,14 +165,14 @@ public class DashboardTests
         await loginTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
         await using var _a = agent;
 
-        // 第 1 个端口代理 → 成功
+        // 第 1 个端口隧道 → 成功
         var reg1 = new TaskCompletionSource<(string, bool, string?)>(TaskCreationOptions.RunContinuationsAsynchronously);
         agent.ProxyRegistered += (id, ok, addr) => reg1.TrySetResult((id, ok, addr));
         await agent.RegisterProxyAsync("p1", LinkType.Tcp, "127.0.0.1", 25565, FreePort());
         var (_, ok1, _) = await reg1.Task.WaitAsync(TimeSpan.FromSeconds(5));
         Assert.True(ok1);
 
-        // 第 2 个端口代理 → 超过上限拒绝
+        // 第 2 个端口隧道 → 超过上限拒绝
         var reg2 = new TaskCompletionSource<(string, bool, string?)>(TaskCreationOptions.RunContinuationsAsynchronously);
         agent.ProxyRegistered += (id, ok, addr) => reg2.TrySetResult((id, ok, addr));
         await agent.RegisterProxyAsync("p2", LinkType.Tcp, "127.0.0.1", 25566, FreePort());

@@ -48,7 +48,7 @@ public class ControlPlaneTests
         // 等"登录成功"日志（"正在连接"之后出现）
         await WaitForLogAsync(logs, "登录成功", TimeSpan.FromSeconds(15));
 
-        // 注册代理成功，返回远程地址
+        // 注册隧道成功，返回远程地址
         await agent.RegisterProxyAsync("p1", LinkType.Tcp, "127.0.0.1", 25565, remotePort: proxyPort);
         var regTcs = new TaskCompletionSource<(string, bool, string?)>(TaskCreationOptions.RunContinuationsAsynchronously);
         agent.ProxyRegistered += (id, ok, addr) => regTcs.TrySetResult((id, ok, addr));

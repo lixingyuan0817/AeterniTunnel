@@ -98,7 +98,7 @@ public class VhostHttpTests
         var agent = await ConnectAgentAsync(controlPort);
         await using var _a = agent;
 
-        // 注册 HTTP 代理（完整域名）
+        // 注册 HTTP 隧道（完整域名）
         var regTcs = new TaskCompletionSource<(string, bool, string?)>(TaskCreationOptions.RunContinuationsAsynchronously);
         agent.ProxyRegistered += (id, ok, addr) => regTcs.TrySetResult((id, ok, addr));
         await agent.RegisterProxyAsync("web1", LinkType.Http, "127.0.0.1", httpPort, domain: "web.t.local");

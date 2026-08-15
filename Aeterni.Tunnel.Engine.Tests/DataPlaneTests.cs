@@ -127,7 +127,7 @@ public class DataPlaneTests
         await using var _ = listener;
         await using var _2 = agent;
 
-        // 用户连接 Server 的代理端口，发数据 → echo 回来
+        // 用户连接 Server 的隧道端口，发数据 → echo 回来
         using var user = new TcpClient();
         await user.ConnectAsync(IPAddress.Loopback, proxyPort);
         var stream = user.GetStream();
@@ -139,9 +139,9 @@ public class DataPlaneTests
         var n = await stream.ReadAsync(buf);
         Assert.Equal(payload, buf.AsSpan(0, n).ToArray());
 
-        // 流量统计：穿透后代理应有非零收发字节
+        // 流量统计：穿透后隧道应有非零收发字节
         var traffic = agent.GetTrafficSnapshot();
-        Assert.True(traffic.TryGetValue("proxy-e2e", out var tr), "应有该代理的流量记录");
+        Assert.True(traffic.TryGetValue("proxy-e2e", out var tr), "应有该隧道的流量记录");
         Assert.True(tr.Up + tr.Down > 0, $"穿透后流量应非零（up={tr.Up} down={tr.Down}）");
     }
 
