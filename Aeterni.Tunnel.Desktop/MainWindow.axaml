@@ -238,7 +238,7 @@
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:ToastItemViewModel">
-                    <Border Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource PanelBorderBrush}"
+                    <Border Background="{DynamicResource BgBrush}" BorderBrush="{DynamicResource ToastBorderBrush}"
                             BorderThickness="1" CornerRadius="10" Padding="12,9"
                             Opacity="{Binding Opacity}">
                         <Border.Transitions>
