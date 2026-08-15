@@ -226,6 +226,22 @@
             <Setter Property="Background" Value="{DynamicResource InputBgBrush}" />
         </Style>
 
+        <!-- 禁用态：无灰色背景，仅整体淡化（替代 Fluent 默认灰底） -->
+        <Style Selector="Button.ghost:disabled">
+            <Setter Property="Opacity" Value="0.45" />
+        </Style>
+        <Style Selector="Button.ghost:disabled /template/ ContentPresenter, Button.ghost:disabled /template/ Border">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <Style Selector="Button.primary:disabled">
+            <Setter Property="Background" Value="{DynamicResource InputBgBrush}" />
+            <Setter Property="Opacity" Value="0.6" />
+        </Style>
+        <Style Selector="Button.danger:disabled">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Opacity" Value="0.45" />
+        </Style>
+
         <Style Selector="Button.danger">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="Foreground" Value="{DynamicResource RedBrush}" />
