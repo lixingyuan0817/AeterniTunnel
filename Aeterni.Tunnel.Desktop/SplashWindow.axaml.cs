@@ -12,9 +12,9 @@ namespace Aeterni.Tunnel.Desktop;
 /// </summary>
 public partial class SplashWindow : Window
 {
-    private const double BoxW = 46;
-    private const double BoxH = 54;
-    private const double Step = BoxW + 8;   // 间距
+    private const double BoxW = 54;
+    private const double BoxH = 64;
+    private const double Step = BoxW + 10;   // 间距
     private static readonly Color Accent = Color.Parse("#34C759");
 
     private readonly List<(Border Box, TranslateTransform Move, RotateTransform Spin, TransformGroup Group)> _letters = [];
@@ -37,13 +37,13 @@ public partial class SplashWindow : Window
                 Width = BoxW,
                 Height = BoxH,
                 BorderBrush = new SolidColorBrush(Accent),
-                BorderThickness = new Thickness(2),
-                CornerRadius = new CornerRadius(6),
-                Background = new SolidColorBrush(Color.FromArgb(0x18, 0x34, 0xC7, 0x59)),
+                BorderThickness = new Thickness(3),
+                CornerRadius = new CornerRadius(8),
+                Background = new SolidColorBrush(Color.FromArgb(0x26, 0x34, 0xC7, 0x59)),
                 Child = new TextBlock
                 {
                     Text = brand[i].ToString(),
-                    FontSize = 26,
+                    FontSize = 30,
                     FontWeight = FontWeight.Bold,
                     Foreground = Brushes.White,
                     HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,

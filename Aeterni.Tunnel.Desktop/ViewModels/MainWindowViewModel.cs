@@ -45,7 +45,6 @@ public sealed class MainWindowViewModel : ObservableBase, IAsyncDisposable
         NavigateSettingsCommand = new RelayCommand(() => Navigate("settings"));
         // 客户端常连：无手动连接/断开；未连接（重连中）时隧道操作禁用
         AddTunnelCommand = new RelayCommand(() => EditTunnelRequested?.Invoke(null), () => IsConnected);
-        ToggleThemeCommand = new RelayCommand(ToggleTheme);
         LoadConfigCommand = new RelayCommand(() => _ = LoadConfigAsync());
         SaveSettingsCommand = new RelayCommand(SaveSettings);
 
@@ -95,19 +94,27 @@ public sealed class MainWindowViewModel : ObservableBase, IAsyncDisposable
         OnPropertyChanged(nameof(NavSettingsBrush));
     }
 
-    // ═════════ 明暗主题 ═════════
+    // ═════════ 明暗主题（明亮 / 黑暗 / 跟随系统，选择持久化到 agent.toml 的 theme 键） ═════════
 
-    private bool _isDarkTheme = true;
+    /// <summary>主题模式（保存值与 agent.toml theme 键一致：light/dark/system）</summary>
+    public enum ThemeMode { Light, Dark, System }
 
-    public bool IsDarkTheme => _isDarkTheme;
+    private ThemeMode _themeMode = ThemeMode.Dark;
 
-    public string ThemeToggleText => IsDarkTheme ? "🌙 深色" : "☀ 亮色";
+    /// <summary>当前实际生效是否为暗色（跟随系统模式下由系统实时决定）</summary>
+    public bool IsDarkTheme => Application.Current?.ActualThemeVariant == ThemeVariant.Dark;
 
-    public ICommand ToggleThemeCommand { get; }
+    public bool IsLightChecked { get => _themeMode == ThemeMode.Light; set { if (value) SelectTheme(ThemeMode.Light); } }
 
-    public void ToggleTheme()
+    public bool IsDarkChecked { get => _themeMode == ThemeMode.Dark; set { if (value) SelectTheme(ThemeMode.Dark); } }
+
+    public bool IsSystemChecked { get => _themeMode == ThemeMode.System; set { if (value) SelectTheme(ThemeMode.System); } }
+
+    public void SelectTheme(ThemeMode mode)
     {
-        _isDarkTheme = !_isDarkTheme;
+        if (_themeMode == mode)
+            return;
+        _themeMode = mode;
         ApplyTheme();
         SaveConfig();   // 主题选择持久化到 agent.toml 的 theme 键
     }
@@ -115,8 +122,16 @@ public sealed class MainWindowViewModel : ObservableBase, IAsyncDisposable
     private void ApplyTheme()
     {
         if (Application.Current is { } app)
-            app.RequestedThemeVariant = IsDarkTheme ? ThemeVariant.Dark : ThemeVariant.Light;
-        OnPropertyChanged(nameof(ThemeToggleText));
+            app.RequestedThemeVariant = _themeMode switch
+            {
+                ThemeMode.Light => ThemeVariant.Light,
+                ThemeMode.Dark => ThemeVariant.Dark,
+                _ => ThemeVariant.Default,   // 跟随系统
+            };
+        OnPropertyChanged(nameof(IsDarkTheme));
+        OnPropertyChanged(nameof(IsLightChecked));
+        OnPropertyChanged(nameof(IsDarkChecked));
+        OnPropertyChanged(nameof(IsSystemChecked));
         OnPropertyChanged(nameof(NavHomeBrush));
         OnPropertyChanged(nameof(NavTunnelsBrush));
         OnPropertyChanged(nameof(NavSettingsBrush));
@@ -247,10 +262,19 @@ public sealed class MainWindowViewModel : ObservableBase, IAsyncDisposable
         try
         {
             var kv = MinimalToml.Parse(File.ReadAllText(ConfigPath));
-            if (kv.TryGetValue("theme", out var v) && v is string s && s.Equals("light", StringComparison.OrdinalIgnoreCase))
+            if (kv.TryGetValue("theme", out var v) && v is string s)
             {
-                _isDarkTheme = false;
-                ApplyTheme();
+                var mode = s.ToLowerInvariant() switch
+                {
+                    "light" => ThemeMode.Light,
+                    "system" => ThemeMode.System,
+                    _ => ThemeMode.Dark,
+                };
+                if (mode != _themeMode)
+                {
+                    _themeMode = mode;
+                    ApplyTheme();
+                }
             }
         }
         catch { /* 读取失败不影响启动 */ }
@@ -290,7 +314,7 @@ public sealed class MainWindowViewModel : ObservableBase, IAsyncDisposable
             if (!int.TryParse(ServerPort.Trim(), out var port) || port is < 1 or > 65535)
                 return;
             var text = AgentTomlWriter.Build(ServerAddr.Trim(), port, Token.Trim(), ClientId.Trim(), UseTls,
-                _pendingDefs, IsDarkTheme ? "dark" : "light");
+                _pendingDefs, _themeMode.ToString().ToLowerInvariant());
             File.WriteAllText(ConfigPath, text);
             IsFirstRun = false;
             AddLog($"配置已保存：{ConfigPath}");

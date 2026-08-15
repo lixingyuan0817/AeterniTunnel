@@ -1,16 +1,16 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="Aeterni.Tunnel.Desktop.SplashWindow"
-        Title="AETERNI TUNNEL" Width="560" SizeToContent="Height"
+        Title="AETERNI TUNNEL" Width="640" SizeToContent="Height"
         WindowStartupLocation="CenterScreen" CanResize="False"
         WindowDecorations="None" ShowInTaskbar="False"
         TransparencyLevelHint="Transparent" Background="Transparent">
-    <Border x:Name="RootPanel" Margin="40,32">
-        <StackPanel Spacing="22" HorizontalAlignment="Center">
+    <Border x:Name="RootPanel" Margin="40,36">
+        <StackPanel Spacing="24" HorizontalAlignment="Center">
             <!-- AETERNI 字母框（由 code-behind 生成并驱动动画） -->
-            <StackPanel x:Name="LogoPanel" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center" />
-            <TextBlock x:Name="SubText" Text="T · U · N · N · E · L" FontSize="13" FontWeight="SemiBold"
-                       Foreground="#64748B" HorizontalAlignment="Center" Opacity="0" />
+            <StackPanel x:Name="LogoPanel" Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center" />
+            <TextBlock x:Name="SubText" Text="T · U · N · N · E · L" FontSize="14" FontWeight="SemiBold"
+                       Foreground="{DynamicResource TextBrush}" HorizontalAlignment="Center" Opacity="0" />
         </StackPanel>
     </Border>
 </Window>

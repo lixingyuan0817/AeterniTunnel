@@ -242,6 +242,30 @@
             <Setter Property="Opacity" Value="0.45" />
         </Style>
 
+        <!-- 分段控制器按钮（顶栏主题切换）：无圆点，选中 accent 底色 -->
+        <Style Selector="RadioButton.seg">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="9,4" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border Background="{TemplateBinding Background}" CornerRadius="{TemplateBinding CornerRadius}">
+                        <ContentPresenter Content="{TemplateBinding Content}" Padding="{TemplateBinding Padding}"
+                                          HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="RadioButton.seg:pointerover">
+            <Setter Property="Background" Value="{DynamicResource RowLineBrush}" />
+        </Style>
+        <Style Selector="RadioButton.seg:checked">
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="Foreground" Value="White" />
+        </Style>
+
         <Style Selector="Button.danger">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="Foreground" Value="{DynamicResource RedBrush}" />
