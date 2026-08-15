@@ -230,7 +230,7 @@
         <Style Selector="Button.ghost:disabled">
             <Setter Property="Opacity" Value="0.45" />
         </Style>
-        <Style Selector="Button.ghost:disabled /template/ ContentPresenter, Button.ghost:disabled /template/ Border">
+        <Style Selector="Button.ghost:disabled /template/ Border">
             <Setter Property="Background" Value="Transparent" />
         </Style>
         <Style Selector="Button.primary:disabled">
