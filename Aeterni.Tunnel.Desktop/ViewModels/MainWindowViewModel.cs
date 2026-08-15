@@ -170,6 +170,16 @@ public sealed class MainWindowViewModel : ObservableBase, IAsyncDisposable
         ? $"{Tunnels.Count} 隧道   ▲ {FormatRate(_upRate)}  ▼ {FormatRate(_downRate)}"
         : $"{Tunnels.Count} 隧道";
 
+    /// <summary>版本号（读程序集版本，发版时 CI 以 tag 覆盖）</summary>
+    public string VersionText
+    {
+        get
+        {
+            var v = typeof(MainWindowViewModel).Assembly.GetName().Version;
+            return v is null ? "ATC" : $"v{v.Major}.{v.Minor}.{v.Build} · ATC";
+        }
+    }
+
     // ═════════ 首页统计 ═════════
 
     public int TunnelCount => Tunnels.Count;

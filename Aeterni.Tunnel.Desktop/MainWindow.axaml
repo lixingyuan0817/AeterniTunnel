@@ -228,7 +228,7 @@
                     <TextBlock Text="{Binding StatusBarText}" FontSize="11"
                                Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" />
                 </StackPanel>
-                <TextBlock Grid.Column="1" Text="v1.0.0 · ATC" FontSize="11" Foreground="{DynamicResource MutedBrush}" />
+                <TextBlock Grid.Column="1" Text="{Binding VersionText}" FontSize="11" Foreground="{DynamicResource MutedBrush}" />
             </Grid>
         </Border>
     </Grid>

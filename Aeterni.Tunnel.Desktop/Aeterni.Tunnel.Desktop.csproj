@@ -6,6 +6,7 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <ApplicationManifest>app.manifest</ApplicationManifest>
         <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+        <Version>10.2.1</Version>
     </PropertyGroup>
 
     <ItemGroup>

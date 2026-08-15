@@ -95,7 +95,7 @@ jobs:
 
       - name: Publish Desktop (NativeAOT)
         run: |
-          dotnet publish Aeterni.Tunnel.Desktop/Aeterni.Tunnel.Desktop.csproj -c Release -r ${{ matrix.rid }} -p:PublishAot=true -o publish/out
+          dotnet publish Aeterni.Tunnel.Desktop/Aeterni.Tunnel.Desktop.csproj -c Release -r ${{ matrix.rid }} -p:PublishAot=true -p:Version="${RELEASE_VERSION#v}" -o publish/out
 
       - name: Package (tar.gz)
         if: runner.os != 'Windows'
