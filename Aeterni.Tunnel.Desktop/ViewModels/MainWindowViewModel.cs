@@ -163,8 +163,9 @@ public sealed class MainWindowViewModel : ObservableBase, IAsyncDisposable
         {
             if (SetProperty(ref _isConnected, value))
             {
-                OnPropertyChanged(nameof(StatusText));
                 OnPropertyChanged(nameof(StatusBrush));
+                OnPropertyChanged(nameof(StatusBarText));
+                OnPropertyChanged(nameof(StatusBarBg));
                 OnPropertyChanged(nameof(TunnelsNavEnabled));
                 AddTunnelCommand.RaiseCanExecuteChanged();
                 // 断联（含重连中）时若停留在隧道页 → 跳回首页；隧道页仅在连接后可用
@@ -177,13 +178,17 @@ public sealed class MainWindowViewModel : ObservableBase, IAsyncDisposable
     /// <summary>顶栏「隧道」导航是否可用（未连接/重连中禁用）</summary>
     public bool TunnelsNavEnabled => IsConnected;
 
-    public string StatusText => IsConnected ? "已连接" : "未连接";
-
     public IBrush StatusBrush => IsConnected ? Green : Yellow;
 
+    /// <summary>底部状态栏背景（连接：绿色微光；未连接：黄色微光——状态直接反映成 bar 颜色）</summary>
+    public IBrush StatusBarBg => IsConnected ? BarConnectedBg : BarDisconnectedBg;
+
+    private static readonly IBrush BarConnectedBg = SolidColorBrush.Parse("#1634C759");
+    private static readonly IBrush BarDisconnectedBg = SolidColorBrush.Parse("#16FBBF24");
+
     public string StatusBarText => IsConnected
-        ? $"{Tunnels.Count} 隧道   ▲ {FormatRate(_upRate)}  ▼ {FormatRate(_downRate)}"
-        : $"{Tunnels.Count} 隧道";
+        ? $"已连接 · {Tunnels.Count} 隧道   ▲ {FormatRate(_upRate)}  ▼ {FormatRate(_downRate)}"
+        : $"未连接 · {Tunnels.Count} 隧道";
 
     /// <summary>版本号（读程序集版本，发版时 CI 以 tag 覆盖）</summary>
     public string VersionText
