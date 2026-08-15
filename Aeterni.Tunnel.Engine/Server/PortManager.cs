@@ -60,6 +60,10 @@ public sealed class PortManager
     public int GetAllowedCount()
         => _allowed?.Count ?? 0;
 
+    /// <summary>白名单端口展开列表（空 = 不限制；供登录后下发客户端做前置校验）</summary>
+    public int[] GetAllowedPorts()
+        => _allowed?.SelectMany(r => Enumerable.Range(r.Start, r.End - r.Start + 1)).ToArray() ?? [];
+
     public bool IsAllocated(int port)
     {
         lock (_lock) return _allocated.Contains(port);

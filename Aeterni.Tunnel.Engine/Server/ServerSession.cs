@@ -109,6 +109,8 @@ public sealed class ServerSession : IAsyncDisposable
         LoggedIn?.Invoke(this);
         LogLine?.Invoke("server", $"Agent 登录成功：{hello.ClientId} ({hello.Hostname})");
         await SendAsync(new HelloAckMessage(true, null, ServerVersion));
+        // 下发端口策略：allowPorts 白名单 + 每客户端上限（客户端添加隧道前做前置校验）
+        await SendAsync(new PortPolicyMessage(_ports.GetAllowedPorts(), _maxPortsPerClient));
     }
 
     private async Task HandleRegisterAsync(RegisterProxyMessage reg)

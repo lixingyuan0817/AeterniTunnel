@@ -183,6 +183,9 @@ public sealed class MainWindowViewModel : ObservableBase, IAsyncDisposable
 
     public IBrush StatusBrush => IsConnected ? Green : Yellow;
 
+    /// <summary>服务端 allowPorts 白名单（登录后由 PortPolicyMessage 下发；空 = 不限制）——添加隧道前置校验</summary>
+    public IReadOnlyList<int> AllowPorts => _service?.PortPolicy?.AllowPorts ?? [];
+
     /// <summary>底部状态栏背景（连接：绿色微光；未连接：黄色微光——状态直接反映成 bar 颜色）</summary>
     public IBrush StatusBarBg => IsConnected ? BarConnectedBg : BarDisconnectedBg;
 

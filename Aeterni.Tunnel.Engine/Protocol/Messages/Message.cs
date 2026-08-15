@@ -17,4 +17,5 @@ namespace Aeterni.Tunnel.Engine.Protocol.Messages;
 [JsonDerivedType(typeof(ErrorMessage), "error")]
 [JsonDerivedType(typeof(RemoveProxyCommandMessage), "removeProxyCommand")]
 [JsonDerivedType(typeof(CommandAckMessage), "commandAck")]
+[JsonDerivedType(typeof(PortPolicyMessage), "portPolicy")]
 public abstract record Message;

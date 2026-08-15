@@ -24,7 +24,7 @@ public partial class MainWindow : Window
         // 弹窗承载：添加/修改隧道
         _vm.EditTunnelRequested += async def =>
         {
-            var dialog = new TunnelEditorWindow(def);
+            var dialog = new TunnelEditorWindow(def, _vm.AllowPorts);
             await dialog.ShowDialog(this);
             if (dialog.Result is not null)
                 await _vm.ApplyTunnelAsync(dialog.Result, dialog.IsEdit);

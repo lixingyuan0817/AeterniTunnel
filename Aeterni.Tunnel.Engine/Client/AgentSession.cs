@@ -31,6 +31,12 @@ public sealed class AgentSession : IAsyncDisposable
     /// <summary>连接断开（断线进入重连 / 停止时触发）</summary>
     public event Action? Disconnected;
 
+    /// <summary>服务端端口策略到达（登录后下发，后台线程）</summary>
+    public event Action<PortPolicyMessage>? PortPolicyReceived;
+
+    /// <summary>服务端端口策略（登录后下发；AllowPorts 空 = 不限制）——添加隧道前置校验用</summary>
+    public PortPolicyMessage? PortPolicy { get; private set; }
+
     private TaskCompletionSource<(bool Ok, string? Error, string? Version)>? _pendingHelloAck;
 
     public bool IsConnected => Volatile.Read(ref _connected) != 0;
@@ -191,6 +197,12 @@ public sealed class AgentSession : IAsyncDisposable
             case HelloAckMessage ack:
                 // 握手结果由 ConnectCoreAsync 统一处理（日志/失败断开/标记已连接）
                 _pendingHelloAck?.TrySetResult((ack.Ok, ack.Error, ack.ServerVersion));
+                break;
+
+            case PortPolicyMessage policy:
+                // 服务端端口策略：allowPorts 白名单 + 每客户端上限（添加隧道前置校验）
+                PortPolicy = policy;
+                PortPolicyReceived?.Invoke(policy);
                 break;
 
             case RegisterProxyAckMessage ack:

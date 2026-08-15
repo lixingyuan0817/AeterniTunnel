@@ -22,5 +22,6 @@ namespace Aeterni.Tunnel.Engine.Protocol.Messages;
 [JsonSerializable(typeof(ErrorMessage))]
 [JsonSerializable(typeof(RemoveProxyCommandMessage))]
 [JsonSerializable(typeof(CommandAckMessage))]
+[JsonSerializable(typeof(PortPolicyMessage))]
 [JsonSerializable(typeof(LinkType))]
 public partial class MessageJsonContext : JsonSerializerContext;

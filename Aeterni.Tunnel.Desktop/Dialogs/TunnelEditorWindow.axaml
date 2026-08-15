@@ -30,7 +30,11 @@
                 </Grid>
 
                 <TextBlock Grid.Row="3" Classes="fieldLabel" Text="公网端口" VerticalAlignment="Center" />
-                <TextBox x:Name="RemotePortBox" Grid.Row="3" Grid.Column="1" PlaceholderText="tcp/udp 用；留空随机" />
+                <StackPanel Grid.Row="3" Grid.Column="1" Spacing="3">
+                    <TextBox x:Name="RemotePortBox" PlaceholderText="tcp/udp 用；留空随机" />
+                    <!-- 白名单前置校验提示（服务端 allowPorts 下发后即时校验） -->
+                    <TextBlock x:Name="PortHint" Text="" Foreground="#F87171" FontSize="10" IsVisible="False" />
+                </StackPanel>
 
                 <TextBlock Grid.Row="4" Classes="fieldLabel" Text="域名" VerticalAlignment="Center" />
                 <TextBox x:Name="DomainBox" Grid.Row="4" Grid.Column="1" PlaceholderText="http/https 用" />

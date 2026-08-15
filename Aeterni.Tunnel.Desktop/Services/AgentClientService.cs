@@ -1,5 +1,6 @@
 using Aeterni.Tunnel.Engine.Client;
 using Aeterni.Tunnel.Engine.Hosting;
+using Aeterni.Tunnel.Engine.Protocol.Messages;
 
 namespace Aeterni.Tunnel.Desktop.Services;
 
@@ -24,6 +25,12 @@ public sealed class AgentClientService : IAsyncDisposable
     /// <summary>连接断开（断线进入重连 / 停止，后台线程）</summary>
     public event Action? Disconnected;
 
+    /// <summary>服务端端口策略到达（后台线程）</summary>
+    public event Action<PortPolicyMessage>? PortPolicyReceived;
+
+    /// <summary>服务端端口策略（登录后下发；AllowPorts 空 = 不限制）——添加隧道前置校验用</summary>
+    public PortPolicyMessage? PortPolicy => _agent.PortPolicy;
+
     public AgentClientService(AgentOptions options)
     {
         _agent = new AgentHost(options);
@@ -31,6 +38,7 @@ public sealed class AgentClientService : IAsyncDisposable
         _agent.ProxyRegistered += (id, ok, addr) => ProxyRegistered?.Invoke(id, ok, addr);
         _agent.Connected += () => Connected?.Invoke();
         _agent.Disconnected += () => Disconnected?.Invoke();
+        _agent.PortPolicyReceived += p => PortPolicyReceived?.Invoke(p);
     }
 
     public bool IsConnected => _agent.IsConnected;

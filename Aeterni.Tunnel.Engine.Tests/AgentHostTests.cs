@@ -3,6 +3,7 @@ using System.Net.Sockets;
 using Aeterni.Tunnel.Engine.Client;
 using Aeterni.Tunnel.Engine.Hosting;
 using Aeterni.Tunnel.Engine.Protocol;
+using Aeterni.Tunnel.Engine.Protocol.Messages;
 using Aeterni.Tunnel.Engine.Server;
 
 namespace Aeterni.Tunnel.Engine.Tests;
@@ -172,5 +173,28 @@ public class AgentHostTests
         }
 
         public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+    }
+
+    /// <summary>端口策略下发：allowPorts + 每客户端上限在登录后下发（添加隧道前置校验数据源）</summary>
+    [Fact]
+    public async Task PortPolicy_DeliveredAfterLogin()
+    {
+        var controlPort = FreePort();
+        var ports = new PortManager(allowed: new List<PortRange> { new(17061, 17062) });
+        var listener = new ServerListener(controlPort, TestToken, ports: ports, maxPortsPerClient: 3);
+        listener.Start();
+        await using var _l = listener;
+
+        var host = new AgentHost(new AgentOptions("127.0.0.1", controlPort, TestToken, "policy-test",
+            HeartbeatInterval: TimeSpan.FromMilliseconds(200)));
+        await using var _h = host;
+
+        var got = new TaskCompletionSource<PortPolicyMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
+        host.PortPolicyReceived += p => got.TrySetResult(p);
+        await host.StartAsync();
+
+        var policy = await got.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Equal(new[] { 17061, 17062 }, policy.AllowPorts);
+        Assert.Equal(3, policy.MaxPortsPerClient);
     }
 }

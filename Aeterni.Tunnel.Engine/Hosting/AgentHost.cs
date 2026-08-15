@@ -1,5 +1,6 @@
 using Aeterni.Tunnel.Engine.Client;
 using Aeterni.Tunnel.Engine.Protocol;
+using Aeterni.Tunnel.Engine.Protocol.Messages;
 
 namespace Aeterni.Tunnel.Engine.Hosting;
 
@@ -28,6 +29,12 @@ public sealed class AgentHost : IAsyncDisposable
 
     /// <summary>连接断开（断线进入重连 / 停止时触发）</summary>
     public event Action? Disconnected;
+
+    /// <summary>服务端端口策略到达（后台线程）</summary>
+    public event Action<PortPolicyMessage>? PortPolicyReceived;
+
+    /// <summary>服务端端口策略（登录后下发；AllowPorts 空 = 不限制）——添加隧道前置校验用</summary>
+    public PortPolicyMessage? PortPolicy => _session?.PortPolicy;
 
     /// <summary>健康检查间隔（秒，0=关闭）。重连间隔由 AgentSession 管理（指数退避）。
     /// checkerFactory：健康检查器工厂（测试注入用）；null 时内部创建真实 HealthChecker。</summary>
@@ -198,6 +205,7 @@ public sealed class AgentHost : IAsyncDisposable
         session.ProxyRemoved += proxyId => _ = HandleProxyRemovedAsync(proxyId);
         session.Connected += () => Connected?.Invoke();
         session.Disconnected += () => Disconnected?.Invoke();
+        session.PortPolicyReceived += p => PortPolicyReceived?.Invoke(p);
 
         // 先登记再连接：初次失败时 AgentSession 会进入后台重连循环并在成功后
         // 自行置 IsConnected=true——若等 ConnectAsync 成功后才登记，宿主看到的
