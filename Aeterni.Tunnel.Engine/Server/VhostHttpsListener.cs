@@ -8,7 +8,7 @@ using Aeterni.Tunnel.Engine.Protocol.Messages;
 namespace Aeterni.Tunnel.Engine.Server;
 
 /// <summary>
-/// HTTPS vhost 监听（FR-033）：监听 vhostHTTPSPort，读 TLS ClientHello 的 SNI 路由到对应代理。
+/// HTTPS vhost 监听（FR-033）：监听 vhostHTTPSPort，读 TLS ClientHello 的 SNI 路由到对应隧道。
 /// TLS 流量透传（不终结），已读的记录头 + ClientHello 显式转发到通道。
 /// </summary>
 public sealed class VhostHttpsListener : IAsyncDisposable, IVhostRegistry

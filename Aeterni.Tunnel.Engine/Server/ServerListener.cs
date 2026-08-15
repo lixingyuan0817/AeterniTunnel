@@ -6,7 +6,7 @@ namespace Aeterni.Tunnel.Engine.Server;
 
 /// <summary>
 /// 服务端监听器：接受 Agent 连接，每个连接创建一个 ServerSession。
-/// 可选 vhost HTTP 监听（vhostHttpPort &gt; 0 时启用，按 Host 路由 HTTP 代理）。
+/// 可选 vhost HTTP 监听（vhostHttpPort &gt; 0 时启用，按 Host 路由 HTTP 隧道）。
 /// </summary>
 public sealed class ServerListener : IAsyncDisposable
 {

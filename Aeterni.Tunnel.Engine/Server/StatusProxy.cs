@@ -1,6 +1,6 @@
 namespace Aeterni.Tunnel.Engine.Server;
 
-/// <summary>Dashboard /api/status 代理条目（含流量统计）</summary>
+/// <summary>Dashboard /api/status 隧道条目（含流量统计）</summary>
 public sealed class StatusProxy
 {
     public string ProxyId { get; set; } = "";

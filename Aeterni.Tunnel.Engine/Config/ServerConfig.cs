@@ -18,7 +18,7 @@ public sealed class ServerConfig
     /// <summary>Dashboard 鉴权密码</summary>
     public string DashboardPassword { get; set; } = "";
 
-    /// <summary>每客户端最大代理端口数（0 = 不限；vhost 域名代理不计）</summary>
+    /// <summary>每客户端最大隧道端口数（0 = 不限；vhost 域名隧道不计）</summary>
     public int MaxPortsPerClient { get; set; }
 
     /// <summary>网页管理器访问 token（sha256+salt 哈希，hex；仅初始化/重置时打印明文）</summary>

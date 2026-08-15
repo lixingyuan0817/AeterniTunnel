@@ -6,8 +6,8 @@ using Aeterni.Tunnel.Engine.Transport;
 namespace Aeterni.Tunnel.Engine.Client;
 
 /// <summary>
-/// Agent 会话：连接 Server → Hello 登录 → 注册/注销代理 → 心跳保活。
-/// 断线自动重连（指数退避）并重注册全部代理（FR-014）。
+/// Agent 会话：连接 Server → Hello 登录 → 注册/注销隧道 → 心跳保活。
+/// 断线自动重连（指数退避）并重注册全部隧道（FR-014）。
 /// </summary>
 public sealed class AgentSession : IAsyncDisposable
 {
@@ -120,7 +120,7 @@ public sealed class AgentSession : IAsyncDisposable
         await SendAsync(new UnregisterProxyMessage(proxyId), ct);
     }
 
-    /// <summary>代理流量快照（TUI/Dashboard 用）：proxyId → (up, down)</summary>
+    /// <summary>隧道流量快照（TUI/Dashboard 用）：proxyId → (up, down)</summary>
     public IReadOnlyDictionary<string, (long Up, long Down)> GetTrafficSnapshot()
         => _traffic.ToDictionary(kv => kv.Key, kv => (kv.Value.UpBytes, kv.Value.DownBytes));
 
@@ -156,7 +156,7 @@ public sealed class AgentSession : IAsyncDisposable
                 try
                 {
                     await ConnectCoreAsync(_cts.Token);
-                    LogLine?.Invoke($"重连成功，重新注册 {_desiredProxies.Count} 个代理");
+                    LogLine?.Invoke($"重连成功，重新注册 {_desiredProxies.Count} 个隧道");
                     foreach (var (id, msg) in _desiredProxies)
                     {
                         await SendAsync(msg, _cts.Token);
@@ -214,7 +214,7 @@ public sealed class AgentSession : IAsyncDisposable
     /// <summary>
     /// 服务端指令：删除隧道。本地移除目标（含重连重注册列表，防止僵尸复活），
     /// 通知宿主做本地清理，回 UnregisterProxyMessage 让服务端释放资源（服务端不直接删），
-    /// 最后回 CommandAckMessage（幂等：未知代理也视为成功）。
+    /// 最后回 CommandAckMessage（幂等：未知隧道也视为成功）。
     /// </summary>
     private async Task HandleRemoveProxyCommandAsync(RemoveProxyCommandMessage cmd)
     {
@@ -222,7 +222,7 @@ public sealed class AgentSession : IAsyncDisposable
         _traffic.Remove(cmd.ProxyId);
         _desiredProxies.RemoveAll(x => x.ProxyId == cmd.ProxyId);
         ProxyRemoved?.Invoke(cmd.ProxyId);
-        LogLine?.Invoke($"服务端指令：移除代理 {cmd.ProxyId}");
+        LogLine?.Invoke($"服务端指令：移除隧道 {cmd.ProxyId}");
         // 通知服务端释放该隧道资源（端口/监听/vhost），走既有注销路径
         await SendAsync(new UnregisterProxyMessage(cmd.ProxyId));
         await SendAsync(new CommandAckMessage("removeProxy", cmd.ProxyId, true, null, cmd.Seq));
@@ -235,7 +235,7 @@ public sealed class AgentSession : IAsyncDisposable
             return;
         if (!_localProxies.TryGetValue(open.ProxyId, out var target))
         {
-            LogLine?.Invoke($"未知代理的隧道请求：{open.ProxyId}");
+            LogLine?.Invoke($"未知隧道的隧道请求：{open.ProxyId}");
             return;
         }
 

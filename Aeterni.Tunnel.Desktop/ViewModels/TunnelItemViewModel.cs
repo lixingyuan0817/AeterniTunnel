@@ -52,7 +52,11 @@ public sealed class TunnelItemViewModel : ObservableBase
     public string Remote
     {
         get => _remote;
-        set => SetProperty(ref _remote, value);
+        set
+        {
+            if (SetProperty(ref _remote, value))
+                OnPropertyChanged(nameof(RouteText));   // 行内「本地 → 远端」随公网端口即时刷新
+        }
     }
 
     public TunnelUiState State

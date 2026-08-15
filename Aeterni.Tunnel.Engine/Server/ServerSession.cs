@@ -6,7 +6,7 @@ namespace Aeterni.Tunnel.Engine.Server;
 
 /// <summary>
 /// 服务端单会话：处理一个 Agent 连接的控制消息（登录/注册/注销/心跳）。
-/// E2 阶段注册代理仅分配端口；E3 起在端口上真正监听并建立数据隧道。
+/// E2 阶段注册隧道仅分配端口；E3 起在端口上真正监听并建立数据隧道。
 /// </summary>
 public sealed class ServerSession : IAsyncDisposable
 {
@@ -121,7 +121,7 @@ public sealed class ServerSession : IAsyncDisposable
                 var isHttps = (reg.LinkType & LinkType.Https) != 0;
                 var registry = isHttps ? _vhostHttps : _vhostHttp;
                 var host = BuildVhostHost(reg)
-                    ?? throw new InvalidOperationException("HTTP/HTTPS 代理需配置 domain 或 subdomain");
+                    ?? throw new InvalidOperationException("HTTP/HTTPS 隧道需配置 domain 或 subdomain");
                 if (registry is null)
                     throw new InvalidOperationException(isHttps
                         ? "服务端未启用 HTTPS vhost（vhostHTTPSPort 未配置）"
@@ -130,16 +130,16 @@ public sealed class ServerSession : IAsyncDisposable
                 _vhostHosts[reg.ProxyId] = host;
                 _traffic[reg.ProxyId] = new Traffic.TrafficCounter();
                 registry.Register(host, _mux, reg.ProxyId);
-                LogLine?.Invoke("server", $"代理注册：{reg.ProxyId} ({reg.LinkType}) → {(isHttps ? "https" : "http")}://{host}");
+                LogLine?.Invoke("server", $"隧道注册：{reg.ProxyId} ({reg.LinkType}) → {(isHttps ? "https" : "http")}://{host}");
                 await SendAsync(new RegisterProxyAckMessage(reg.ProxyId, true, $"{(isHttps ? "https" : "http")}://{host}", null));
                 return;
             }
 
             var port = _ports.Allocate(reg.RemotePort);
 
-            // maxPortsPerClient：限制每客户端端口代理数（0 = 不限）
+            // maxPortsPerClient：限制每客户端端口隧道数（0 = 不限）
             if (_maxPortsPerClient > 0 && _proxyPorts.Count >= _maxPortsPerClient)
-                throw new InvalidOperationException($"代理端口数超过客户端上限（{_maxPortsPerClient}）");
+                throw new InvalidOperationException($"隧道端口数超过客户端上限（{_maxPortsPerClient}）");
 
             _proxyPorts[reg.ProxyId] = port;
             _proxyTypes[reg.ProxyId] = reg.LinkType;
@@ -160,17 +160,17 @@ public sealed class ServerSession : IAsyncDisposable
                 listener.Start();
             }
 
-            LogLine?.Invoke("server", $"代理注册：{reg.ProxyId} ({reg.LinkType}) → 0.0.0.0:{port}");
+            LogLine?.Invoke("server", $"隧道注册：{reg.ProxyId} ({reg.LinkType}) → 0.0.0.0:{port}");
             await SendAsync(new RegisterProxyAckMessage(reg.ProxyId, true, $"0.0.0.0:{port}", null));
         }
         catch (Exception ex)
         {
-            LogLine?.Invoke("server", $"代理注册失败：{reg.ProxyId} ({ex.Message})");
+            LogLine?.Invoke("server", $"隧道注册失败：{reg.ProxyId} ({ex.Message})");
             await SendAsync(new RegisterProxyAckMessage(reg.ProxyId, false, null, ex.Message));
         }
     }
 
-    /// <summary>代理快照（Dashboard/TUI 用）：ProxyId, Group, Type, RemoteAddr, UpBytes, DownBytes, Online</summary>
+    /// <summary>隧道快照（Dashboard/TUI 用）：ProxyId, Group, Type, RemoteAddr, UpBytes, DownBytes, Online</summary>
     public IReadOnlyList<(string ProxyId, string Group, string Type, string RemoteAddr, long UpBytes, long DownBytes, bool Online)> GetProxiesSnapshot()
     {
         var list = new List<(string, string, string, string, long, long, bool)>();
@@ -197,7 +197,7 @@ public sealed class ServerSession : IAsyncDisposable
 
     private void HandleUnregisterAsync(string proxyId)
     {
-        // 端口代理：释放端口与监听器
+        // 端口隧道：释放端口与监听器
         if (_proxyPorts.Remove(proxyId, out var port))
         {
             _proxyTypes.Remove(proxyId);
@@ -206,15 +206,15 @@ public sealed class ServerSession : IAsyncDisposable
             if (_udpListeners.Remove(proxyId, out var udpListener))
                 _ = udpListener.DisposeAsync();
             _ports.Release(port);
-            LogLine?.Invoke("server", $"代理注销：{proxyId}（释放端口 {port}）");
+            LogLine?.Invoke("server", $"隧道注销：{proxyId}（释放端口 {port}）");
         }
 
-        // vhost 代理：从 Host 路由表摘除（端口代理无此条目，独立清理，避免泄漏）
+        // vhost 隧道：从 Host 路由表摘除（端口隧道无此条目，独立清理，避免泄漏）
         if (_vhostHosts.Remove(proxyId, out var host))
         {
             _vhostHttp?.Unregister(host);
             _vhostHttps?.Unregister(host);
-            LogLine?.Invoke("server", $"代理注销：{proxyId}（vhost {host}）");
+            LogLine?.Invoke("server", $"隧道注销：{proxyId}（vhost {host}）");
         }
 
         _proxyGroups.Remove(proxyId);

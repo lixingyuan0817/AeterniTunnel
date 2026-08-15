@@ -4,7 +4,7 @@ namespace Aeterni.Tunnel.Engine.Client;
 
 /// <summary>
 /// 健康检查器（frp healthCheck 语义）：周期探测本地服务（tcp 连接 / http GET）。
-/// 连续失败 MaxFailed 次 → IsHealthy=false 并触发 StatusChanged(false)（调用方摘除代理）；
+/// 连续失败 MaxFailed 次 → IsHealthy=false 并触发 StatusChanged(false)（调用方摘除隧道）；
 /// 恢复后触发 StatusChanged(true)（重新上线）。
 /// </summary>
 public sealed class HealthChecker : IHealthChecker

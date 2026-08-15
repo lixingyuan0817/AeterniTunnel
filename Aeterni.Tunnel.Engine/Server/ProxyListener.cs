@@ -6,7 +6,7 @@ using Aeterni.Tunnel.Engine.Protocol.Messages;
 namespace Aeterni.Tunnel.Engine.Server;
 
 /// <summary>
-/// 服务端代理端口监听：用户连接 → 分配通道 → 发 OpenTunnel 给 Agent → 双向转发。
+/// 服务端隧道端口监听：用户连接 → 分配通道 → 发 OpenTunnel 给 Agent → 双向转发。
 /// </summary>
 public sealed class ProxyListener : IAsyncDisposable
 {

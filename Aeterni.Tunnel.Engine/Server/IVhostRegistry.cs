@@ -7,7 +7,7 @@ namespace Aeterni.Tunnel.Engine.Server;
 /// </summary>
 public interface IVhostRegistry
 {
-    /// <summary>注册 域名 → (连接, 代理)，Session 创建监听时调用</summary>
+    /// <summary>注册 域名 → (连接, 隧道)，Session 创建监听时调用</summary>
     void Register(string host, ChannelMultiplexer mux, string proxyId);
 
     /// <summary>注销域名路由</summary>

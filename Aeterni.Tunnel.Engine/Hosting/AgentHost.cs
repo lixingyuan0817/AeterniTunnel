@@ -4,8 +4,8 @@ using Aeterni.Tunnel.Engine.Protocol;
 namespace Aeterni.Tunnel.Engine.Hosting;
 
 /// <summary>
-/// Agent 宿主：代理列表管理 + Agent 会话生命周期 + 健康检查自动摘除/恢复。
-/// 断线自动重连由 AgentSession 内部负责（重连后自动重注册全部代理，并通过
+/// Agent 宿主：隧道列表管理 + Agent 会话生命周期 + 健康检查自动摘除/恢复。
+/// 断线自动重连由 AgentSession 内部负责（重连后自动重注册全部隧道，并通过
 /// ProxyRegistered 事件通知宿主）。
 /// </summary>
 public sealed class AgentHost : IAsyncDisposable
@@ -50,17 +50,17 @@ public sealed class AgentHost : IAsyncDisposable
     /// <summary>客户端标识（TUI 展示用）</summary>
     public string ClientId => _options.ClientId;
 
-    /// <summary>已配置的代理列表（TUI/管理用）</summary>
+    /// <summary>已配置的隧道列表（TUI/管理用）</summary>
     public IReadOnlyList<ProxyDefinition> Proxies
     {
         get { lock (_lock) return _proxies.ToList(); }
     }
 
-    /// <summary>代理流量快照：proxyId → (up, down)（TUI 用）</summary>
+    /// <summary>隧道流量快照：proxyId → (up, down)（TUI 用）</summary>
     public IReadOnlyDictionary<string, (long Up, long Down)> GetTraffic()
         => _session?.GetTrafficSnapshot() ?? new Dictionary<string, (long, long)>();
 
-    /// <summary>连接 Server 并注册全部代理（重复调用幂等）</summary>
+    /// <summary>连接 Server 并注册全部隧道（重复调用幂等）</summary>
     public async Task StartAsync(CancellationToken ct = default)
     {
         lock (_lock)
@@ -106,7 +106,7 @@ public sealed class AgentHost : IAsyncDisposable
             await session.DisposeAsync();
     }
 
-    /// <summary>添加代理到列表（StartAsync 时统一注册；已在运行则热注册）</summary>
+    /// <summary>添加隧道到列表（StartAsync 时统一注册；已在运行则热注册）</summary>
     public void AddProxy(ProxyDefinition proxy)
     {
         lock (_lock)
@@ -117,7 +117,7 @@ public sealed class AgentHost : IAsyncDisposable
         EnsureHealthCheck(proxy);
     }
 
-    /// <summary>添加代理（已在运行则热注册，FR-015）</summary>
+    /// <summary>添加隧道（已在运行则热注册，FR-015）</summary>
     public async Task AddProxyAsync(ProxyDefinition proxy, CancellationToken ct = default)
     {
         AddProxy(proxy);
@@ -126,7 +126,7 @@ public sealed class AgentHost : IAsyncDisposable
             await session.RegisterProxyAsync(proxy.ProxyId, proxy.LinkType, proxy.LocalIp, proxy.LocalPort, proxy.RemotePort, proxy.Domain, proxy.Subdomain, proxy.Group, ct);
     }
 
-    /// <summary>移除代理（已在运行则热注销；停止健康检查）</summary>
+    /// <summary>移除隧道（已在运行则热注销；停止健康检查）</summary>
     public async Task RemoveProxyAsync(string proxyId, CancellationToken ct = default)
     {
         lock (_lock)
@@ -149,7 +149,7 @@ public sealed class AgentHost : IAsyncDisposable
             await session.UnregisterProxyAsync(proxyId, ct);
     }
 
-    /// <summary>配置热更新（FR-015）：对比新代理列表，增量增删/更新（同 id 参数变化视为更新）</summary>
+    /// <summary>配置热更新（FR-015）：对比新隧道列表，增量增删/更新（同 id 参数变化视为更新）</summary>
     public async Task<List<string>> ReloadAsync(IReadOnlyList<ProxyDefinition> newProxies, CancellationToken ct = default)
     {
         var changes = new List<string>();
@@ -212,7 +212,7 @@ public sealed class AgentHost : IAsyncDisposable
     }
 
     /// <summary>
-    /// 服务端指令删除代理：本地清理（停止健康检查、移除配置与注册标记）。
+    /// 服务端指令删除隧道：本地清理（停止健康检查、移除配置与注册标记）。
     /// 不向服务端重发注销（服务端为发起方）；停健康检查避免「健康恢复 → 重新注册」复活。
     /// </summary>
     private async Task HandleProxyRemovedAsync(string proxyId)
@@ -227,7 +227,7 @@ public sealed class AgentHost : IAsyncDisposable
         }
         if (checker is not null)
             await checker.DisposeAsync();
-        LogLine?.Invoke($"代理 {proxyId} 已被服务端移除，本地已清理");
+        LogLine?.Invoke($"隧道 {proxyId} 已被服务端移除，本地已清理");
     }
 
     private void OnProxyRegistered(string id, bool ok, string? addr)
@@ -240,7 +240,7 @@ public sealed class AgentHost : IAsyncDisposable
         ProxyRegistered?.Invoke(id, ok, addr);
     }
 
-    /// <summary>健康检查：失败自动摘除代理，恢复自动重新注册（core2）</summary>
+    /// <summary>健康检查：失败自动摘除隧道，恢复自动重新注册（core2）</summary>
     private void EnsureHealthCheck(ProxyDefinition proxy)
     {
         if (_healthIntervalSeconds <= 0)
@@ -274,7 +274,7 @@ public sealed class AgentHost : IAsyncDisposable
             lock (_lock) needRegister = !_registered.Contains(proxy.ProxyId);
             if (needRegister && session is { IsConnected: true })
             {
-                LogLine?.Invoke($"代理 {proxy.ProxyId} 健康恢复，重新注册");
+                LogLine?.Invoke($"隧道 {proxy.ProxyId} 健康恢复，重新注册");
                 await session.RegisterProxyAsync(proxy.ProxyId, proxy.LinkType, proxy.LocalIp, proxy.LocalPort, proxy.RemotePort, proxy.Domain, proxy.Subdomain, proxy.Group);
             }
         }
@@ -283,7 +283,7 @@ public sealed class AgentHost : IAsyncDisposable
             lock (_lock) _registered.Remove(proxy.ProxyId);
             if (session is { IsConnected: true })
             {
-                LogLine?.Invoke($"代理 {proxy.ProxyId} 健康检查失败，自动摘除");
+                LogLine?.Invoke($"隧道 {proxy.ProxyId} 健康检查失败，自动摘除");
                 await session.UnregisterProxyAsync(proxy.ProxyId);
             }
         }

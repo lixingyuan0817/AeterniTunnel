@@ -6,7 +6,7 @@ using Aeterni.Tunnel.Engine.Protocol.Messages;
 namespace Aeterni.Tunnel.Engine.Server;
 
 /// <summary>
-/// UDP 代理监听（FR-031）：UdpClient 绑定代理端口。
+/// UDP 隧道监听（FR-031）：UdpClient 绑定隧道端口。
 /// - 注册时建立一条固定数据通道并发送 OpenTunnel；
 /// - 收到远端 UDP 包 → 封装为数据帧送通道 → Agent 转发本地；
 /// - Agent 回传帧 → 发送给最近一次远端来源（单客户端场景）。

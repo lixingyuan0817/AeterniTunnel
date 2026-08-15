@@ -8,7 +8,7 @@ using Aeterni.Tunnel.Engine.Protocol.Messages;
 namespace Aeterni.Tunnel.Engine.Server;
 
 /// <summary>
-/// HTTP vhost 监听（FR-032）：监听 vhostHTTPPort，按请求 Host 头路由到对应代理，
+/// HTTP vhost 监听（FR-032）：监听 vhostHTTPPort，按请求 Host 头路由到对应隧道，
 /// 建立隧道后把请求连同剩余流量透传到本地服务（不终结 HTTP）。
 /// </summary>
 public sealed class VhostHttpListener : IAsyncDisposable, IVhostRegistry

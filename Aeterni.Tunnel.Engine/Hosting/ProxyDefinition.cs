@@ -1,6 +1,6 @@
 namespace Aeterni.Tunnel.Engine.Hosting;
 
-/// <summary>代理定义（宿主层配置）</summary>
+/// <summary>隧道定义（宿主层配置）</summary>
 public sealed record ProxyDefinition(
     string ProxyId,
     Protocol.LinkType LinkType,
