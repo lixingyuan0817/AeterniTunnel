@@ -191,8 +191,11 @@ public sealed class AgentHost : IAsyncDisposable
         session.ProxyRegistered += OnProxyRegistered;
         session.ProxyRemoved += proxyId => _ = HandleProxyRemovedAsync(proxyId);
 
-        await session.ConnectAsync(ct);
+        // 先登记再连接：初次失败时 AgentSession 会进入后台重连循环并在成功后
+        // 自行置 IsConnected=true——若等 ConnectAsync 成功后才登记，宿主看到的
+        // 永远是 null（重连成功但 UI/隧道页仍显示未连接）
         lock (_lock) _session = session;
+        await session.ConnectAsync(ct);
 
         List<ProxyDefinition> proxies;
         lock (_lock) proxies = _proxies.ToList();
