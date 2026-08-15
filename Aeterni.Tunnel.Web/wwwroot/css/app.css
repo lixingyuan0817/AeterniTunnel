@@ -297,3 +297,37 @@ html *, html *::before, html *::after { transition: background-color .25s ease, 
 .dark .ats-sub-letter {
   color: #94a3b8;            /* 暗色：柔和灰 */
 }
+
+/* ── 滚动条：细、圆角胶囊、明暗主题适配（与 ATC 桌面端一致） ── */
+:root {
+  --ats-scroll-thumb: rgba(100, 116, 139, .35);
+  --ats-scroll-thumb-hover: rgba(100, 116, 139, .55);
+}
+.dark {
+  --ats-scroll-thumb: rgba(148, 163, 184, .28);
+  --ats-scroll-thumb-hover: rgba(148, 163, 184, .5);
+}
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--ats-scroll-thumb);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;   /* 滑块与轨道留 2px 间隙 */
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ats-scroll-thumb-hover);
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--ats-scroll-thumb) transparent;
+}
