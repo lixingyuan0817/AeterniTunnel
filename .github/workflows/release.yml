@@ -94,6 +94,8 @@ jobs:
           dotnet-version: '10.0.302'
 
       - name: Publish Desktop (NativeAOT)
+        # 必须显式 bash：${RELEASE_VERSION#v} 是 bash 参数扩展，Windows runner 默认 pwsh 会解析为空 → Version 无效
+        shell: bash
         run: |
           dotnet publish Aeterni.Tunnel.Desktop/Aeterni.Tunnel.Desktop.csproj -c Release -r ${{ matrix.rid }} -p:PublishAot=true -p:Version="${RELEASE_VERSION#v}" -o publish/out
 
