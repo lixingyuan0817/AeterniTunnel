@@ -23,6 +23,12 @@ public sealed class AgentHost : IAsyncDisposable
     public event Action<string>? LogLine;
     public event Action<string, bool, string?>? ProxyRegistered;
 
+    /// <summary>连接建立（含重连成功）——UI 事件驱动即时响应</summary>
+    public event Action? Connected;
+
+    /// <summary>连接断开（断线进入重连 / 停止时触发）</summary>
+    public event Action? Disconnected;
+
     /// <summary>健康检查间隔（秒，0=关闭）。重连间隔由 AgentSession 管理（指数退避）。
     /// checkerFactory：健康检查器工厂（测试注入用）；null 时内部创建真实 HealthChecker。</summary>
     public AgentHost(AgentOptions options, int healthIntervalSeconds = 0, int reconnectIntervalSeconds = 5,
@@ -190,6 +196,8 @@ public sealed class AgentHost : IAsyncDisposable
         session.LogLine += s => LogLine?.Invoke(s);
         session.ProxyRegistered += OnProxyRegistered;
         session.ProxyRemoved += proxyId => _ = HandleProxyRemovedAsync(proxyId);
+        session.Connected += () => Connected?.Invoke();
+        session.Disconnected += () => Disconnected?.Invoke();
 
         // 先登记再连接：初次失败时 AgentSession 会进入后台重连循环并在成功后
         // 自行置 IsConnected=true——若等 ConnectAsync 成功后才登记，宿主看到的

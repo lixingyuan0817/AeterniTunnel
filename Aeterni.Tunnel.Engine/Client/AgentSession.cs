@@ -24,6 +24,11 @@ public sealed class AgentSession : IAsyncDisposable
     public event Action<string>? LogLine;
     public event Action<string, bool, string?>? ProxyRegistered;
     public event Action<string>? ProxyRemoved;
+
+    /// <summary>连接建立（含重连成功）——UI 事件驱动即时响应</summary>
+    public event Action? Connected;
+
+    /// <summary>连接断开（断线进入重连 / 停止时触发）</summary>
     public event Action? Disconnected;
 
     private TaskCompletionSource<(bool Ok, string? Error, string? Version)>? _pendingHelloAck;
@@ -91,6 +96,7 @@ public sealed class AgentSession : IAsyncDisposable
 
         LogLine?.Invoke($"登录成功 (server {result.Version})");
         Interlocked.Exchange(ref _connected, 1);
+        Connected?.Invoke();
         StartHeartbeat();
     }
 
@@ -123,6 +129,7 @@ public sealed class AgentSession : IAsyncDisposable
     private void OnConnectionClosed()
     {
         Interlocked.Exchange(ref _connected, 0);
+        Disconnected?.Invoke();
         LogLine?.Invoke("连接断开，准备重连");
         _ = ReconnectLoopAsync();
     }

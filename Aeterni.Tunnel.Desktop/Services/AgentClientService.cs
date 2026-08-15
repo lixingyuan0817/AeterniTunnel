@@ -18,11 +18,19 @@ public sealed class AgentClientService : IAsyncDisposable
     /// <summary>隧道注册结果（后台线程）：proxyId / ok / remoteAddr|error</summary>
     public event Action<string, bool, string?>? ProxyRegistered;
 
+    /// <summary>连接建立（含重连成功，后台线程）</summary>
+    public event Action? Connected;
+
+    /// <summary>连接断开（断线进入重连 / 停止，后台线程）</summary>
+    public event Action? Disconnected;
+
     public AgentClientService(AgentOptions options)
     {
         _agent = new AgentHost(options);
         _agent.LogLine += line => LogReceived?.Invoke(line);
         _agent.ProxyRegistered += (id, ok, addr) => ProxyRegistered?.Invoke(id, ok, addr);
+        _agent.Connected += () => Connected?.Invoke();
+        _agent.Disconnected += () => Disconnected?.Invoke();
     }
 
     public bool IsConnected => _agent.IsConnected;

@@ -48,6 +48,9 @@ public sealed class MainWindowViewModel : ObservableBase, IAsyncDisposable
         LoadConfigCommand = new RelayCommand(() => _ = LoadConfigAsync());
         SaveSettingsCommand = new RelayCommand(SaveSettings);
 
+        // 事件驱动：连接建立/断开即时刷新 UI（不依赖每秒轮询）
+        Toasts.CollectionChanged += (_, _) => OnPropertyChanged(nameof(ToastCount));
+
         _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
         _timer.Tick += (_, _) => RefreshTick();
         _timer.Start();
@@ -332,6 +335,20 @@ public sealed class MainWindowViewModel : ObservableBase, IAsyncDisposable
 
     // ═════════ 连接（常连，自动重连） ═════════
 
+    /// <summary>右上角 Toast 提示集合（新到顶部，最多 5 条，3 秒自动消失）</summary>
+    public ObservableCollection<ToastItemViewModel> Toasts { get; } = [];
+
+    public int ToastCount => Toasts.Count;
+
+    /// <summary>弹出 Toast（任意线程可调，内部调度到 UI 线程）</summary>
+    public void ShowToast(string message, ToastKind kind = ToastKind.Info)
+        => Dispatcher.UIThread.Post(() =>
+        {
+            Toasts.Insert(0, new ToastItemViewModel(message, kind, t => Toasts.Remove(t)));
+            while (Toasts.Count > 5)
+                Toasts.RemoveAt(Toasts.Count - 1);
+        });
+
     private void Connect()
     {
         if (_service is not null)
@@ -349,6 +366,8 @@ public sealed class MainWindowViewModel : ObservableBase, IAsyncDisposable
         var svc = new AgentClientService(options);
         svc.LogReceived += OnLogReceived;
         svc.ProxyRegistered += OnProxyRegistered;
+        svc.Connected += OnEngineConnected;
+        svc.Disconnected += OnEngineDisconnected;
         _service = svc;
 
         foreach (var d in _pendingDefs)
@@ -367,6 +386,8 @@ public sealed class MainWindowViewModel : ObservableBase, IAsyncDisposable
         {
             svc.LogReceived -= OnLogReceived;
             svc.ProxyRegistered -= OnProxyRegistered;
+            svc.Connected -= OnEngineConnected;
+            svc.Disconnected -= OnEngineDisconnected;
             _ = svc.DisposeAsync();
         }
         _registered.Clear();
@@ -415,6 +436,22 @@ public sealed class MainWindowViewModel : ObservableBase, IAsyncDisposable
     private void OnLogReceived(string line)
         => Dispatcher.UIThread.Post(() => AddLog(line));
 
+    /// <summary>连接建立（含重连成功）——事件驱动，即时更新 UI</summary>
+    private void OnEngineConnected()
+        => Dispatcher.UIThread.Post(() =>
+        {
+            IsConnected = true;
+            ShowToast("已连接到服务端", ToastKind.Success);
+        });
+
+    /// <summary>连接断开（断线进入重连 / 停止）——即时更新 UI 并提示</summary>
+    private void OnEngineDisconnected()
+        => Dispatcher.UIThread.Post(() =>
+        {
+            IsConnected = false;
+            ShowToast("连接断开，正在自动重连…", ToastKind.Error);
+        });
+
     private void OnProxyRegistered(string id, bool ok, string? addr)
         => Dispatcher.UIThread.Post(() =>
         {
@@ -427,6 +464,9 @@ public sealed class MainWindowViewModel : ObservableBase, IAsyncDisposable
             {
                 _registered.Remove(id);
                 _failed.Add(id);
+                // 服务端拒绝（端口白名单/数量上限/vhost 未启用等）→ 右上角提示原因
+                var name = Tunnels.FirstOrDefault(t => t.ProxyId == id)?.Local ?? id;
+                ShowToast($"隧道「{name}」创建失败：{addr ?? "未知原因"}", ToastKind.Error);
             }
             var vm = Tunnels.FirstOrDefault(t => t.ProxyId == id);
             if (vm is not null)
