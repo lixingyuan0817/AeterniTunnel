@@ -44,6 +44,7 @@
                     <SolidColorBrush x:Key="ToastBorderBrush" Color="{StaticResource ToastBorderColor}" />
                     <SolidColorBrush x:Key="PanelBorderBrush" Color="{StaticResource PanelBorderColor}" />
                     <SolidColorBrush x:Key="InputBgBrush" Color="{StaticResource InputBgColor}" />
+                    <SolidColorBrush x:Key="DropdownBgBrush" Color="#99FFFFFF" />
                     <SolidColorBrush x:Key="InputBorderBrush" Color="{StaticResource InputBorderColor}" />
                     <SolidColorBrush x:Key="InputBgFocusBrush" Color="{StaticResource InputBgFocusColor}" />
                     <SolidColorBrush x:Key="RowLineBrush" Color="{StaticResource RowLineColor}" />
@@ -94,6 +95,7 @@
                     <SolidColorBrush x:Key="ToastBgBrush" Color="{StaticResource ToastBgColor}" />
                     <SolidColorBrush x:Key="ToastBorderBrush" Color="{StaticResource ToastBorderColor}" />
                     <SolidColorBrush x:Key="PanelBorderBrush" Color="{StaticResource PanelBorderColor}" />
+                    <SolidColorBrush x:Key="DropdownBgBrush" Color="#99FFFFFF" />
                     <SolidColorBrush x:Key="InputBgBrush" Color="{StaticResource InputBgColor}" />
                     <SolidColorBrush x:Key="InputBorderBrush" Color="{StaticResource InputBorderColor}" />
                     <SolidColorBrush x:Key="InputBgFocusBrush" Color="{StaticResource InputBgFocusColor}" />
@@ -245,7 +247,7 @@
                                PlacementTarget="Background"
                                IsLightDismissEnabled="True">
                             <Border x:Name="PopupBorder"
-                                    Background="{DynamicResource InputBgBrush}"
+                                    Background="{DynamicResource DropdownBgBrush}"
                                     BorderBrush="{DynamicResource PanelBorderBrush}"
                                     BorderThickness="1"
                                     CornerRadius="8"

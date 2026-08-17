@@ -6,11 +6,12 @@
         xmlns:aeterni="using:AeterniLink.Controls"
         mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="660"
         x:Class="AeterniLink.MainWindow"
+        CornerRadius="16"
         Title="AETERNI LINK">
 
     <!-- AeterniLink 窗口壳：圆角毛玻璃根（外观由 AeterniWindow 基类提供）+ 自定义标题栏 + 顶栏 + 内容区 + 状态栏
          风格体系与 Aeterni.Tunnel.Desktop 统一（同一套主题资源与全局样式） -->
-    <Border CornerRadius="12" ClipToBounds="True" Background="{DynamicResource WindowBgBrush}">
+    <Border CornerRadius="16" ClipToBounds="True" Background="{DynamicResource WindowBgBrush}">
         <Panel>
             <Grid RowDefinitions="Auto,Auto,*,Auto">
 
