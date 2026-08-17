@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace Aeterni.Tunnel.Common;
+namespace Aeterni.Tunnel.Engine.Config;
 
 /// <summary>
 /// 轻量 TOML 解析器（配置文件用）：
@@ -83,4 +83,41 @@ public static class MinimalToml
         return s;
     }
 
+    /// <summary>序列化 ServerConfig → TOML 文本（token 写回用；保留可读结构）</summary>
+    public static string Write(ServerConfig cfg)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine($"bindPort = {cfg.BindPort}");
+        sb.AppendLine($"token = \"{Escape(cfg.Token)}\"");
+        if (!string.IsNullOrEmpty(cfg.WebToken))
+            sb.AppendLine($"webToken = \"{Escape(cfg.WebToken)}\"");
+        if (!string.IsNullOrEmpty(cfg.WebTokenSalt))
+            sb.AppendLine($"webTokenSalt = \"{Escape(cfg.WebTokenSalt)}\"");
+        if (cfg.VhostHttpPort > 0)
+            sb.AppendLine($"vhostHttpPort = {cfg.VhostHttpPort}");
+        if (cfg.VhostHttpsPort > 0)
+            sb.AppendLine($"vhostHttpsPort = {cfg.VhostHttpsPort}");
+        if (!string.IsNullOrEmpty(cfg.SubDomainHost))
+            sb.AppendLine($"subDomainHost = \"{Escape(cfg.SubDomainHost)}\"");
+        if (cfg.DashboardPort > 0)
+            sb.AppendLine($"dashboardPort = {cfg.DashboardPort}");
+        if (!string.IsNullOrEmpty(cfg.WebBind))
+            sb.AppendLine($"webBind = \"{Escape(cfg.WebBind)}\"");
+        if (cfg.MaxPortsPerClient > 0)
+            sb.AppendLine($"maxPortsPerClient = {cfg.MaxPortsPerClient}");
+        if (cfg.AllowPorts is { Count: > 0 })
+            sb.AppendLine($"allowPorts = [{string.Join(", ", cfg.AllowPorts.Select(p => p.Start == p.End ? p.Start.ToString() : $"\"{p.Start}-{p.End}\""))}]");
+        if (cfg.ApiEnabled)
+            sb.AppendLine("apiEnabled = true");
+        sb.AppendLine();
+        sb.AppendLine("[log]");
+        if (!string.IsNullOrEmpty(cfg.Log.File))
+            sb.AppendLine($"file = \"{Escape(cfg.Log.File)}\"");
+        sb.AppendLine($"level = \"{cfg.Log.Level}\"");
+        sb.AppendLine($"maxSizeMb = {cfg.Log.MaxSizeMb}");
+        return sb.ToString();
+    }
+
+    private static string Escape(string s)
+        => s.Replace("\\", "\\\\").Replace("\"", "\\\"");
 }

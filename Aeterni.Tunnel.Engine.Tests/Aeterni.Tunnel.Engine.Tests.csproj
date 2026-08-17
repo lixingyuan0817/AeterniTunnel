@@ -26,7 +26,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Aeterni.Tunnel.Engine\Aeterni.Tunnel.Engine.csproj" />
-    <ProjectReference Include="..\Aeterni.Tunnel.Common\Aeterni.Tunnel.Common.csproj" />
   </ItemGroup>
 
   <ItemGroup>

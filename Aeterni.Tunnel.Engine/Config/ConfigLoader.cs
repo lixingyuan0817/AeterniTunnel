@@ -1,5 +1,3 @@
-using System.Text;
-using Aeterni.Tunnel.Common;
 using Aeterni.Tunnel.Engine.Client;
 using Aeterni.Tunnel.Engine.Hosting;
 using Aeterni.Tunnel.Engine.Protocol;
@@ -70,7 +68,7 @@ public static class ConfigLoader
 
     /// <summary>序列化 ServerConfig 并写入文件（token / webToken 写回用）</summary>
     public static void SaveServer(string path, ServerConfig cfg)
-        => File.WriteAllText(path, Write(cfg));
+        => File.WriteAllText(path, MinimalToml.Write(cfg));
 
     /// <summary>ServerConfig → ServerHostOptions（用于 ServerHost 启动）</summary>
     public static ServerHostOptions ToHostOptions(ServerConfig cfg)
@@ -200,42 +198,4 @@ public static class ConfigLoader
 
     private static bool GetBool(Dictionary<string, object?> kv, string key, bool def)
         => kv.TryGetValue(key, out var v) && v is bool b ? b : def;
-    /// <summary>序列化 ServerConfig → TOML 文本（token 写回用；保留可读结构）</summary>
-    public static string Write(ServerConfig cfg)
-    {
-        var sb = new StringBuilder();
-        sb.AppendLine($"bindPort = {cfg.BindPort}");
-        sb.AppendLine($"token = \"{Escape(cfg.Token)}\"");
-        if (!string.IsNullOrEmpty(cfg.WebToken))
-            sb.AppendLine($"webToken = \"{Escape(cfg.WebToken)}\"");
-        if (!string.IsNullOrEmpty(cfg.WebTokenSalt))
-            sb.AppendLine($"webTokenSalt = \"{Escape(cfg.WebTokenSalt)}\"");
-        if (cfg.VhostHttpPort > 0)
-            sb.AppendLine($"vhostHttpPort = {cfg.VhostHttpPort}");
-        if (cfg.VhostHttpsPort > 0)
-            sb.AppendLine($"vhostHttpsPort = {cfg.VhostHttpsPort}");
-        if (!string.IsNullOrEmpty(cfg.SubDomainHost))
-            sb.AppendLine($"subDomainHost = \"{Escape(cfg.SubDomainHost)}\"");
-        if (cfg.DashboardPort > 0)
-            sb.AppendLine($"dashboardPort = {cfg.DashboardPort}");
-        if (!string.IsNullOrEmpty(cfg.WebBind))
-            sb.AppendLine($"webBind = \"{Escape(cfg.WebBind)}\"");
-        if (cfg.MaxPortsPerClient > 0)
-            sb.AppendLine($"maxPortsPerClient = {cfg.MaxPortsPerClient}");
-        if (cfg.AllowPorts is { Count: > 0 })
-            sb.AppendLine($"allowPorts = [{string.Join(", ", cfg.AllowPorts.Select(p => p.Start == p.End ? p.Start.ToString() : $"\"{p.Start}-{p.End}\""))}]");
-        if (cfg.ApiEnabled)
-            sb.AppendLine("apiEnabled = true");
-        sb.AppendLine();
-        sb.AppendLine("[log]");
-        if (!string.IsNullOrEmpty(cfg.Log.File))
-            sb.AppendLine($"file = \"{Escape(cfg.Log.File)}\"");
-        sb.AppendLine($"level = \"{cfg.Log.Level}\"");
-        sb.AppendLine($"maxSizeMb = {cfg.Log.MaxSizeMb}");
-        return sb.ToString();
-    }
-
-    private static string Escape(string s)
-        => s.Replace("\\", "\\\\").Replace("\"", "\\\"");
-
 }

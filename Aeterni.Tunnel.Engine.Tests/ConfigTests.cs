@@ -1,4 +1,3 @@
-using Aeterni.Tunnel.Common;
 using Aeterni.Tunnel.Engine.Config;
 using Aeterni.Tunnel.Engine.Protocol;
 using Aeterni.Tunnel.Engine.Server;
@@ -54,7 +53,7 @@ public class MinimalTomlTests
         Assert.Equal(new PortRange(7071, 7171), cfg.AllowPorts[1]);
         Assert.Equal(new PortRange(17061, 17061), cfg.AllowPorts[2]);
 
-        var text = ConfigLoader.Write(cfg);
+        var text = MinimalToml.Write(cfg);
         var cfg2 = ConfigLoader.LoadString(text)!;
         Assert.Equal(3, cfg2.AllowPorts!.Count);
         Assert.Equal(new PortRange(7071, 7171), cfg2.AllowPorts[1]);
