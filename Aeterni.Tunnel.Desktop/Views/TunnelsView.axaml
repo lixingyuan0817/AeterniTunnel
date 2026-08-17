@@ -3,58 +3,60 @@
              xmlns:vm="using:Aeterni.Tunnel.Desktop.ViewModels"
              x:Class="Aeterni.Tunnel.Desktop.Views.TunnelsView"
              x:DataType="vm:MainWindowViewModel">
+    <!-- 隧道页：标题 + 添加按钮 + 分组列表 -->
     <Grid RowDefinitions="Auto,*">
-                <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,10">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <Border Classes="titleBar" Width="3" Height="14" />
-                        <TextBlock Classes="cardTitle" Text="{Binding TunnelCountText}" />
-                    </StackPanel>
-                    <Button Grid.Column="1" Classes="primary" Content="＋ 添加隧道" Command="{Binding AddTunnelCommand}" />
-                </Grid>
 
-                <Border Grid.Row="1" Classes="card" Padding="16,10">
-                    <ScrollViewer>
-                        <ItemsControl ItemsSource="{Binding TunnelGroups}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="vm:TunnelGroupViewModel">
-                                    <StackPanel Spacing="2" Margin="0,4,0,8">
-                                        <!-- 分组头 -->
-                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="12"
-                                                   Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,2" />
-                                        <!-- 成员行 -->
-                                        <ItemsControl ItemsSource="{Binding Items}">
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate x:DataType="vm:TunnelItemViewModel">
-                                                    <Border BorderBrush="{DynamicResource RowLineBrush}" BorderThickness="0,0,0,1" Padding="8,7"
-                                                            IsEnabled="{Binding IsEnabled}">
-                                                        <Grid ColumnDefinitions="Auto,110,Auto,*,Auto,Auto,Auto" ColumnSpacing="10">
-                                                            <Ellipse Width="8" Height="8" Fill="{Binding StateBrush}" VerticalAlignment="Center" />
-                                                            <TextBlock Grid.Column="1" Text="{Binding ProxyId}" FontWeight="SemiBold"
-                                                                       FontSize="12" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                                                            <Border Grid.Column="2" Classes="badge" VerticalAlignment="Center">
-                                                                <TextBlock Classes="badgeText" Text="{Binding Type}" Foreground="{Binding TypeBrush}" />
-                                                            </Border>
-                                                            <TextBlock Grid.Column="3" Text="{Binding RouteText}"
-                                                                       Foreground="{DynamicResource MutedBrush}" FontSize="11"
-                                                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                                                            <TextBlock Grid.Column="4" Text="{Binding StateText}"
-                                                                       Foreground="{Binding StateBrush}" FontSize="11" VerticalAlignment="Center" />
-                                                            <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                                                                <TextBlock Text="{Binding FlowText}" Foreground="{DynamicResource MutedBrush}"
-                                                                           FontSize="10" VerticalAlignment="Center" />
-                                                                <Button Classes="ghost" Padding="8,3" FontSize="11" Content="编辑" Command="{Binding EditCommand}" />
-                                                                <Button Classes="danger" Content="删除" Command="{Binding RemoveCommand}" />
-                                                            </StackPanel>
-                                                        </Grid>
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,10">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <Border Classes="titleBar" Width="3" Height="14" />
+                <TextBlock Classes="cardTitle" Text="{Binding TunnelCountText}" />
+            </StackPanel>
+            <Button Grid.Column="1" Classes="primary" Content="＋ 添加隧道" Command="{Binding AddTunnelCommand}" />
+        </Grid>
+
+        <Border Grid.Row="1" Classes="card" Padding="16,10">
+            <ScrollViewer>
+                <ItemsControl ItemsSource="{Binding TunnelGroups}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:TunnelGroupViewModel">
+                            <StackPanel Spacing="2" Margin="0,4,0,8">
+                                <!-- 分组头 -->
+                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="12"
+                                           Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,2" />
+                                <!-- 成员行 -->
+                                <ItemsControl ItemsSource="{Binding Items}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:TunnelItemViewModel">
+                                            <Border BorderBrush="{DynamicResource RowLineBrush}" BorderThickness="0,0,0,1" Padding="8,7"
+                                                    IsEnabled="{Binding IsEnabled}">
+                                                <Grid ColumnDefinitions="Auto,110,Auto,*,Auto,Auto,Auto" ColumnSpacing="10">
+                                                    <Ellipse Width="8" Height="8" Fill="{Binding StateBrush}" VerticalAlignment="Center" />
+                                                    <TextBlock Grid.Column="1" Text="{Binding ProxyId}" FontWeight="SemiBold"
+                                                               FontSize="12" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                                    <Border Grid.Column="2" Classes="badge" VerticalAlignment="Center">
+                                                        <TextBlock Classes="badgeText" Text="{Binding Type}" Foreground="{Binding TypeBrush}" />
                                                     </Border>
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
-                                    </StackPanel>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </ScrollViewer>
-                </Border>
-            </Grid>
+                                                    <TextBlock Grid.Column="3" Text="{Binding RouteText}"
+                                                               Foreground="{DynamicResource MutedBrush}" FontSize="11"
+                                                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                                    <TextBlock Grid.Column="4" Text="{Binding StateText}"
+                                                               Foreground="{Binding StateBrush}" FontSize="11" VerticalAlignment="Center" />
+                                                    <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding FlowText}" Foreground="{DynamicResource MutedBrush}"
+                                                                   FontSize="10" VerticalAlignment="Center" />
+                                                        <Button Classes="ghost" Padding="8,3" FontSize="11" Content="编辑" Command="{Binding EditCommand}" />
+                                                        <Button Classes="danger" Content="删除" Command="{Binding RemoveCommand}" />
+                                                    </StackPanel>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Border>
+    </Grid>
 </UserControl>

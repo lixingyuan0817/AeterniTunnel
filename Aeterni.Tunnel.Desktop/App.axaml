@@ -1,12 +1,7 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="Aeterni.Tunnel.Desktop.App"
-             xmlns:local="using:Aeterni.Tunnel.Desktop"
              RequestedThemeVariant="Dark">
-
-    <Application.DataTemplates>
-        <local:ViewLocator />
-    </Application.DataTemplates>
 
     <Application.Resources>
         <ResourceDictionary>
@@ -294,20 +289,6 @@
             <Setter Property="Background" Value="#2E34C759" />
         </Style>
 
-        <!-- 开服页左栏实例项：圆角、hover 微亮 -->
-        <Style Selector="Button.serverItem">
-            <Setter Property="CornerRadius" Value="7" />
-            <Setter Property="HorizontalContentAlignment" Value="Left" />
-            <Setter Property="Transitions">
-                <Transitions>
-                    <BrushTransition Property="Background" Duration="0:0:0.12" />
-                </Transitions>
-            </Setter>
-        </Style>
-        <Style Selector="Button.serverItem:pointerover /template/ ContentPresenter">
-            <Setter Property="Background" Value="#1434C759" />
-        </Style>
-
         <Style Selector="Button.primary">
             <Setter Property="Background" Value="{DynamicResource AccentStrongColor}" />
             <Setter Property="Foreground" Value="White" />
@@ -398,6 +379,37 @@
         </Style>
         <Style Selector="Button.danger:pointerover">
             <Setter Property="Background" Value="#22F87171" />
+        </Style>
+
+        <!-- ═══ 窗口标题栏 macOS 红绿灯按钮（三平台统一自绘，配合 SystemDecorations=None） ═══ -->
+        <Style Selector="Button.traffic">
+            <Setter Property="Width" Value="12" />
+            <Setter Property="Height" Value="12" />
+            <Setter Property="MinWidth" Value="0" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="FontSize" Value="9" />
+            <Setter Property="Foreground" Value="Transparent" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+        <!-- hover：显示符号（关闭 ✕ / 最小化 － / 最大化 ＋） -->
+        <Style Selector="Button.traffic:pointerover">
+            <Setter Property="Foreground" Value="#80000000" />
+        </Style>
+        <Style Selector="Button.trafficClose">
+            <Setter Property="Background" Value="#FF5F57" />
+            <Setter Property="BorderBrush" Value="#E0443E" />
+        </Style>
+        <Style Selector="Button.trafficMin">
+            <Setter Property="Background" Value="#FEBC2E" />
+            <Setter Property="BorderBrush" Value="#D8A023" />
+        </Style>
+        <Style Selector="Button.trafficMax">
+            <Setter Property="Background" Value="#28C840" />
+            <Setter Property="BorderBrush" Value="#1E9E2E" />
         </Style>
 
         <Style Selector="Border.badge">

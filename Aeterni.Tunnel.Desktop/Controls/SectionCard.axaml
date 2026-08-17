@@ -1,0 +1,20 @@
+<ContentControl xmlns="https://github.com/avaloniaui"
+                xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                xmlns:controls="using:Aeterni.Tunnel.Desktop.Controls"
+                x:Class="Aeterni.Tunnel.Desktop.Controls.SectionCard">
+    <!-- 卡片 + 标题栏封装：titleBar 竖条 + cardTitle 标题 + 内容区
+         继承 ContentControl：隐式子内容即 Content，模板内 ContentPresenter 渲染，外层包 card 样式 -->
+    <ContentControl.Template>
+        <ControlTemplate TargetType="controls:SectionCard">
+            <Border Classes="card">
+                <StackPanel Spacing="10">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Border Classes="titleBar" Width="3" Height="14" />
+                        <TextBlock Classes="cardTitle" Text="{TemplateBinding Title}" />
+                    </StackPanel>
+                    <ContentPresenter Content="{TemplateBinding Content}" />
+                </StackPanel>
+            </Border>
+        </ControlTemplate>
+    </ContentControl.Template>
+</ContentControl>

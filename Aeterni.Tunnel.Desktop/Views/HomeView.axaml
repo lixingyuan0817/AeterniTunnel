@@ -1,70 +1,59 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:Aeterni.Tunnel.Desktop.Controls"
              xmlns:vm="using:Aeterni.Tunnel.Desktop.ViewModels"
              x:Class="Aeterni.Tunnel.Desktop.Views.HomeView"
              x:DataType="vm:MainWindowViewModel">
+    <!-- 首页：首启提示 + 统计卡 + 日志 -->
     <Grid RowDefinitions="Auto,Auto,*" RowSpacing="12">
-                <Border IsVisible="{Binding IsFirstRun}" Grid.Row="0"
-                        Background="{DynamicResource BannerBgBrush}" BorderBrush="{DynamicResource BannerBorderBrush}" BorderThickness="1"
-                        CornerRadius="8" Padding="12,9">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <TextBlock Text="●" Foreground="{DynamicResource YellowBrush}" FontSize="12" VerticalAlignment="Center" />
-                        <TextBlock Text="{Binding FirstRunHint}" FontSize="12" Foreground="{DynamicResource BannerTextBrush}"
-                                   TextWrapping="Wrap" VerticalAlignment="Center" />
-                    </StackPanel>
-                </Border>
 
-                <!-- 统计卡 -->
-                <Grid Grid.Row="1" ColumnDefinitions="*,*,*" ColumnSpacing="12">
-                    <Border Classes="card" Grid.Column="0">
-                        <StackPanel Spacing="4">
-                            <TextBlock Classes="fieldLabel" Text="隧道总数" />
-                            <TextBlock Text="{Binding TunnelCount}" FontSize="16" FontWeight="Bold"
-                                       Foreground="{DynamicResource AccentBrush}" />
-                        </StackPanel>
-                    </Border>
-                    <Border Classes="card" Grid.Column="1">
-                        <StackPanel Spacing="4">
-                            <TextBlock Classes="fieldLabel" Text="分组数" />
-                            <TextBlock Text="{Binding GroupCount}" FontSize="16" FontWeight="Bold"
-                                       Foreground="{DynamicResource AccentBrush}" />
-                        </StackPanel>
-                    </Border>
-                    <Border Classes="card" Grid.Column="2">
-                        <StackPanel Spacing="4">
-                            <TextBlock Classes="fieldLabel" Text="实时速率" />
-                            <TextBlock FontSize="14" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}">
-                                <Run Text="▲ " /><Run Text="{Binding UpRateText}" />
-                                <Run Text="  ▼ " /><Run Text="{Binding DownRateText}" />
-                            </TextBlock>
-                        </StackPanel>
-                    </Border>
-                </Grid>
+        <!-- 首启提示 -->
+        <Border IsVisible="{Binding IsFirstRun}" Grid.Row="0"
+                Background="{DynamicResource BannerBgBrush}" BorderBrush="{DynamicResource BannerBorderBrush}" BorderThickness="1"
+                CornerRadius="8" Padding="12,9">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="●" Foreground="{DynamicResource YellowBrush}" FontSize="12" VerticalAlignment="Center" />
+                <TextBlock Text="{Binding FirstRunHint}" FontSize="12" Foreground="{DynamicResource BannerTextBrush}"
+                           TextWrapping="Wrap" VerticalAlignment="Center" />
+            </StackPanel>
+        </Border>
 
-                <!-- 日志 -->
-                <Border Grid.Row="2" Classes="card" Padding="16,12">
-                    <Grid RowDefinitions="Auto,*">
-                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,10">
-                            <Border Classes="titleBar" Width="3" Height="14" />
-                            <TextBlock Classes="cardTitle" Text="日志" />
-                        </StackPanel>
-                        <ScrollViewer Grid.Row="1" x:Name="LogScroll">
-                            <ItemsControl ItemsSource="{Binding Logs}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate x:DataType="vm:LogItemViewModel">
-                                        <Grid ColumnDefinitions="58,34,*" ColumnSpacing="6">
-                                            <TextBlock Text="{Binding TimeText}" Foreground="{Binding Brush}"
-                                                       FontFamily="Menlo, Consolas, monospace" FontSize="10" />
-                                            <TextBlock Grid.Column="1" Text="{Binding LevelText}" Foreground="{Binding Brush}"
-                                                       FontFamily="Menlo, Consolas, monospace" FontSize="10" />
-                                            <TextBlock Grid.Column="2" Text="{Binding Text}" Foreground="{Binding Brush}"
-                                                       FontFamily="Menlo, Consolas, monospace" FontSize="11" TextWrapping="Wrap" />
-                                        </Grid>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </ScrollViewer>
-                    </Grid>
-                </Border>
-            </Grid>
+        <!-- 统计卡 -->
+        <Grid Grid.Row="1" ColumnDefinitions="*,*,*" ColumnSpacing="12">
+            <controls:StatCard Grid.Column="0" Label="隧道总数">
+                <TextBlock Text="{Binding TunnelCount}" FontSize="16" FontWeight="Bold"
+                           Foreground="{DynamicResource AccentBrush}" />
+            </controls:StatCard>
+            <controls:StatCard Grid.Column="1" Label="分组数">
+                <TextBlock Text="{Binding GroupCount}" FontSize="16" FontWeight="Bold"
+                           Foreground="{DynamicResource AccentBrush}" />
+            </controls:StatCard>
+            <controls:StatCard Grid.Column="2" Label="实时速率">
+                <TextBlock FontSize="14" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}">
+                    <Run Text="▲ " /><Run Text="{Binding UpRateText}" />
+                    <Run Text="  ▼ " /><Run Text="{Binding DownRateText}" />
+                </TextBlock>
+            </controls:StatCard>
+        </Grid>
+
+        <!-- 日志（追加自动滚到底，见 HomeView.axaml.cs） -->
+        <controls:SectionCard Grid.Row="2" Title="日志">
+            <ScrollViewer x:Name="LogScroll">
+                <ItemsControl ItemsSource="{Binding Logs}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:LogItemViewModel">
+                            <Grid ColumnDefinitions="58,34,*" ColumnSpacing="6">
+                                <TextBlock Text="{Binding TimeText}" Foreground="{Binding Brush}"
+                                           FontFamily="Menlo, Consolas, monospace" FontSize="10" />
+                                <TextBlock Grid.Column="1" Text="{Binding LevelText}" Foreground="{Binding Brush}"
+                                           FontFamily="Menlo, Consolas, monospace" FontSize="10" />
+                                <TextBlock Grid.Column="2" Text="{Binding Text}" Foreground="{Binding Brush}"
+                                           FontFamily="Menlo, Consolas, monospace" FontSize="11" TextWrapping="Wrap" />
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </controls:SectionCard>
+    </Grid>
 </UserControl>

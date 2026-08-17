@@ -44,11 +44,9 @@ public sealed class MainWindowViewModel : ObservableBase, IAsyncDisposable
         NavigateHomeCommand = new RelayCommand(() => Navigate("home"));
         NavigateTunnelsCommand = new RelayCommand(() => Navigate("tunnels"));
         NavigateSettingsCommand = new RelayCommand(() => Navigate("settings"));
-        NavigateLauncherCommand = new RelayCommand(() => Navigate("launcher"));
         // 客户端常连：无手动连接/断开；未连接（重连中）时隧道操作禁用
         AddTunnelCommand = new RelayCommand(() => EditTunnelRequested?.Invoke(null), () => IsConnected);
         LoadConfigCommand = new RelayCommand(() => _ = LoadConfigAsync());
-        SelectServerCommand = new RelayCommand(s => { if (s is ServerCardViewModel card) SelectedServer = card; });
         SaveSettingsCommand = new RelayCommand(SaveSettings);
 
         // 事件驱动：连接建立/断开即时刷新 UI（不依赖每秒轮询）
@@ -59,28 +57,23 @@ public sealed class MainWindowViewModel : ObservableBase, IAsyncDisposable
         _timer.Start();
 
         AddLog("欢迎使用 AETERNI TUNNEL 桌面客户端（ATC）");
-        SeedSampleServers();
     }
 
     // ═════════ 页面导航 ═════════
 
-    public object CurrentPage { get; private set; } = new HomePage();
+    public string CurrentPage { get; private set; } = "home";
 
-    public bool HomeVisible => CurrentPage is HomePage;
+    public bool HomeVisible => CurrentPage == "home";
 
-    public bool TunnelsVisible => CurrentPage is TunnelsPage;
+    public bool TunnelsVisible => CurrentPage == "tunnels";
 
-    public bool SettingsVisible => CurrentPage is SettingsPage;
+    public bool SettingsVisible => CurrentPage == "settings";
 
-    public bool LauncherVisible => CurrentPage is LauncherPage;
+    public IBrush NavHomeBrush => CurrentPage == "home" ? NavActiveBrush : NavMutedBrush;
 
-    public IBrush NavHomeBrush => CurrentPage is HomePage ? NavActiveBrush : NavMutedBrush;
+    public IBrush NavTunnelsBrush => CurrentPage == "tunnels" ? NavActiveBrush : NavMutedBrush;
 
-    public IBrush NavTunnelsBrush => CurrentPage is TunnelsPage ? NavActiveBrush : NavMutedBrush;
-
-    public IBrush NavSettingsBrush => CurrentPage is SettingsPage ? NavActiveBrush : NavMutedBrush;
-
-    public IBrush NavLauncherBrush => CurrentPage is LauncherPage ? NavActiveBrush : NavMutedBrush;
+    public IBrush NavSettingsBrush => CurrentPage == "settings" ? NavActiveBrush : NavMutedBrush;
 
     private IBrush NavActiveBrush => IsDarkTheme ? NavActiveDark : NavActiveLight;
 
@@ -92,60 +85,17 @@ public sealed class MainWindowViewModel : ObservableBase, IAsyncDisposable
 
     public ICommand NavigateSettingsCommand { get; }
 
-    public ICommand NavigateLauncherCommand { get; }
-
-    /// <summary>开服页实例分组（左栏：组 → 实例，示例数据后续接入 Launcher 服务）</summary>
-    public ObservableCollection<ServerGroupViewModel> ServerGroups { get; } = [];
-
-    private ServerCardViewModel? _selectedServer;
-    public ServerCardViewModel? SelectedServer
-    {
-        get => _selectedServer;
-        set { _selectedServer = value; OnPropertyChanged(); }
-    }
-
-    public RelayCommand SelectServerCommand { get; }
-
-    private void SeedSampleServers()
-    {
-        var mine = new ServerGroupViewModel { Name = "我的服务器" };
-        mine.Items.Add(new ServerCardViewModel
-        {
-            Name = "lyzp-mc", Template = "Minecraft Paper 1.21", Java = "Java 21",
-            Port = ":25565", Stats = "运行 2h31m · ↑1.2MB ↓800KB", IsRunning = true,
-        });
-        mine.Items.Add(new ServerCardViewModel
-        {
-            Name = "skyblock", Template = "Minecraft Vanilla 1.21", Java = "Java 21",
-            Port = ":25566", IsRunning = false,
-        });
-        ServerGroups.Add(mine);
-
-        var archive = new ServerGroupViewModel { Name = "存档服" };
-        archive.Items.Add(new ServerCardViewModel
-        {
-            Name = "survival", Template = "Minecraft Paper 1.20", Java = "Java 17",
-            Port = ":25567", IsRunning = false,
-        });
-        ServerGroups.Add(archive);
-
-        SelectedServer = mine.Items[0];
-    }
-
-    private void Navigate(object page)
+    private void Navigate(string page)
     {
         if (CurrentPage == page)
             return;
         CurrentPage = page;
-        OnPropertyChanged(nameof(CurrentPage));   // 关键：ContentControl 绑定刷新（此前缺失导致切换无效）
         OnPropertyChanged(nameof(HomeVisible));
         OnPropertyChanged(nameof(TunnelsVisible));
         OnPropertyChanged(nameof(SettingsVisible));
-        OnPropertyChanged(nameof(LauncherVisible));
         OnPropertyChanged(nameof(NavHomeBrush));
         OnPropertyChanged(nameof(NavTunnelsBrush));
         OnPropertyChanged(nameof(NavSettingsBrush));
-        OnPropertyChanged(nameof(NavLauncherBrush));
     }
 
     // ═════════ 明暗主题（明亮 / 黑暗 / 跟随系统，选择持久化到 agent.toml 的 theme 键） ═════════
