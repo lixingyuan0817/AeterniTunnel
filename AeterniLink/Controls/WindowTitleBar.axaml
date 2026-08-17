@@ -1,0 +1,26 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="AeterniLink.Controls.WindowTitleBar">
+    <!-- 三平台统一的自定义标题栏（macOS 红绿灯风格）：左红黄绿圆点按钮 + 标题
+         配合 SystemDecorations="None" 使用；标题栏空白区支持拖拽移动、双击最大化 -->
+    <Grid Height="40" ColumnDefinitions="Auto,*,Auto" Background="Transparent">
+        <!-- macOS 红绿灯：红=关闭 / 黄=最小化 / 绿=最大化还原（hover 显示符号；外层 22px 透明 Border 扩大命中区） -->
+        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4" Margin="12,0,0,0" VerticalAlignment="Center">
+            <Border Width="22" Height="22" Background="Transparent" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <Button x:Name="CloseBtn" Classes="traffic trafficClose" Content="✕" ToolTip.Tip="关闭"
+                        HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Border>
+            <Border Width="22" Height="22" Background="Transparent" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <Button x:Name="MinBtn" Classes="traffic trafficMin" Content="－" ToolTip.Tip="最小化"
+                        HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Border>
+            <Border Width="22" Height="22" Background="Transparent" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <Button x:Name="MaxBtn" Classes="traffic trafficMax" Content="＋" ToolTip.Tip="最大化"
+                        HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Border>
+        </StackPanel>
+        <TextBlock x:Name="TitleText" Grid.Column="1" VerticalAlignment="Center" Margin="10,0,0,0"
+                   Foreground="{DynamicResource TextBrush}" FontSize="13" FontWeight="SemiBold"
+                   TextTrimming="CharacterEllipsis" />
+    </Grid>
+</UserControl>

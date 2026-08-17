@@ -1,0 +1,488 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="AeterniLink.App"
+             RequestedThemeVariant="Dark">
+
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.ThemeDictionaries>
+
+                <!-- ═══ 深色主题（Web 深色 #05070f） ═══ -->
+                <ResourceDictionary x:Key="Dark">
+                    <Color x:Key="AccentColor">#34C759</Color>
+                    <Color x:Key="AccentStrongColor">#16A34A</Color>
+                    <Color x:Key="BgColor">#05070F</Color>
+                    <Color x:Key="PanelColor">#0DFFFFFF</Color>
+                    <Color x:Key="DropdownBgColor">#F205070F</Color>
+                    <Color x:Key="ToastBgColor">#E605070F</Color>
+                    <Color x:Key="ToastBorderColor">#40FFFFFF</Color>
+                    <Color x:Key="PanelBorderColor">#1FFFFFFF</Color>
+                    <Color x:Key="InputBgColor">#14FFFFFF</Color>
+                    <Color x:Key="InputBorderColor">#2AFFFFFF</Color>
+                    <Color x:Key="InputBgFocusColor">#24FFFFFF</Color>
+                    <Color x:Key="RowLineColor">#14FFFFFF</Color>
+                    <Color x:Key="TextColor">#E2E8F0</Color>
+                    <Color x:Key="MutedColor">#94A3B8</Color>
+                    <Color x:Key="RedColor">#F87171</Color>
+                    <Color x:Key="YellowColor">#FBBF24</Color>
+                    <Color x:Key="BlueColor">#60A5FA</Color>
+                    <Color x:Key="PurpleColor">#A78BFA</Color>
+                    <Color x:Key="BannerBgColor">#22FBBF24</Color>
+                    <Color x:Key="BannerBorderColor">#55FBBF24</Color>
+                    <Color x:Key="BannerTextColor">#FDE68A</Color>
+                    <Color x:Key="WindowBgColor">#8C05070F</Color>
+                    <Color x:Key="ScrollThumbColor">#26FFFFFF</Color>
+                    <Color x:Key="ScrollThumbHoverColor">#40FFFFFF</Color>
+                    <Color x:Key="ScrollThumbPressedColor">#55FFFFFF</Color>
+                    <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentColor}" />
+                    <SolidColorBrush x:Key="BgBrush" Color="{StaticResource BgColor}" />
+                    <SolidColorBrush x:Key="WindowBgBrush" Color="{StaticResource WindowBgColor}" />
+                    <SolidColorBrush x:Key="ScrollThumbBrush" Color="{StaticResource ScrollThumbColor}" />
+                    <SolidColorBrush x:Key="ScrollThumbHoverBrush" Color="{StaticResource ScrollThumbHoverColor}" />
+                    <SolidColorBrush x:Key="ScrollThumbPressedBrush" Color="{StaticResource ScrollThumbPressedColor}" />
+                    <SolidColorBrush x:Key="PanelBrush" Color="{StaticResource PanelColor}" />
+                    <SolidColorBrush x:Key="DropdownBgBrush" Color="{StaticResource DropdownBgColor}" />
+                    <SolidColorBrush x:Key="ToastBgBrush" Color="{StaticResource ToastBgColor}" />
+                    <SolidColorBrush x:Key="ToastBorderBrush" Color="{StaticResource ToastBorderColor}" />
+                    <SolidColorBrush x:Key="PanelBorderBrush" Color="{StaticResource PanelBorderColor}" />
+                    <SolidColorBrush x:Key="InputBgBrush" Color="{StaticResource InputBgColor}" />
+                    <SolidColorBrush x:Key="InputBorderBrush" Color="{StaticResource InputBorderColor}" />
+                    <SolidColorBrush x:Key="InputBgFocusBrush" Color="{StaticResource InputBgFocusColor}" />
+                    <SolidColorBrush x:Key="RowLineBrush" Color="{StaticResource RowLineColor}" />
+                    <SolidColorBrush x:Key="TextBrush" Color="{StaticResource TextColor}" />
+                    <SolidColorBrush x:Key="MutedBrush" Color="{StaticResource MutedColor}" />
+                    <SolidColorBrush x:Key="RedBrush" Color="{StaticResource RedColor}" />
+                    <SolidColorBrush x:Key="YellowBrush" Color="{StaticResource YellowColor}" />
+                    <SolidColorBrush x:Key="BlueBrush" Color="{StaticResource BlueColor}" />
+                    <SolidColorBrush x:Key="PurpleBrush" Color="{StaticResource PurpleColor}" />
+                    <SolidColorBrush x:Key="BannerBgBrush" Color="{StaticResource BannerBgColor}" />
+                    <SolidColorBrush x:Key="BannerBorderBrush" Color="{StaticResource BannerBorderColor}" />
+                    <SolidColorBrush x:Key="BannerTextBrush" Color="{StaticResource BannerTextColor}" />
+                </ResourceDictionary>
+
+                <!-- ═══ 亮色主题（Web 亮色 #eef1f8） ═══ -->
+                <ResourceDictionary x:Key="Light">
+                    <Color x:Key="AccentColor">#16A34A</Color>
+                    <Color x:Key="AccentStrongColor">#15803D</Color>
+                    <Color x:Key="BgColor">#EEF1F8</Color>
+                    <Color x:Key="PanelColor">#99FFFFFF</Color>
+                    <Color x:Key="DropdownBgColor">#F2FFFFFF</Color>
+                    <Color x:Key="ToastBgColor">#E6EEF1F8</Color>
+                    <Color x:Key="ToastBorderColor">#8CFFFFFF</Color>
+                    <Color x:Key="PanelBorderColor">#331E293B</Color>
+                    <Color x:Key="InputBgColor">#99FFFFFF</Color>
+                    <Color x:Key="InputBorderColor">#331E293B</Color>
+                    <Color x:Key="InputBgFocusColor">#E6FFFFFF</Color>
+                    <Color x:Key="RowLineColor">#141E293B</Color>
+                    <Color x:Key="TextColor">#1E293B</Color>
+                    <Color x:Key="MutedColor">#64748B</Color>
+                    <Color x:Key="RedColor">#DC2626</Color>
+                    <Color x:Key="YellowColor">#D97706</Color>
+                    <Color x:Key="BlueColor">#2563EB</Color>
+                    <Color x:Key="PurpleColor">#7C3AED</Color>
+                    <Color x:Key="BannerBgColor">#33FBBF24</Color>
+                    <Color x:Key="BannerBorderColor">#66D97706</Color>
+                    <Color x:Key="BannerTextColor">#92400E</Color>
+                    <Color x:Key="WindowBgColor">#8CEEF1F8</Color>
+                    <Color x:Key="ScrollThumbColor">#141E293B</Color>
+                    <Color x:Key="ScrollThumbHoverColor">#241E293B</Color>
+                    <Color x:Key="ScrollThumbPressedColor">#331E293B</Color>
+                    <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentColor}" />
+                    <SolidColorBrush x:Key="BgBrush" Color="{StaticResource BgColor}" />
+                    <SolidColorBrush x:Key="WindowBgBrush" Color="{StaticResource WindowBgColor}" />
+                    <SolidColorBrush x:Key="ScrollThumbBrush" Color="{StaticResource ScrollThumbColor}" />
+                    <SolidColorBrush x:Key="ScrollThumbHoverBrush" Color="{StaticResource ScrollThumbHoverColor}" />
+                    <SolidColorBrush x:Key="ScrollThumbPressedBrush" Color="{StaticResource ScrollThumbPressedColor}" />
+                    <SolidColorBrush x:Key="PanelBrush" Color="{StaticResource PanelColor}" />
+                    <SolidColorBrush x:Key="DropdownBgBrush" Color="{StaticResource DropdownBgColor}" />
+                    <SolidColorBrush x:Key="ToastBgBrush" Color="{StaticResource ToastBgColor}" />
+                    <SolidColorBrush x:Key="ToastBorderBrush" Color="{StaticResource ToastBorderColor}" />
+                    <SolidColorBrush x:Key="PanelBorderBrush" Color="{StaticResource PanelBorderColor}" />
+                    <SolidColorBrush x:Key="InputBgBrush" Color="{StaticResource InputBgColor}" />
+                    <SolidColorBrush x:Key="InputBorderBrush" Color="{StaticResource InputBorderColor}" />
+                    <SolidColorBrush x:Key="InputBgFocusBrush" Color="{StaticResource InputBgFocusColor}" />
+                    <SolidColorBrush x:Key="RowLineBrush" Color="{StaticResource RowLineColor}" />
+                    <SolidColorBrush x:Key="TextBrush" Color="{StaticResource TextColor}" />
+                    <SolidColorBrush x:Key="MutedBrush" Color="{StaticResource MutedColor}" />
+                    <SolidColorBrush x:Key="RedBrush" Color="{StaticResource RedColor}" />
+                    <SolidColorBrush x:Key="YellowBrush" Color="{StaticResource YellowColor}" />
+                    <SolidColorBrush x:Key="BlueBrush" Color="{StaticResource BlueColor}" />
+                    <SolidColorBrush x:Key="PurpleBrush" Color="{StaticResource PurpleColor}" />
+                    <SolidColorBrush x:Key="BannerBgBrush" Color="{StaticResource BannerBgColor}" />
+                    <SolidColorBrush x:Key="BannerBorderBrush" Color="{StaticResource BannerBorderColor}" />
+                    <SolidColorBrush x:Key="BannerTextBrush" Color="{StaticResource BannerTextColor}" />
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
+
+    <Application.Styles>
+        <FluentTheme />
+
+        <!-- ═══ 卡片（Web .stat-card 同款） ═══ -->
+        <Style Selector="Border.card">
+            <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource PanelBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="Padding" Value="16" />
+        </Style>
+
+        <Style Selector="TextBlock.cardTitle">
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="Border.titleBar">
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="CornerRadius" Value="2" />
+        </Style>
+
+        <Style Selector="TextBlock.fieldLabel">
+            <Setter Property="Foreground" Value="{DynamicResource MutedBrush}" />
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+
+        <Style Selector="TextBox">
+            <Setter Property="Background" Value="{DynamicResource InputBgBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource InputBorderBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+            <Setter Property="CaretBrush" Value="{DynamicResource TextBrush}" />
+            <Setter Property="SelectionBrush" Value="#6634C759" />
+            <Setter Property="Padding" Value="10,7" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="BorderBrush" Duration="0:0:0.18" />
+                    <BrushTransition Property="Background" Duration="0:0:0.18" />
+                </Transitions>
+            </Setter>
+            <!-- 自定义模板：摆脱 Fluent 默认蓝色焦点（模板内部样式优先于外层属性） -->
+            <Setter Property="Template">
+                <ControlTemplate TargetType="TextBox">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{TemplateBinding CornerRadius}">
+                        <Grid>
+                            <ScrollViewer x:Name="PART_TextScrollViewer"
+                                          Margin="{TemplateBinding Padding}"
+                                          HorizontalScrollBarVisibility="Hidden"
+                                          VerticalScrollBarVisibility="Auto"
+                                          IsTabStop="False" Focusable="False">
+                                <TextPresenter x:Name="PART_TextPresenter"
+                                               Text="{TemplateBinding Text, Mode=TwoWay}"
+                                               CaretBrush="{TemplateBinding CaretBrush}"
+                                               SelectionBrush="{TemplateBinding SelectionBrush}"
+                                               TextWrapping="{TemplateBinding TextWrapping}"
+                                               TextAlignment="{TemplateBinding TextAlignment}"
+                                               PasswordChar="{TemplateBinding PasswordChar}" />
+                            </ScrollViewer>
+                            <TextBlock x:Name="PART_Watermark"
+                                       Margin="{TemplateBinding Padding}"
+                                       IsHitTestVisible="False"
+                                       Text="{TemplateBinding Watermark}"
+                                       Foreground="{TemplateBinding Foreground}"
+                                       Opacity="0.45" FontSize="{TemplateBinding FontSize}"
+                                       VerticalAlignment="Center" />
+                        </Grid>
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+
+        <!-- 输入框焦点：绿色边框 + 背景微亮（替代默认 Fluent 蓝） -->
+        <Style Selector="TextBox:focus">
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="Background" Value="{DynamicResource InputBgFocusBrush}" />
+        </Style>
+
+        <!-- 水印：仅文本为空时显示（:empty 伪类控制，避免叠在已输入文字上） -->
+        <Style Selector="TextBox:empty /template/ TextBlock#PART_Watermark">
+            <Setter Property="IsVisible" Value="True" />
+        </Style>
+        <Style Selector="TextBox:not(:empty) /template/ TextBlock#PART_Watermark">
+            <Setter Property="IsVisible" Value="False" />
+        </Style>
+        <!-- ComboBox：与 TextBox 同风格——圆角 8 / InputBg 背景 / 焦点绿框 / 下拉面板毛玻璃 -->
+        <Style Selector="ComboBox">
+            <Setter Property="Background" Value="{DynamicResource InputBgBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource InputBorderBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+            <Setter Property="Padding" Value="10,7" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="MinHeight" Value="34" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="BorderBrush" Duration="0:0:0.18" />
+                    <BrushTransition Property="Background" Duration="0:0:0.18" />
+                </Transitions>
+            </Setter>
+            <Setter Property="Template">
+                <ControlTemplate TargetType="ComboBox">
+                    <Grid ColumnDefinitions="*,32">
+                        <Border x:Name="Background"
+                                Grid.Column="0" Grid.ColumnSpan="2"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="{TemplateBinding CornerRadius}"
+                                MinWidth="{TemplateBinding MinWidth}" />
+                        <ContentControl x:Name="ContentPresenter"
+                                        Content="{TemplateBinding SelectionBoxItem}"
+                                        ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                        Grid.Column="0"
+                                        Margin="{TemplateBinding Padding}"
+                                        VerticalContentAlignment="Center" />
+                        <PathIcon x:Name="DropDownGlyph"
+                                  Grid.Column="1"
+                                  Width="12" Height="12"
+                                  Margin="0,0,10,0"
+                                  HorizontalAlignment="Right" VerticalAlignment="Center"
+                                  Foreground="{DynamicResource MutedBrush}"
+                                  Data="M1939 486L2029 576L1024 1581L19 576L109 486L1024 1401L1939 486Z" />
+                        <Popup x:Name="PART_Popup"
+                               IsOpen="{TemplateBinding IsDropDownOpen, Mode=TwoWay}"
+                               MinWidth="{Binding Bounds.Width, RelativeSource={RelativeSource TemplatedParent}}"
+                               MaxHeight="{TemplateBinding MaxDropDownHeight}"
+                               PlacementTarget="Background"
+                               IsLightDismissEnabled="True">
+                            <Border x:Name="PopupBorder"
+                                    Background="{DynamicResource DropdownBgBrush}"
+                                    BorderBrush="{DynamicResource PanelBorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="8"
+                                    Margin="0,4,0,0"
+                                    Padding="4"
+                                    BoxShadow="0 4 14 0 #40000000">
+                                <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                                              VerticalScrollBarVisibility="Auto"
+                                              MaxHeight="{Binding MaxHeight, RelativeSource={RelativeSource TemplatedParent}}">
+                                    <ItemsPresenter Name="PART_ItemsPresenter"
+                                                    ItemsPanel="{TemplateBinding ItemsPanel}" />
+                                </ScrollViewer>
+                            </Border>
+                        </Popup>
+                    </Grid>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <!-- ComboBox 焦点：绿色边框 + 背景微亮（与 TextBox 一致） -->
+        <Style Selector="ComboBox:focus /template/ Border#Background">
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="Background" Value="{DynamicResource InputBgFocusBrush}" />
+        </Style>
+        <!-- 下拉项：圆角 hover / 选中主题色高亮 -->
+        <Style Selector="ComboBoxItem">
+            <Setter Property="Padding" Value="10,7" />
+            <Setter Property="Margin" Value="2,1" />
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="CornerRadius" Value="6" />
+        </Style>
+        <Style Selector="ComboBoxItem:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#1A34C759" />
+        </Style>
+        <Style Selector="ComboBoxItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="#2E34C759" />
+        </Style>
+
+        <Style Selector="Button.primary">
+            <Setter Property="Background" Value="{DynamicResource AccentStrongColor}" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="16,7" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="Button.primary:pointerover">
+            <Setter Property="Background" Value="{DynamicResource AccentColor}" />
+        </Style>
+
+        <Style Selector="Button.ghost">
+            <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource PanelBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="14,7" />
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+        <Style Selector="Button.ghost:pointerover">
+            <Setter Property="Background" Value="{DynamicResource InputBgBrush}" />
+        </Style>
+
+        <!-- 禁用态：无灰色背景，仅整体淡化（替代 Fluent 默认灰底） -->
+        <Style Selector="Button.ghost:disabled">
+            <Setter Property="Opacity" Value="0.45" />
+        </Style>
+        <Style Selector="Button.ghost:disabled /template/ Border">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <Style Selector="Button.primary:disabled">
+            <Setter Property="Background" Value="{DynamicResource InputBgBrush}" />
+            <Setter Property="Opacity" Value="0.6" />
+        </Style>
+        <Style Selector="Button.danger:disabled">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Opacity" Value="0.45" />
+        </Style>
+
+        <!-- 分段控制器按钮（顶栏主题切换）：无圆点，选中 accent 底色 -->
+        <Style Selector="RadioButton.seg">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="9,4" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border Background="{TemplateBinding Background}" CornerRadius="{TemplateBinding CornerRadius}">
+                        <ContentPresenter Content="{TemplateBinding Content}" Padding="{TemplateBinding Padding}"
+                                          HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="RadioButton.seg:pointerover">
+            <Setter Property="Background" Value="{DynamicResource RowLineBrush}" />
+        </Style>
+        <Style Selector="RadioButton.seg:checked">
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="Foreground" Value="White" />
+        </Style>
+
+        <!-- 连接状态圆点脉冲（连接正常时往复呼吸，替代 Web header 流光） -->
+        <Style Selector="Ellipse.pulse">
+            <Style.Animations>
+                <Animation Duration="0:0:1.2" IterationCount="Infinite" PlaybackDirection="Alternate" Easing="SineEaseInOut">
+                    <KeyFrame Cue="0%">
+                        <Setter Property="Opacity" Value="0.25" />
+                    </KeyFrame>
+                    <KeyFrame Cue="100%">
+                        <Setter Property="Opacity" Value="1" />
+                    </KeyFrame>
+                </Animation>
+            </Style.Animations>
+        </Style>
+
+        <Style Selector="Button.danger">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource RedBrush}" />
+            <Setter Property="BorderBrush" Value="#33F87171" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="10,4" />
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+        <Style Selector="Button.danger:pointerover">
+            <Setter Property="Background" Value="#22F87171" />
+        </Style>
+
+        <!-- ═══ 窗口标题栏 macOS 红绿灯按钮（三平台统一自绘，配合 SystemDecorations=None） ═══ -->
+        <Style Selector="Button.traffic">
+            <Setter Property="Width" Value="12" />
+            <Setter Property="Height" Value="12" />
+            <Setter Property="MinWidth" Value="0" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="FontSize" Value="9" />
+            <Setter Property="Foreground" Value="Transparent" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+        <!-- hover：显示符号（关闭 ✕ / 最小化 － / 最大化 ＋） -->
+        <Style Selector="Button.traffic:pointerover">
+            <Setter Property="Foreground" Value="#80000000" />
+        </Style>
+        <Style Selector="Button.trafficClose">
+            <Setter Property="Background" Value="#FF5F57" />
+            <Setter Property="BorderBrush" Value="#E0443E" />
+        </Style>
+        <Style Selector="Button.trafficMin">
+            <Setter Property="Background" Value="#FEBC2E" />
+            <Setter Property="BorderBrush" Value="#D8A023" />
+        </Style>
+        <Style Selector="Button.trafficMax">
+            <Setter Property="Background" Value="#28C840" />
+            <Setter Property="BorderBrush" Value="#1E9E2E" />
+        </Style>
+
+        <Style Selector="Border.badge">
+            <Setter Property="Background" Value="{DynamicResource InputBgBrush}" />
+            <Setter Property="CornerRadius" Value="5" />
+            <Setter Property="Padding" Value="6,2" />
+        </Style>
+        <Style Selector="TextBlock.badgeText">
+            <Setter Property="FontSize" Value="10" />
+        </Style>
+
+        <!-- ═══ CheckBox：自定义模板（主题绿勾选框，替代 Fluent 默认蓝） ═══ -->
+        <Style Selector="CheckBox">
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Template">
+                <ControlTemplate TargetType="CheckBox">
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="7">
+                        <Border x:Name="BoxBorder" Width="16" Height="16" CornerRadius="4"
+                                Background="Transparent" BorderBrush="{DynamicResource InputBorderBrush}"
+                                BorderThickness="1.5" VerticalAlignment="Center">
+                            <Path x:Name="CheckPath" Data="M 2.5,8 L 6,11.5 L 13.5,4.5"
+                                  Stroke="White" StrokeThickness="1.6" StrokeLineCap="Round"
+                                  Stretch="None" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                  IsVisible="False" />
+                        </Border>
+                        <ContentPresenter Grid.Column="1" VerticalAlignment="Center"
+                                          Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}" />
+                    </Grid>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="CheckBox:checked /template/ Border#BoxBorder">
+            <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+        </Style>
+        <Style Selector="CheckBox:checked /template/ Path#CheckPath">
+            <Setter Property="IsVisible" Value="True" />
+        </Style>
+        <Style Selector="CheckBox:pointerover /template/ Border#BoxBorder">
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+        </Style>
+        <Style Selector="CheckBox:focus /template/ Border#BoxBorder">
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+        </Style>
+
+        <!-- ═══ ScrollBar：窄胶囊滑块，平时低透明，悬停/拖动加深，滑块与轨道留空隙 ═══ -->
+        <Style Selector="ScrollBar">
+            <Setter Property="MinWidth" Value="8" />
+            <Setter Property="MinHeight" Value="8" />
+        </Style>
+        <Style Selector="ScrollBar /template/ Thumb">
+            <Setter Property="Background" Value="{DynamicResource ScrollThumbBrush}" />
+            <Setter Property="CornerRadius" Value="3" />
+            <Setter Property="Margin" Value="1.5" />
+            <!-- 自定义模板：纯 Border 渲染，确保圆角/边距/背景全部生效 -->
+            <Setter Property="Template">
+                <ControlTemplate TargetType="Thumb">
+                    <Border Background="{TemplateBinding Background}"
+                            CornerRadius="{TemplateBinding CornerRadius}"
+                            Margin="{TemplateBinding Margin}" />
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="ScrollBar /template/ Thumb:pointerover">
+            <Setter Property="Background" Value="{DynamicResource ScrollThumbHoverBrush}" />
+        </Style>
+        <Style Selector="ScrollBar /template/ Thumb:pressed">
+            <Setter Property="Background" Value="{DynamicResource ScrollThumbPressedBrush}" />
+        </Style>
+        <!-- 隐藏两端箭头按钮（简洁；拖拽 + 滚轮仍可用） -->
+        <Style Selector="ScrollBar /template/ RepeatButton">
+            <Setter Property="IsVisible" Value="False" />
+        </Style>
+    </Application.Styles>
+</Application>

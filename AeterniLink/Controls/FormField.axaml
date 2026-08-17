@@ -1,0 +1,14 @@
+<ContentControl xmlns="https://github.com/avaloniaui"
+                xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                xmlns:controls="using:AeterniLink.Controls"
+                x:Class="AeterniLink.Controls.FormField">
+    <!-- 表单字段封装：Label 标签（fieldLabel）+ Content 输入控件（隐式子内容即 Content，模板内渲染） -->
+    <ContentControl.Template>
+        <ControlTemplate TargetType="controls:FormField">
+            <Grid ColumnDefinitions="72,*" ColumnSpacing="8">
+                <TextBlock Classes="fieldLabel" VerticalAlignment="Center" Text="{TemplateBinding Label}" />
+                <ContentPresenter Grid.Column="1" Content="{TemplateBinding Content}" />
+            </Grid>
+        </ControlTemplate>
+    </ContentControl.Template>
+</ContentControl>
