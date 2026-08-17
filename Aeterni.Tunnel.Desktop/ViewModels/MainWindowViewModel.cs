@@ -149,6 +149,7 @@ public sealed class MainWindowViewModel : ObservableBase, IAsyncDisposable
         if (CurrentPage == page)
             return;
         CurrentPage = page;
+        OnPropertyChanged(nameof(CurrentPage));
         OnPropertyChanged(nameof(HomeVisible));
         OnPropertyChanged(nameof(TunnelsVisible));
         OnPropertyChanged(nameof(SettingsVisible));

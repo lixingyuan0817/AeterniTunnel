@@ -23,14 +23,14 @@
                     <!-- 页面导航 -->
                     <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                         <Button Classes="ghost" Background="Transparent" BorderThickness="0" Padding="10,6"
-                                Content="首页" Foreground="{Binding NavHomeBrush}" Command="{Binding NavigateHomeCommand}" />
+                                Content="🏠 首页" Foreground="{Binding NavHomeBrush}" Command="{Binding NavigateHomeCommand}" />
                         <Button Classes="ghost" Background="Transparent" BorderThickness="0" Padding="10,6"
-                                Content="隧道" Foreground="{Binding NavTunnelsBrush}" Command="{Binding NavigateTunnelsCommand}"
+                                Content="🔗 隧道" Foreground="{Binding NavTunnelsBrush}" Command="{Binding NavigateTunnelsCommand}"
                                 IsEnabled="{Binding TunnelsNavEnabled}" />
                         <Button Classes="ghost" Background="Transparent" BorderThickness="0" Padding="10,6"
                                 Content="🎮 开服" Foreground="{Binding NavLauncherBrush}" Command="{Binding NavigateLauncherCommand}" />
                         <Button Classes="ghost" Background="Transparent" BorderThickness="0" Padding="10,6"
-                                Content="设置" Foreground="{Binding NavSettingsBrush}" Command="{Binding NavigateSettingsCommand}" />
+                                Content="⚙ 设置" Foreground="{Binding NavSettingsBrush}" Command="{Binding NavigateSettingsCommand}" />
                     </StackPanel>
 
                     <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
