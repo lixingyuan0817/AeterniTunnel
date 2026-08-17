@@ -1,0 +1,17 @@
+id = "vanilla-1.21"
+displayName = "Minecraft Vanilla 1.21"
+startMode = "jar"
+javaVersion = "21"
+jar = "server.jar"
+jarUrl = "https://piston-data.mojang.com/v1/objects/450698d1863ab6590cbc0f0054e5e06655b7ce69/server.jar"
+memoryMinMb = 1024
+memoryMaxMb = 8192
+launchArgs = "-Xmx{memory}M -jar {jar} nogui"
+stopCommand = "stop"
+
+[env]
+JAVA_OPTS = "-XX:+UseG1GC -XX:MaxGCPauseMillis=100"
+
+[firstRunFiles]
+"eula.txt" = "eula=true"
+"server.properties" = "online-mode=false\nserver-port={port}\nmotd=Aeterni Tunnel Server"

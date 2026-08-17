@@ -1,0 +1,17 @@
+id = "paper-1.21"
+displayName = "Minecraft Paper 1.21"
+startMode = "jar"
+javaVersion = "21"
+jar = "paper.jar"
+jarUrl = "https://api.papermc.io/v2/projects/paper/versions/1.21.3/builds/latest/downloads/paper-1.21.3-latest.jar"
+memoryMinMb = 1024
+memoryMaxMb = 8192
+launchArgs = "-Xmx{memory}M -jar {jar} nogui"
+stopCommand = "stop"
+
+[env]
+JAVA_OPTS = "-XX:+UseG1GC -XX:MaxGCPauseMillis=100 -XX:+ParallelRefProcEnabled -Dusing.aikars.flags=https://mcflags.emc.gs"
+
+[firstRunFiles]
+"eula.txt" = "eula=true"
+"server.properties" = "online-mode=false\nserver-port={port}\nmotd=Aeterni Tunnel Server"
