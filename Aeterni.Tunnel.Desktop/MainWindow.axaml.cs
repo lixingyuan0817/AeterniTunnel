@@ -18,34 +18,52 @@ public partial class MainWindow : Window
         _vm = new MainWindowViewModel();
         DataContext = _vm;
 
-        // 日志追加后自动滚动到底部
-        _vm.Logs.CollectionChanged += (_, _) => LogScroll.ScrollToEnd();
-
         // 弹窗承载：添加/修改隧道
         _vm.EditTunnelRequested += async def =>
         {
-            var dialog = new TunnelEditorWindow(def, _vm.AllowPorts);
-            await dialog.ShowDialog(this);
-            if (dialog.Result is not null)
-                await _vm.ApplyTunnelAsync(dialog.Result, dialog.IsEdit);
+            try
+            {
+                var dialog = new TunnelEditorWindow(def, _vm.AllowPorts);
+                await dialog.ShowDialog(this);
+                if (dialog.Result is not null)
+                    await _vm.ApplyTunnelAsync(dialog.Result, dialog.IsEdit);
+            }
+            catch (Exception ex)
+            {
+                _vm.ShowToast($"打开隧道编辑失败：{ex.Message}", ToastKind.Error);
+            }
         };
 
         // 弹窗承载：启动时连接配置缺失/无效 → 引导填写并保存连接
         _vm.ConnectionSetupRequested += async () =>
         {
-            var dialog = new ConnectionDialog(_vm.ServerAddr, _vm.ServerPort, _vm.Token, _vm.UseTls);
-            await dialog.ShowDialog(this);
-            if (dialog.Confirmed)
-                _vm.ApplyConnectionSettings(dialog.Address, dialog.Port, dialog.Token, dialog.UseTls);
+            try
+            {
+                var dialog = new ConnectionDialog(_vm.ServerAddr, _vm.ServerPort, _vm.Token, _vm.UseTls);
+                await dialog.ShowDialog(this);
+                if (dialog.Confirmed)
+                    _vm.ApplyConnectionSettings(dialog.Address, dialog.Port, dialog.Token, dialog.UseTls);
+            }
+            catch (Exception ex)
+            {
+                _vm.ShowToast($"打开连接设置失败：{ex.Message}", ToastKind.Error);
+            }
         };
 
         // 弹窗承载：删除确认
         _vm.RemoveTunnelRequested += async proxyId =>
         {
-            var dialog = new ConfirmDialog("删除隧道", $"确定删除隧道 \"{proxyId}\"？该操作会同步更新 agent.toml。");
-            await dialog.ShowDialog(this);
-            if (dialog.Confirmed)
-                await _vm.RemoveTunnelAsync(proxyId);
+            try
+            {
+                var dialog = new ConfirmDialog("删除隧道", $"确定删除隧道 \"{proxyId}\"？该操作会同步更新 agent.toml。");
+                await dialog.ShowDialog(this);
+                if (dialog.Confirmed)
+                    await _vm.RemoveTunnelAsync(proxyId);
+            }
+            catch (Exception ex)
+            {
+                _vm.ShowToast($"删除隧道失败：{ex.Message}", ToastKind.Error);
+            }
         };
 
         // 窗口打开：读取 agent.toml（首启无配置 → 引导填写；有配置 → 自动填充并自动连接）
