@@ -305,6 +305,83 @@
             <Setter Property="RenderTransform" Value="scale(0.96)" />
         </Style>
 
+        <!-- ═══ Button 全局（AeterniButton 组件经 Classes 触发；与 Desktop 同源）：
+             按下 0.96 缩放过渡；primary/ghost/danger 悬浮/按下同色系深浅，不落灰 ═══ -->
+        <Style Selector="Button">
+            <Setter Property="RenderTransformOrigin" Value="50%,50%" />
+            <Setter Property="RenderTransform" Value="scale(1)" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.1" />
+                    <BrushTransition Property="Background" Duration="0:0:0.15" />
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button:pressed">
+            <Setter Property="RenderTransform" Value="scale(0.96)" />
+        </Style>
+
+        <Style Selector="Button.primary">
+            <Setter Property="Background" Value="{DynamicResource AccentStrongColor}" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="16,7" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="Button.primary:pointerover">
+            <Setter Property="Background" Value="{DynamicResource AccentColor}" />
+        </Style>
+        <Style Selector="Button.primary:pressed">
+            <Setter Property="Background" Value="#12853A" />
+        </Style>
+        <Style Selector="Button.primary:disabled">
+            <Setter Property="Background" Value="{DynamicResource InputBgBrush}" />
+            <Setter Property="Opacity" Value="0.6" />
+        </Style>
+
+        <Style Selector="Button.ghost">
+            <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource PanelBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="14,7" />
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+        <Style Selector="Button.ghost:pointerover">
+            <Setter Property="Background" Value="{DynamicResource GhostHoverBrush}" />
+        </Style>
+        <Style Selector="Button.ghost:pressed">
+            <Setter Property="Background" Value="{DynamicResource GhostPressedBrush}" />
+        </Style>
+        <Style Selector="Button.ghost:disabled">
+            <Setter Property="Opacity" Value="0.45" />
+        </Style>
+        <Style Selector="Button.ghost:disabled /template/ Border">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+
+        <Style Selector="Button.danger">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource RedBrush}" />
+            <Setter Property="BorderBrush" Value="#33F87171" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="10,4" />
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+        <Style Selector="Button.danger:pointerover">
+            <Setter Property="Background" Value="#33F87171" />
+        </Style>
+        <Style Selector="Button.danger:pressed">
+            <Setter Property="Background" Value="#4DF87171" />
+        </Style>
+        <Style Selector="Button.danger:disabled">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Opacity" Value="0.45" />
+        </Style>
+
         <Style Selector="RadioButton.seg">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
