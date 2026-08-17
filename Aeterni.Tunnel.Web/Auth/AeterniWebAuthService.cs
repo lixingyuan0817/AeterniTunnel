@@ -8,7 +8,7 @@ namespace Aeterni.Tunnel.Web.Auth;
 /// <summary>
 /// Aeterni Web 登录认证服务：管理 webToken 的校验（加盐 SHA256，常量时间比较）。
 /// Token 来源优先级：AETERNI_WEB_TOKEN 环境变量 &gt; server.toml（webToken+webTokenSalt 哈希落盘）
-/// &gt; 配置 Aeterni:WebToken（开发便利）&gt; 首启随机生成并写回 server.toml。
+/// &gt; 首启随机生成并写回 server.toml。
 /// 与 ATS token（ServerConfig.Token，ATC 认证）分层独立。
 /// 支持运行时修改（ChangeToken，当前进程生效；file 来源会写回 server.toml 持久化）。
 /// </summary>
@@ -16,7 +16,6 @@ public sealed class AeterniWebAuthService
 {
     public const string EnvSource = "env";
     public const string FileSource = "file";
-    public const string ConfigSource = "config";
     public const string GeneratedSource = "generated";
 
     private readonly object _lock = new();

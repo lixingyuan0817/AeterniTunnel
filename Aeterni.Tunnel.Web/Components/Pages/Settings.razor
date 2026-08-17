@@ -254,7 +254,6 @@
     private string TokenSourceText => Auth.Source switch
     {
         AeterniWebAuthService.EnvSource => "环境变量 AETERNI_WEB_TOKEN（不可在界面修改）",
-        AeterniWebAuthService.ConfigSource => "配置 Aeterni:WebToken",
         _ => "server.toml",
     };
 

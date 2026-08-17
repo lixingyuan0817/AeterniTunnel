@@ -223,7 +223,6 @@
     private string TokenSourceText => Auth.Source switch
     {
         Aeterni.Tunnel.Web.Auth.AeterniWebAuthService.EnvSource => "环境变量 AETERNI_WEB_TOKEN",
-        Aeterni.Tunnel.Web.Auth.AeterniWebAuthService.ConfigSource => "配置 Aeterni:WebToken",
         _ => "首启随机生成",
     };
 
