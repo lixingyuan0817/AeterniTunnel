@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Windows.Input;
 using Aeterni.Tunnel.Desktop.Services;
 using Aeterni.Tunnel.Engine.Client;
+using Aeterni.Tunnel.Common;
 using Aeterni.Tunnel.Engine.Config;
 using Aeterni.Tunnel.Engine.Hosting;
 using Avalonia;

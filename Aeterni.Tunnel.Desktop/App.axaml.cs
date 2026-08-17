@@ -4,6 +4,7 @@ using Avalonia.Markup.Xaml;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Aeterni.Tunnel.Desktop.Services;
+using Aeterni.Tunnel.Common;
 using Aeterni.Tunnel.Engine.Config;
 using System.Diagnostics;
 
