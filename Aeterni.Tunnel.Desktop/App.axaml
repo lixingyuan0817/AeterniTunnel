@@ -66,6 +66,7 @@
                     <Color x:Key="AccentStrongColor">#15803D</Color>
                     <Color x:Key="BgColor">#EEF1F8</Color>
                     <Color x:Key="PanelColor">#99FFFFFF</Color>
+                    <Color x:Key="DropdownBgColor">#F2FFFFFF</Color>
                     <Color x:Key="ToastBgColor">#E6EEF1F8</Color>
                     <Color x:Key="ToastBorderColor">#8CFFFFFF</Color>
                     <Color x:Key="PanelBorderColor">#331E293B</Color>
