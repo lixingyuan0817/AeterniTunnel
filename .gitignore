@@ -11,6 +11,7 @@ TestResults/
 # ── 密钥与配置：server.toml 含 ATS token / webToken 哈希，绝不入库 ──
 # 首次启动会自动生成（Program.cs BuildServerHost），ATC 在 agent.toml 里配同一 token
 **/server.toml
+**/agent.toml
 
 # ── Node ────────────────────────────────────────────────
 node_modules/

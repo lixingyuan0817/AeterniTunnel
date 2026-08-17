@@ -33,7 +33,7 @@ public sealed class AeterniWebAuthService
         _logger = logger;
     }
 
-    /// <summary>token 来源（env / file / config / generated）；环境变量来源优先级最高，不可在运行时修改</summary>
+    /// <summary>token 来源（env / file / generated）；环境变量来源优先级最高，不可在运行时修改</summary>
     public string Source { get; }
 
     /// <summary>运行时是否可修改 token（环境变量来源不可修改）</summary>
