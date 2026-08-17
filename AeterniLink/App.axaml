@@ -44,7 +44,7 @@
                     <SolidColorBrush x:Key="ToastBorderBrush" Color="{StaticResource ToastBorderColor}" />
                     <SolidColorBrush x:Key="PanelBorderBrush" Color="{StaticResource PanelBorderColor}" />
                     <SolidColorBrush x:Key="InputBgBrush" Color="{StaticResource InputBgColor}" />
-                    <SolidColorBrush x:Key="DropdownBgBrush" Color="#1E293B" />
+                    <SolidColorBrush x:Key="DropdownBgBrush" Color="#F205070F" />
                     <SolidColorBrush x:Key="InputBorderBrush" Color="{StaticResource InputBorderColor}" />
                     <SolidColorBrush x:Key="InputBgFocusBrush" Color="{StaticResource InputBgFocusColor}" />
                     <SolidColorBrush x:Key="RowLineBrush" Color="{StaticResource RowLineColor}" />
@@ -95,7 +95,7 @@
                     <SolidColorBrush x:Key="ToastBgBrush" Color="{StaticResource ToastBgColor}" />
                     <SolidColorBrush x:Key="ToastBorderBrush" Color="{StaticResource ToastBorderColor}" />
                     <SolidColorBrush x:Key="PanelBorderBrush" Color="{StaticResource PanelBorderColor}" />
-                    <SolidColorBrush x:Key="DropdownBgBrush" Color="#F1F5F9" />
+                    <SolidColorBrush x:Key="DropdownBgBrush" Color="#F2FFFFFF" />
                     <SolidColorBrush x:Key="InputBgBrush" Color="{StaticResource InputBgColor}" />
                     <SolidColorBrush x:Key="InputBorderBrush" Color="{StaticResource InputBorderColor}" />
                     <SolidColorBrush x:Key="InputBgFocusBrush" Color="{StaticResource InputBgFocusColor}" />
@@ -293,6 +293,7 @@
             <Setter Property="Transitions">
                 <Transitions>
                     <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.1" />
+                    <BrushTransition Property="Background" Duration="0:0:0.15" />
                 </Transitions>
             </Setter>
         </Style>
