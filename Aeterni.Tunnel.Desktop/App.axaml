@@ -201,12 +201,88 @@
         <Style Selector="TextBox:not(:empty) /template/ TextBlock#PART_Watermark">
             <Setter Property="IsVisible" Value="False" />
         </Style>
+        <!-- ComboBox：与 TextBox 同风格——圆角 8 / InputBg 背景 / 焦点绿框 / 下拉面板毛玻璃 -->
         <Style Selector="ComboBox">
             <Setter Property="Background" Value="{DynamicResource InputBgBrush}" />
             <Setter Property="BorderBrush" Value="{DynamicResource InputBorderBrush}" />
             <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
-            <Setter Property="MinHeight" Value="32" />
+            <Setter Property="Padding" Value="10,7" />
+            <Setter Property="CornerRadius" Value="8" />
             <Setter Property="FontSize" Value="12" />
+            <Setter Property="MinHeight" Value="34" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="BorderBrush" Duration="0:0:0.18" />
+                    <BrushTransition Property="Background" Duration="0:0:0.18" />
+                </Transitions>
+            </Setter>
+            <Setter Property="Template">
+                <ControlTemplate TargetType="ComboBox">
+                    <Grid ColumnDefinitions="*,32">
+                        <Border x:Name="Background"
+                                Grid.Column="0" Grid.ColumnSpan="2"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="{TemplateBinding CornerRadius}"
+                                MinWidth="{TemplateBinding MinWidth}" />
+                        <ContentControl x:Name="ContentPresenter"
+                                        Content="{TemplateBinding SelectionBoxItem}"
+                                        ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                        Grid.Column="0"
+                                        Margin="{TemplateBinding Padding}"
+                                        VerticalContentAlignment="Center" />
+                        <PathIcon x:Name="DropDownGlyph"
+                                  Grid.Column="1"
+                                  Width="12" Height="12"
+                                  Margin="0,0,10,0"
+                                  HorizontalAlignment="Right" VerticalAlignment="Center"
+                                  Foreground="{DynamicResource MutedBrush}"
+                                  Data="M1939 486L2029 576L1024 1581L19 576L109 486L1024 1401L1939 486Z" />
+                        <Popup x:Name="PART_Popup"
+                               IsOpen="{TemplateBinding IsDropDownOpen, Mode=TwoWay}"
+                               MinWidth="{Binding Bounds.Width, RelativeSource={RelativeSource TemplatedParent}}"
+                               MaxHeight="{TemplateBinding MaxDropDownHeight}"
+                               PlacementTarget="Background"
+                               IsLightDismissEnabled="True">
+                            <Border x:Name="PopupBorder"
+                                    Background="{DynamicResource PanelBrush}"
+                                    BorderBrush="{DynamicResource PanelBorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="8"
+                                    Margin="0,4,0,0"
+                                    Padding="4"
+                                    BoxShadow="0 4 14 0 #40000000">
+                                <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                                              VerticalScrollBarVisibility="Auto"
+                                              MaxHeight="{Binding MaxHeight, RelativeSource={RelativeSource TemplatedParent}}">
+                                    <ItemsPresenter Name="PART_ItemsPresenter"
+                                                    ItemsPanel="{TemplateBinding ItemsPanel}" />
+                                </ScrollViewer>
+                            </Border>
+                        </Popup>
+                    </Grid>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <!-- ComboBox 焦点：绿色边框 + 背景微亮（与 TextBox 一致） -->
+        <Style Selector="ComboBox:focus /template/ Border#Background">
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="Background" Value="{DynamicResource InputBgFocusBrush}" />
+        </Style>
+        <!-- 下拉项：圆角 hover / 选中主题色高亮 -->
+        <Style Selector="ComboBoxItem">
+            <Setter Property="Padding" Value="10,7" />
+            <Setter Property="Margin" Value="2,1" />
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="CornerRadius" Value="6" />
+        </Style>
+        <Style Selector="ComboBoxItem:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#1A34C759" />
+        </Style>
+        <Style Selector="ComboBoxItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="#2E34C759" />
         </Style>
 
         <Style Selector="Button.primary">
