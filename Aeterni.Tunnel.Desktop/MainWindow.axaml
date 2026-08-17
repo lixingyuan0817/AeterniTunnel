@@ -12,63 +12,59 @@
         TransparencyLevelHint="AcrylicBlur,Blur" Background="{DynamicResource WindowBgBrush}">
 
     <Panel>
-        <Grid x:Name="MainRoot" ColumnDefinitions="196,*">
+        <Grid x:Name="MainRoot" RowDefinitions="Auto,*,Auto">
 
-            <!-- ═══ 左侧边栏：品牌 + 导航菜单 + 主题 + 状态 ═══ -->
-            <Border Grid.Column="0" BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="0,0,1,0"
-                    Background="{DynamicResource BgBrush}">
-                <Grid RowDefinitions="Auto,*,Auto" Margin="14,16">
+            <!-- ═══ 顶栏：品牌 + 页面导航 + 主题 ═══ -->
+            <Border Grid.Row="0" BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="0,0,0,1" Padding="16,10">
+                <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="18">
+                    <TextBlock Text="AETERNI TUNNEL" FontWeight="Bold" FontSize="17"
+                               Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
 
-                    <!-- 品牌 -->
-                    <StackPanel Grid.Row="0" Spacing="2" Margin="8,0,8,16">
-                        <TextBlock Text="AETERNI TUNNEL" FontWeight="Bold" FontSize="16"
-                                   Foreground="{DynamicResource AccentBrush}" />
-                        <TextBlock Text="ATC 客户端 · 内网穿透" FontSize="11"
-                                   Foreground="{DynamicResource MutedBrush}" />
-                    </StackPanel>
-
-                    <!-- 导航菜单 -->
-                    <StackPanel Grid.Row="1" Spacing="3">
-                        <Button Classes="navItem" Content="🏠 首页" Command="{Binding NavigateHomeCommand}"
-                                Foreground="{Binding NavHomeBrush}" Background="{Binding NavHomeBg}" />
-                        <Button Classes="navItem" Content="🔗 隧道" Command="{Binding NavigateTunnelsCommand}"
-                                Foreground="{Binding NavTunnelsBrush}" Background="{Binding NavTunnelsBg}"
+                    <!-- 页面导航 -->
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                        <Button Classes="ghost" Background="Transparent" BorderThickness="0" Padding="10,6"
+                                Content="首页" Foreground="{Binding NavHomeBrush}" Command="{Binding NavigateHomeCommand}" />
+                        <Button Classes="ghost" Background="Transparent" BorderThickness="0" Padding="10,6"
+                                Content="隧道" Foreground="{Binding NavTunnelsBrush}" Command="{Binding NavigateTunnelsCommand}"
                                 IsEnabled="{Binding TunnelsNavEnabled}" />
-                        <Button Classes="navItem" Content="🎮 开服" Command="{Binding NavigateLauncherCommand}"
-                                Foreground="{Binding NavLauncherBrush}" Background="{Binding NavLauncherBg}" />
-                        <Button Classes="navItem" Content="⚙ 设置" Command="{Binding NavigateSettingsCommand}"
-                                Foreground="{Binding NavSettingsBrush}" Background="{Binding NavSettingsBg}" />
+                        <Button Classes="ghost" Background="Transparent" BorderThickness="0" Padding="10,6"
+                                Content="🎮 开服" Foreground="{Binding NavLauncherBrush}" Command="{Binding NavigateLauncherCommand}" />
+                        <Button Classes="ghost" Background="Transparent" BorderThickness="0" Padding="10,6"
+                                Content="设置" Foreground="{Binding NavSettingsBrush}" Command="{Binding NavigateSettingsCommand}" />
                     </StackPanel>
 
-                    <!-- 底部：主题 + 连接状态 -->
-                    <StackPanel Grid.Row="2" Spacing="10">
-                        <Border Background="{DynamicResource InputBgBrush}" CornerRadius="9" Padding="3"
-                                HorizontalAlignment="Stretch">
-                            <StackPanel Orientation="Horizontal" Spacing="2" HorizontalAlignment="Center">
+                    <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                        <!-- 主题分段控制器：明亮 / 黑暗 / 跟随系统 -->
+                        <Border Background="{DynamicResource InputBgBrush}" CornerRadius="9" Padding="3" VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal" Spacing="2">
                                 <RadioButton Classes="seg" Content="☀" ToolTip.Tip="明亮" IsChecked="{Binding IsLightChecked}" />
                                 <RadioButton Classes="seg" Content="🌙" ToolTip.Tip="黑暗" IsChecked="{Binding IsDarkChecked}" />
                                 <RadioButton Classes="seg" Content="◐" ToolTip.Tip="跟随系统" IsChecked="{Binding IsSystemChecked}" />
-                            </StackPanel>
-                        </Border>
-                        <Border Background="{DynamicResource InputBgBrush}" CornerRadius="8" Padding="10,8">
-                            <StackPanel Spacing="3">
-                                <TextBlock Text="{Binding StatusBarText}" FontSize="11" Foreground="{DynamicResource TextBrush}"
-                                           TextWrapping="Wrap" />
-                                <TextBlock Text="{Binding VersionText}" FontSize="10" Foreground="{DynamicResource MutedBrush}" />
                             </StackPanel>
                         </Border>
                     </StackPanel>
                 </Grid>
             </Border>
 
-            <!-- ═══ 右侧内容区（页面切换：ViewLocator 按页面标记映射各 View） ═══ -->
-            <Grid Grid.Column="1" Margin="20">
+            <!-- ═══ 内容区（页面切换：ViewLocator 按页面标记映射各 View） ═══ -->
+            <Grid Grid.Row="1" Margin="16">
                 <ContentControl Content="{Binding CurrentPage}" />
             </Grid>
+
+            <!-- ═══ 状态栏（连接状态 + 实时速率；背景色随连接状态变化） ═══ -->
+            <Border Grid.Row="2" Background="{Binding StatusBarBg}"
+                    BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="0,1,0,0" Padding="16,6">
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Text="{Binding StatusBarText}" FontSize="11"
+                               Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1" Text="{Binding VersionText}" FontSize="10"
+                               Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" />
+                </Grid>
+            </Border>
         </Grid>
 
         <!-- ═══ Toast 层（全局通知） ═══ -->
-        <ItemsControl ItemsSource="{Binding Toasts}" Margin="0,16,16,0"
+        <ItemsControl ItemsSource="{Binding Toasts}" IsHitTestVisible="False" Margin="0,16,16,0"
                       HorizontalAlignment="Right" VerticalAlignment="Top">
             <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:ToastItemViewModel">
