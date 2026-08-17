@@ -13,11 +13,11 @@ public enum AeterniButtonVariant
 }
 
 /// <summary>
-/// AeterniLink 按钮组件：通过 Variant 应用对应样式类（primary/ghost/danger），
-/// 复用 App.axaml 全局样式（悬浮/按下同色系深浅 + 按下 0.96 缩放过渡）。
+/// AeterniLink 按钮组件（样式自包含于 AeterniButton.axaml）：
+/// Variant 驱动 primary/ghost/danger 样式类；悬浮/按下同色系深浅 + 按下 0.96 缩放过渡。
 /// 用法：&lt;controls:AeterniButton Variant="Primary" Content="保存" /&gt;
 /// </summary>
-public class AeterniButton : Button
+public partial class AeterniButton : Button
 {
     public static readonly StyledProperty<AeterniButtonVariant> VariantProperty =
         AvaloniaProperty.Register<AeterniButton, AeterniButtonVariant>(nameof(Variant));
@@ -36,6 +36,7 @@ public class AeterniButton : Button
 
     public AeterniButton()
     {
+        InitializeComponent();
         UpdateClasses();
     }
 

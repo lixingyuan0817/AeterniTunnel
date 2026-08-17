@@ -305,54 +305,6 @@
             <Setter Property="RenderTransform" Value="scale(0.96)" />
         </Style>
 
-        <Style Selector="Button.primary">
-            <Setter Property="Background" Value="{DynamicResource AccentStrongColor}" />
-            <Setter Property="Foreground" Value="White" />
-            <Setter Property="CornerRadius" Value="8" />
-            <Setter Property="Padding" Value="16,7" />
-            <Setter Property="FontSize" Value="12" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-        </Style>
-        <Style Selector="Button.primary:pointerover">
-            <Setter Property="Background" Value="{DynamicResource AccentColor}" />
-        </Style>
-        <Style Selector="Button.primary:pressed">
-            <Setter Property="Background" Value="#12853A" />
-        </Style>
-
-        <Style Selector="Button.ghost">
-            <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
-            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource PanelBorderBrush}" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="8" />
-            <Setter Property="Padding" Value="14,7" />
-            <Setter Property="FontSize" Value="12" />
-        </Style>
-        <Style Selector="Button.ghost:pointerover">
-            <Setter Property="Background" Value="{DynamicResource GhostHoverBrush}" />
-        </Style>
-        <Style Selector="Button.ghost:pressed">
-            <Setter Property="Background" Value="{DynamicResource GhostPressedBrush}" />
-        </Style>
-
-        <!-- 禁用态：无灰色背景，仅整体淡化（替代 Fluent 默认灰底） -->
-        <Style Selector="Button.ghost:disabled">
-            <Setter Property="Opacity" Value="0.45" />
-        </Style>
-        <Style Selector="Button.ghost:disabled /template/ Border">
-            <Setter Property="Background" Value="Transparent" />
-        </Style>
-        <Style Selector="Button.primary:disabled">
-            <Setter Property="Background" Value="{DynamicResource InputBgBrush}" />
-            <Setter Property="Opacity" Value="0.6" />
-        </Style>
-        <Style Selector="Button.danger:disabled">
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="Opacity" Value="0.45" />
-        </Style>
-
-        <!-- 分段控制器按钮（顶栏主题切换）：无圆点，选中 accent 底色 -->
         <Style Selector="RadioButton.seg">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
@@ -390,21 +342,6 @@
             </Style.Animations>
         </Style>
 
-        <Style Selector="Button.danger">
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="Foreground" Value="{DynamicResource RedBrush}" />
-            <Setter Property="BorderBrush" Value="#33F87171" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="6" />
-            <Setter Property="Padding" Value="10,4" />
-            <Setter Property="FontSize" Value="11" />
-        </Style>
-        <Style Selector="Button.danger:pointerover">
-            <Setter Property="Background" Value="#33F87171" />
-        </Style>
-        <Style Selector="Button.danger:pressed">
-            <Setter Property="Background" Value="#4DF87171" />
-        </Style>
 
         <!-- ═══ 窗口标题栏 macOS 红绿灯按钮（三平台统一自绘，配合 SystemDecorations=None） ═══ -->
         <Style Selector="Button.traffic">
