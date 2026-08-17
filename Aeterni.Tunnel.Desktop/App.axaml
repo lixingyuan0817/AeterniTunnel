@@ -381,6 +381,37 @@
             <Setter Property="Background" Value="#22F87171" />
         </Style>
 
+        <!-- ═══ 窗口标题栏 macOS 红绿灯按钮（三平台统一自绘，配合 SystemDecorations=None） ═══ -->
+        <Style Selector="Button.traffic">
+            <Setter Property="Width" Value="12" />
+            <Setter Property="Height" Value="12" />
+            <Setter Property="MinWidth" Value="0" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="FontSize" Value="9" />
+            <Setter Property="Foreground" Value="Transparent" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+        <!-- hover：显示符号（关闭 ✕ / 最小化 － / 最大化 ＋） -->
+        <Style Selector="Button.traffic:pointerover">
+            <Setter Property="Foreground" Value="#80000000" />
+        </Style>
+        <Style Selector="Button.trafficClose">
+            <Setter Property="Background" Value="#FF5F57" />
+            <Setter Property="BorderBrush" Value="#E0443E" />
+        </Style>
+        <Style Selector="Button.trafficMin">
+            <Setter Property="Background" Value="#FEBC2E" />
+            <Setter Property="BorderBrush" Value="#D8A023" />
+        </Style>
+        <Style Selector="Button.trafficMax">
+            <Setter Property="Background" Value="#28C840" />
+            <Setter Property="BorderBrush" Value="#1E9E2E" />
+        </Style>
+
         <Style Selector="Border.badge">
             <Setter Property="Background" Value="{DynamicResource InputBgBrush}" />
             <Setter Property="CornerRadius" Value="5" />
