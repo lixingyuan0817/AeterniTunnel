@@ -290,24 +290,10 @@
             <Setter Property="Background" Value="#2E34C759" />
         </Style>
 
-        <!-- ═══ Button 全局基础：按下缩放动画（悬浮/按下保持主题色，不落灰） ═══ -->
-        <Style Selector="Button">
-            <Setter Property="RenderTransformOrigin" Value="50%,50%" />
-            <Setter Property="RenderTransform" Value="scale(1)" />
-            <Setter Property="Transitions">
-                <Transitions>
-                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.1" />
-                    <BrushTransition Property="Background" Duration="0:0:0.15" />
-                </Transitions>
-            </Setter>
-        </Style>
-        <Style Selector="Button:pressed">
-            <Setter Property="RenderTransform" Value="scale(0.96)" />
-        </Style>
 
         <!-- ═══ Button 全局（AeterniButton 组件经 Classes 触发；与 Desktop 同源）：
              按下 0.96 缩放过渡；primary/ghost/danger 悬浮/按下同色系深浅，不落灰 ═══ -->
-        <Style Selector="Button">
+        <Style Selector=":is(Button)">
             <Setter Property="RenderTransformOrigin" Value="50%,50%" />
             <Setter Property="RenderTransform" Value="scale(1)" />
             <Setter Property="Transitions">
@@ -317,11 +303,11 @@
                 </Transitions>
             </Setter>
         </Style>
-        <Style Selector="Button:pressed">
+        <Style Selector=":is(Button):pressed">
             <Setter Property="RenderTransform" Value="scale(0.96)" />
         </Style>
 
-        <Style Selector="Button.primary">
+        <Style Selector=":is(Button).primary">
             <Setter Property="Background" Value="{DynamicResource AccentStrongColor}" />
             <Setter Property="Foreground" Value="White" />
             <Setter Property="CornerRadius" Value="8" />
@@ -329,18 +315,18 @@
             <Setter Property="FontSize" Value="12" />
             <Setter Property="FontWeight" Value="SemiBold" />
         </Style>
-        <Style Selector="Button.primary:pointerover">
+        <Style Selector=":is(Button).primary:pointerover">
             <Setter Property="Background" Value="{DynamicResource AccentColor}" />
         </Style>
-        <Style Selector="Button.primary:pressed">
+        <Style Selector=":is(Button).primary:pressed">
             <Setter Property="Background" Value="#12853A" />
         </Style>
-        <Style Selector="Button.primary:disabled">
+        <Style Selector=":is(Button).primary:disabled">
             <Setter Property="Background" Value="{DynamicResource InputBgBrush}" />
             <Setter Property="Opacity" Value="0.6" />
         </Style>
 
-        <Style Selector="Button.ghost">
+        <Style Selector=":is(Button).ghost">
             <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
             <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
             <Setter Property="BorderBrush" Value="{DynamicResource PanelBorderBrush}" />
@@ -349,20 +335,20 @@
             <Setter Property="Padding" Value="14,7" />
             <Setter Property="FontSize" Value="12" />
         </Style>
-        <Style Selector="Button.ghost:pointerover">
+        <Style Selector=":is(Button).ghost:pointerover">
             <Setter Property="Background" Value="{DynamicResource GhostHoverBrush}" />
         </Style>
-        <Style Selector="Button.ghost:pressed">
+        <Style Selector=":is(Button).ghost:pressed">
             <Setter Property="Background" Value="{DynamicResource GhostPressedBrush}" />
         </Style>
-        <Style Selector="Button.ghost:disabled">
+        <Style Selector=":is(Button).ghost:disabled">
             <Setter Property="Opacity" Value="0.45" />
         </Style>
-        <Style Selector="Button.ghost:disabled /template/ Border">
+        <Style Selector=":is(Button).ghost:disabled /template/ Border">
             <Setter Property="Background" Value="Transparent" />
         </Style>
 
-        <Style Selector="Button.danger">
+        <Style Selector=":is(Button).danger">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="Foreground" Value="{DynamicResource RedBrush}" />
             <Setter Property="BorderBrush" Value="#33F87171" />
@@ -371,13 +357,13 @@
             <Setter Property="Padding" Value="10,4" />
             <Setter Property="FontSize" Value="11" />
         </Style>
-        <Style Selector="Button.danger:pointerover">
+        <Style Selector=":is(Button).danger:pointerover">
             <Setter Property="Background" Value="#33F87171" />
         </Style>
-        <Style Selector="Button.danger:pressed">
+        <Style Selector=":is(Button).danger:pressed">
             <Setter Property="Background" Value="#4DF87171" />
         </Style>
-        <Style Selector="Button.danger:disabled">
+        <Style Selector=":is(Button).danger:disabled">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="Opacity" Value="0.45" />
         </Style>
@@ -421,7 +407,7 @@
 
 
         <!-- ═══ 窗口标题栏 macOS 红绿灯按钮（三平台统一自绘，配合 SystemDecorations=None） ═══ -->
-        <Style Selector="Button.traffic">
+        <Style Selector=":is(Button).traffic">
             <Setter Property="Width" Value="12" />
             <Setter Property="Height" Value="12" />
             <Setter Property="MinWidth" Value="0" />
@@ -435,18 +421,18 @@
             <Setter Property="VerticalContentAlignment" Value="Center" />
         </Style>
         <!-- hover：显示符号（关闭 ✕ / 最小化 － / 最大化 ＋） -->
-        <Style Selector="Button.traffic:pointerover">
+        <Style Selector=":is(Button).traffic:pointerover">
             <Setter Property="Foreground" Value="#80000000" />
         </Style>
-        <Style Selector="Button.trafficClose">
+        <Style Selector=":is(Button).trafficClose">
             <Setter Property="Background" Value="#FF5F57" />
             <Setter Property="BorderBrush" Value="#E0443E" />
         </Style>
-        <Style Selector="Button.trafficMin">
+        <Style Selector=":is(Button).trafficMin">
             <Setter Property="Background" Value="#FEBC2E" />
             <Setter Property="BorderBrush" Value="#D8A023" />
         </Style>
-        <Style Selector="Button.trafficMax">
+        <Style Selector=":is(Button).trafficMax">
             <Setter Property="Background" Value="#28C840" />
             <Setter Property="BorderBrush" Value="#1E9E2E" />
         </Style>
