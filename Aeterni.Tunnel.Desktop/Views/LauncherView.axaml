@@ -1,0 +1,77 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Aeterni.Tunnel.Desktop.ViewModels"
+             x:Class="Aeterni.Tunnel.Desktop.Views.LauncherView"
+             x:DataType="vm:MainWindowViewModel">
+    <Grid RowDefinitions="Auto,*" RowSpacing="12">
+                <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+                    <TextBlock Text="游戏服务器" Classes="cardTitle" VerticalAlignment="Center" />
+                    <Button Grid.Column="1" Classes="primary" Content="＋ 新建游戏服务器" Padding="14,7" />
+                </Grid>
+
+                <Grid Grid.Row="1" ColumnDefinitions="232,*" ColumnSpacing="14">
+                    <!-- 左：实例分组列表 -->
+                    <Border Classes="card" Padding="8">
+                        <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+                            <ItemsControl ItemsSource="{Binding ServerGroups}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:ServerGroupViewModel">
+                                        <StackPanel Margin="0,2,0,6">
+                                            <TextBlock Text="{Binding Name}" FontSize="11" FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource MutedBrush}" Margin="6,8,6,4" />
+                                            <ItemsControl ItemsSource="{Binding Items}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="vm:ServerCardViewModel">
+                                                        <Button Classes="serverItem" Padding="8,7"
+                                                                Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).SelectServerCommand}"
+                                                                CommandParameter="{Binding}">
+                                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                                <Ellipse Width="8" Height="8" Fill="{Binding StateBrush}" VerticalAlignment="Center" />
+                                                                <TextBlock Text="{Binding Name}" FontSize="12" Foreground="{DynamicResource TextBrush}" />
+                                                            </StackPanel>
+                                                        </Button>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </Border>
+
+                    <!-- 右：实例详情 -->
+                    <Border Classes="card" Padding="16">
+                        <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="12">
+                            <StackPanel Grid.Row="0" Spacing="3">
+                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                    <Ellipse Width="10" Height="10" Fill="{Binding SelectedServer.StateBrush}" VerticalAlignment="Center" />
+                                    <TextBlock Text="{Binding SelectedServer.Name}" FontWeight="Bold" FontSize="17"
+                                               Foreground="{DynamicResource TextBrush}" />
+                                    <TextBlock Text="{Binding SelectedServer.StateText}" FontSize="12" VerticalAlignment="Center"
+                                               Foreground="{Binding SelectedServer.StateBrush}" />
+                                </StackPanel>
+                                <TextBlock Text="{Binding SelectedServer.Template}" FontSize="12" Foreground="{DynamicResource MutedBrush}" />
+                                <TextBlock Text="{Binding SelectedServer.Meta}" FontSize="11" Foreground="{DynamicResource MutedBrush}" />
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8">
+                                <Button Classes="primary" Content="▶ 启动" Padding="16,7" IsVisible="{Binding SelectedServer.IsStopped}" />
+                                <Button Classes="ghost" Content="⏹ 停止" Padding="16,7" IsVisible="{Binding SelectedServer.IsRunning}" />
+                                <Button Classes="ghost" Content="⌨ 打开控制台" Padding="14,7" IsVisible="{Binding SelectedServer.IsRunning}" />
+                                <Button Classes="ghost" Content="📂 打开目录" Padding="14,7" />
+                            </StackPanel>
+
+                            <Border Grid.Row="2" Background="{DynamicResource InputBgBrush}" CornerRadius="8" Padding="12">
+                                <TextBlock Text="控制台输出（接入 ServerInstance 后显示实时日志）" FontSize="11"
+                                           Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" />
+                            </Border>
+
+                            <StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="8">
+                                <Button Classes="danger" Content="🗑 删除服务器" Padding="14,7" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Grid>
+</UserControl>

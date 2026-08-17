@@ -1,0 +1,47 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Aeterni.Tunnel.Desktop.ViewModels"
+             x:Class="Aeterni.Tunnel.Desktop.Views.SettingsView"
+             x:DataType="vm:MainWindowViewModel">
+    <Grid ColumnDefinitions="440,*" ColumnSpacing="12">
+                <Border Grid.Column="0" Classes="card" VerticalAlignment="Top">
+                    <StackPanel Spacing="12">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Border Classes="titleBar" Width="3" Height="14" />
+                            <TextBlock Classes="cardTitle" Text="连接设置" />
+                        </StackPanel>
+
+                        <Grid ColumnDefinitions="72,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="8" ColumnSpacing="8">
+                            <TextBlock Classes="fieldLabel" Text="服务端" VerticalAlignment="Center" />
+                            <TextBox Grid.Column="1" Text="{Binding ServerAddr}" PlaceholderText="ATS 地址" />
+                            <TextBlock Grid.Row="1" Classes="fieldLabel" Text="端口" VerticalAlignment="Center" />
+                            <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding ServerPort}" PlaceholderText="7000" />
+                            <TextBlock Grid.Row="2" Classes="fieldLabel" Text="令牌" VerticalAlignment="Center" />
+                            <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Token}" PasswordChar="●" PlaceholderText="ATS token" />
+                            <TextBlock Grid.Row="3" Classes="fieldLabel" Text="客户端ID" VerticalAlignment="Center" />
+                            <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding ClientId}" PlaceholderText="留空自动生成" />
+                            <CheckBox Grid.Row="4" Grid.Column="1" Content="TLS 加密传输" IsChecked="{Binding UseTls}" FontSize="11" />
+                        </Grid>
+
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button Classes="primary" Content="保存设置" Command="{Binding SaveSettingsCommand}" />
+                            <Button Classes="ghost" Content="加载 agent.toml" Command="{Binding LoadConfigCommand}" />
+                        </StackPanel>
+
+                        <TextBlock Classes="fieldLabel" TextWrapping="Wrap"
+                                   Text="保存后写入 agent.toml，下次启动自动读取并自动连接；修改服务端参数后保存会自动重新连接。" />
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Column="1" Classes="card" VerticalAlignment="Top">
+                    <StackPanel Spacing="10">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Border Classes="titleBar" Width="3" Height="14" />
+                            <TextBlock Classes="cardTitle" Text="使用说明" />
+                        </StackPanel>
+                        <TextBlock FontSize="12" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"
+                                   Text="1. 填写 ATS 服务端地址、端口与令牌（与服务端 server.toml 一致）。&#10;2. 点击「保存设置」写入 agent.toml，保存后自动连接。&#10;3. 客户端常连：启动读取配置自动连接，断线自动重连；重连期间隧道列表禁用。&#10;4. 隧道在「隧道」页统一管理；主题切换会一并保存，下次启动自动恢复。" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+</UserControl>

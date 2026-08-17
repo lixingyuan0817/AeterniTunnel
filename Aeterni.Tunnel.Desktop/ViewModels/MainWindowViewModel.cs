@@ -64,23 +64,23 @@ public sealed class MainWindowViewModel : ObservableBase, IAsyncDisposable
 
     // ═════════ 页面导航 ═════════
 
-    public string CurrentPage { get; private set; } = "home";
+    public object CurrentPage { get; private set; } = new HomePage();
 
-    public bool HomeVisible => CurrentPage == "home";
+    public bool HomeVisible => CurrentPage is HomePage;
 
-    public bool TunnelsVisible => CurrentPage == "tunnels";
+    public bool TunnelsVisible => CurrentPage is TunnelsPage;
 
-    public bool SettingsVisible => CurrentPage == "settings";
+    public bool SettingsVisible => CurrentPage is SettingsPage;
 
-    public bool LauncherVisible => CurrentPage == "launcher";
+    public bool LauncherVisible => CurrentPage is LauncherPage;
 
-    public IBrush NavHomeBrush => CurrentPage == "home" ? NavActiveBrush : NavMutedBrush;
+    public IBrush NavHomeBrush => CurrentPage is HomePage ? NavActiveBrush : NavMutedBrush;
 
-    public IBrush NavTunnelsBrush => CurrentPage == "tunnels" ? NavActiveBrush : NavMutedBrush;
+    public IBrush NavTunnelsBrush => CurrentPage is TunnelsPage ? NavActiveBrush : NavMutedBrush;
 
-    public IBrush NavSettingsBrush => CurrentPage == "settings" ? NavActiveBrush : NavMutedBrush;
+    public IBrush NavSettingsBrush => CurrentPage is SettingsPage ? NavActiveBrush : NavMutedBrush;
 
-    public IBrush NavLauncherBrush => CurrentPage == "launcher" ? NavActiveBrush : NavMutedBrush;
+    public IBrush NavLauncherBrush => CurrentPage is LauncherPage ? NavActiveBrush : NavMutedBrush;
 
     private IBrush NavActiveBrush => IsDarkTheme ? NavActiveDark : NavActiveLight;
 
@@ -132,11 +132,12 @@ public sealed class MainWindowViewModel : ObservableBase, IAsyncDisposable
         SelectedServer = mine.Items[0];
     }
 
-    private void Navigate(string page)
+    private void Navigate(object page)
     {
         if (CurrentPage == page)
             return;
         CurrentPage = page;
+        OnPropertyChanged(nameof(CurrentPage));   // 关键：ContentControl 绑定刷新（此前缺失导致切换无效）
         OnPropertyChanged(nameof(HomeVisible));
         OnPropertyChanged(nameof(TunnelsVisible));
         OnPropertyChanged(nameof(SettingsVisible));

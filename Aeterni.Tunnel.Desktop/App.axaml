@@ -1,7 +1,12 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="Aeterni.Tunnel.Desktop.App"
+             xmlns:local="using:Aeterni.Tunnel.Desktop"
              RequestedThemeVariant="Dark">
+
+    <Application.DataTemplates>
+        <local:ViewLocator />
+    </Application.DataTemplates>
 
     <Application.Resources>
         <ResourceDictionary>

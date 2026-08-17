@@ -1,6 +1,6 @@
 namespace Aeterni.Tunnel.Desktop.ViewModels;
 
-/// <summary>页面导航标记（ContentControl 通过 DataTemplate 映射到各 View）</summary>
+/// <summary>页面导航标记（ContentControl 通过 ViewLocator 映射到各 View）</summary>
 public sealed record HomePage;
 
 /// <summary>隧道页标记</summary>
