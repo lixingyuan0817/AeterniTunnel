@@ -2,7 +2,7 @@ using Avalonia.Media;
 
 namespace Aeterni.Tunnel.Desktop.ViewModels;
 
-/// <summary>开服页实例卡片（示例界面；后续接入 Aeterni.Tunnel.Launcher 真实状态）</summary>
+/// <summary>开服页实例卡片（示例界面数据）</summary>
 public sealed class ServerCardViewModel
 {
     public string Name { get; set; } = "";
