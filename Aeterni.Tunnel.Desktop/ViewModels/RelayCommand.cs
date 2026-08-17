@@ -2,7 +2,7 @@ using System.Windows.Input;
 
 namespace Aeterni.Tunnel.Desktop.ViewModels;
 
-/// <summary>极简 ICommand 实现（无第三方 MVVM 包依赖；支持可选参数）</summary>
+/// <summary>极简 ICommand 实现（无第三方 MVVM 包依赖）</summary>
 public sealed class RelayCommand : ICommand
 {
     private readonly Action<object?> _execute;

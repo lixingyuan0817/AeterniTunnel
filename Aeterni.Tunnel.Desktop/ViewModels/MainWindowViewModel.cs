@@ -45,10 +45,10 @@ public sealed class MainWindowViewModel : ObservableBase, IAsyncDisposable
         NavigateTunnelsCommand = new RelayCommand(() => Navigate("tunnels"));
         NavigateSettingsCommand = new RelayCommand(() => Navigate("settings"));
         NavigateLauncherCommand = new RelayCommand(() => Navigate("launcher"));
-        SelectServerCommand = new RelayCommand(s => { if (s is ServerCardViewModel card) SelectedServer = card; });
         // 客户端常连：无手动连接/断开；未连接（重连中）时隧道操作禁用
         AddTunnelCommand = new RelayCommand(() => EditTunnelRequested?.Invoke(null), () => IsConnected);
         LoadConfigCommand = new RelayCommand(() => _ = LoadConfigAsync());
+        SelectServerCommand = new RelayCommand(s => { if (s is ServerCardViewModel card) SelectedServer = card; });
         SaveSettingsCommand = new RelayCommand(SaveSettings);
 
         // 事件驱动：连接建立/断开即时刷新 UI（不依赖每秒轮询）
@@ -64,35 +64,23 @@ public sealed class MainWindowViewModel : ObservableBase, IAsyncDisposable
 
     // ═════════ 页面导航 ═════════
 
-    public object CurrentPage { get; private set; } = new HomePage();
+    public string CurrentPage { get; private set; } = "home";
 
-    public bool HomeVisible => CurrentPage is HomePage;
+    public bool HomeVisible => CurrentPage == "home";
 
-    public bool TunnelsVisible => CurrentPage is TunnelsPage;
+    public bool TunnelsVisible => CurrentPage == "tunnels";
 
-    public bool SettingsVisible => CurrentPage is SettingsPage;
+    public bool SettingsVisible => CurrentPage == "settings";
 
-    public bool LauncherVisible => CurrentPage is LauncherPage;
+    public bool LauncherVisible => CurrentPage == "launcher";
 
-    public IBrush NavHomeBrush => CurrentPage is HomePage ? NavActiveBrush : NavMutedBrush;
+    public IBrush NavHomeBrush => CurrentPage == "home" ? NavActiveBrush : NavMutedBrush;
 
-    public IBrush NavTunnelsBrush => CurrentPage is TunnelsPage ? NavActiveBrush : NavMutedBrush;
+    public IBrush NavTunnelsBrush => CurrentPage == "tunnels" ? NavActiveBrush : NavMutedBrush;
 
-    public IBrush NavSettingsBrush => CurrentPage is SettingsPage ? NavActiveBrush : NavMutedBrush;
+    public IBrush NavSettingsBrush => CurrentPage == "settings" ? NavActiveBrush : NavMutedBrush;
 
-    public IBrush NavLauncherBrush => CurrentPage is LauncherPage ? NavActiveBrush : NavMutedBrush;
-
-    public IBrush NavHomeBg => CurrentPage is HomePage ? NavActiveBg : NavIdleBg;
-
-    public IBrush NavTunnelsBg => CurrentPage is TunnelsPage ? NavActiveBg : NavIdleBg;
-
-    public IBrush NavLauncherBg => CurrentPage is LauncherPage ? NavActiveBg : NavIdleBg;
-
-    public IBrush NavSettingsBg => CurrentPage is SettingsPage ? NavActiveBg : NavIdleBg;
-
-    private IBrush NavActiveBg => new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#1F34C759"));
-
-    private IBrush NavIdleBg => Avalonia.Media.Brushes.Transparent;
+    public IBrush NavLauncherBrush => CurrentPage == "launcher" ? NavActiveBrush : NavMutedBrush;
 
     private IBrush NavActiveBrush => IsDarkTheme ? NavActiveDark : NavActiveLight;
 
@@ -144,12 +132,11 @@ public sealed class MainWindowViewModel : ObservableBase, IAsyncDisposable
         SelectedServer = mine.Items[0];
     }
 
-    private void Navigate(object page)
+    private void Navigate(string page)
     {
         if (CurrentPage == page)
             return;
         CurrentPage = page;
-        OnPropertyChanged(nameof(CurrentPage));
         OnPropertyChanged(nameof(HomeVisible));
         OnPropertyChanged(nameof(TunnelsVisible));
         OnPropertyChanged(nameof(SettingsVisible));
@@ -158,10 +145,6 @@ public sealed class MainWindowViewModel : ObservableBase, IAsyncDisposable
         OnPropertyChanged(nameof(NavTunnelsBrush));
         OnPropertyChanged(nameof(NavSettingsBrush));
         OnPropertyChanged(nameof(NavLauncherBrush));
-        OnPropertyChanged(nameof(NavHomeBg));
-        OnPropertyChanged(nameof(NavTunnelsBg));
-        OnPropertyChanged(nameof(NavLauncherBg));
-        OnPropertyChanged(nameof(NavSettingsBg));
     }
 
     // ═════════ 明暗主题（明亮 / 黑暗 / 跟随系统，选择持久化到 agent.toml 的 theme 键） ═════════

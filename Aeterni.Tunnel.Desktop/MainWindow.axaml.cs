@@ -18,6 +18,9 @@ public partial class MainWindow : Window
         _vm = new MainWindowViewModel();
         DataContext = _vm;
 
+        // 日志追加后自动滚动到底部
+        _vm.Logs.CollectionChanged += (_, _) => LogScroll.ScrollToEnd();
+
         // 弹窗承载：添加/修改隧道
         _vm.EditTunnelRequested += async def =>
         {
