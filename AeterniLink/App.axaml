@@ -30,7 +30,7 @@
                     <Color x:Key="BannerBgColor">#22FBBF24</Color>
                     <Color x:Key="BannerBorderColor">#55FBBF24</Color>
                     <Color x:Key="BannerTextColor">#FDE68A</Color>
-                    <Color x:Key="WindowBgColor">#8C05070F</Color>
+                    <Color x:Key="WindowBgColor">#7305070F</Color>
                     <Color x:Key="ScrollThumbColor">#26FFFFFF</Color>
                     <Color x:Key="ScrollThumbHoverColor">#40FFFFFF</Color>
                     <Color x:Key="ScrollThumbPressedColor">#55FFFFFF</Color>
@@ -83,7 +83,7 @@
                     <Color x:Key="BannerBgColor">#33FBBF24</Color>
                     <Color x:Key="BannerBorderColor">#66D97706</Color>
                     <Color x:Key="BannerTextColor">#92400E</Color>
-                    <Color x:Key="WindowBgColor">#8CEEF1F8</Color>
+                    <Color x:Key="WindowBgColor">#73EEF1F8</Color>
                     <Color x:Key="ScrollThumbColor">#141E293B</Color>
                     <Color x:Key="ScrollThumbHoverColor">#241E293B</Color>
                     <Color x:Key="ScrollThumbPressedColor">#331E293B</Color>
@@ -124,7 +124,7 @@
             <Setter Property="Background" Value="{DynamicResource PanelBrush}" />
             <Setter Property="BorderBrush" Value="{DynamicResource PanelBorderBrush}" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="CornerRadius" Value="10" />
             <Setter Property="Padding" Value="16" />
         </Style>
 

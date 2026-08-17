@@ -1,24 +1,21 @@
-<Window xmlns="https://github.com/avaloniaui"
+<aeterni:AeterniWindow xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:controls="using:AeterniLink.Controls"
+        xmlns:aeterni="using:AeterniLink.Controls"
         mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="660"
         x:Class="AeterniLink.MainWindow"
-        Title="AETERNI LINK"
-        Width="1000" Height="660" MinWidth="880" MinHeight="580"
-        WindowStartupLocation="CenterScreen"
-        WindowDecorations="None"
-        TransparencyLevelHint="AcrylicBlur,Blur,Transparent" Background="Transparent">
+        Title="AETERNI LINK">
 
-    <!-- AeterniLink 布局壳：圆角根（无边框窗口）+ 自定义标题栏 + 顶栏 + 内容区 + 状态栏
+    <!-- AeterniLink 窗口壳：圆角毛玻璃根（外观由 AeterniWindow 基类提供）+ 自定义标题栏 + 顶栏 + 内容区 + 状态栏
          风格体系与 Aeterni.Tunnel.Desktop 统一（同一套主题资源与全局样式） -->
-    <Border CornerRadius="10" ClipToBounds="True" Background="{DynamicResource WindowBgBrush}">
+    <Border CornerRadius="8" ClipToBounds="True" Background="{DynamicResource WindowBgBrush}">
         <Panel>
             <Grid RowDefinitions="Auto,Auto,*,Auto">
 
                 <!-- ═══ 自定义标题栏（三平台统一，拖拽/双击/红绿灯由控件处理） ═══ -->
-                <controls:WindowTitleBar Grid.Row="0" />
+                <controls:AeterniTitleBar Grid.Row="0" />
 
                 <!-- ═══ 顶栏：页面导航 + 主题（品牌已移入标题栏） ═══ -->
                 <Border Grid.Row="1" BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="0,0,0,1" Padding="16,10">
@@ -70,4 +67,4 @@
             </Grid>
         </Panel>
     </Border>
-</Window>
+</aeterni:AeterniWindow>

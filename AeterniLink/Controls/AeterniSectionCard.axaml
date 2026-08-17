@@ -1,11 +1,11 @@
 <ContentControl xmlns="https://github.com/avaloniaui"
                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                 xmlns:controls="using:AeterniLink.Controls"
-                x:Class="AeterniLink.Controls.SectionCard">
+                x:Class="AeterniLink.Controls.AeterniSectionCard">
     <!-- 卡片 + 标题栏封装：titleBar 竖条 + cardTitle 标题 + 内容区
          继承 ContentControl：隐式子内容即 Content，模板内 ContentPresenter 渲染，外层包 card 样式 -->
     <ContentControl.Template>
-        <ControlTemplate TargetType="controls:SectionCard">
+        <ControlTemplate TargetType="controls:AeterniSectionCard">
             <Border Classes="card">
                 <StackPanel Spacing="10">
                     <StackPanel Orientation="Horizontal" Spacing="8">

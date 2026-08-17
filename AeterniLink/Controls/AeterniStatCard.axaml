@@ -1,10 +1,10 @@
 <ContentControl xmlns="https://github.com/avaloniaui"
                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                 xmlns:controls="using:AeterniLink.Controls"
-                x:Class="AeterniLink.Controls.StatCard">
+                x:Class="AeterniLink.Controls.AeterniStatCard">
     <!-- 统计卡封装：Label 小字 + Content 数值区（隐式子内容即 Content，模板内渲染） -->
     <ContentControl.Template>
-        <ControlTemplate TargetType="controls:StatCard">
+        <ControlTemplate TargetType="controls:AeterniStatCard">
             <Border Classes="card">
                 <StackPanel Spacing="4">
                     <TextBlock Classes="fieldLabel" Text="{TemplateBinding Label}" />

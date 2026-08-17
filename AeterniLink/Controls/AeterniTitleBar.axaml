@@ -1,6 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             x:Class="AeterniLink.Controls.WindowTitleBar">
+             x:Class="AeterniLink.Controls.AeterniTitleBar">
     <!-- 三平台统一的自定义标题栏（macOS 红绿灯风格）：左红黄绿圆点按钮 + 标题
          配合 SystemDecorations="None" 使用；标题栏空白区支持拖拽移动、双击最大化 -->
     <Grid Height="40" ColumnDefinitions="Auto,*,Auto" Background="Transparent">

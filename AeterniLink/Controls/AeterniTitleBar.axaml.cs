@@ -11,11 +11,11 @@ namespace AeterniLink.Controls;
 /// 左侧标题自动跟随 Window.Title，右侧最小化/最大化还原/关闭按钮；
 /// 标题栏空白区拖拽移动窗口、双击最大化/还原；非可缩放窗口不显示最大化按钮。
 /// </summary>
-public partial class WindowTitleBar : UserControl
+public partial class AeterniTitleBar : UserControl
 {
     private Window? _window;
 
-    public WindowTitleBar()
+    public AeterniTitleBar()
     {
         InitializeComponent();
 
