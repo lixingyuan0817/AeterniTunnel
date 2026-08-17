@@ -47,6 +47,8 @@
                     <SolidColorBrush x:Key="DropdownBgBrush" Color="#F205070F" />
                     <SolidColorBrush x:Key="InputBorderBrush" Color="{StaticResource InputBorderColor}" />
                     <SolidColorBrush x:Key="InputBgFocusBrush" Color="{StaticResource InputBgFocusColor}" />
+                    <SolidColorBrush x:Key="GhostHoverBrush" Color="#26FFFFFF" />
+                    <SolidColorBrush x:Key="GhostPressedBrush" Color="#38FFFFFF" />
                     <SolidColorBrush x:Key="RowLineBrush" Color="{StaticResource RowLineColor}" />
                     <SolidColorBrush x:Key="TextBrush" Color="{StaticResource TextColor}" />
                     <SolidColorBrush x:Key="MutedBrush" Color="{StaticResource MutedColor}" />
@@ -97,6 +99,8 @@
                     <SolidColorBrush x:Key="PanelBorderBrush" Color="{StaticResource PanelBorderColor}" />
                     <SolidColorBrush x:Key="DropdownBgBrush" Color="#F2FFFFFF" />
                     <SolidColorBrush x:Key="InputBgBrush" Color="{StaticResource InputBgColor}" />
+                    <SolidColorBrush x:Key="GhostHoverBrush" Color="#141E293B" />
+                    <SolidColorBrush x:Key="GhostPressedBrush" Color="#1F1E293B" />
                     <SolidColorBrush x:Key="InputBorderBrush" Color="{StaticResource InputBorderColor}" />
                     <SolidColorBrush x:Key="InputBgFocusBrush" Color="{StaticResource InputBgFocusColor}" />
                     <SolidColorBrush x:Key="RowLineBrush" Color="{StaticResource RowLineColor}" />
@@ -326,12 +330,10 @@
             <Setter Property="FontSize" Value="12" />
         </Style>
         <Style Selector="Button.ghost:pointerover">
-            <Setter Property="Background" Value="#2E9E44" />
-            <Setter Property="Foreground" Value="White" />
+            <Setter Property="Background" Value="{DynamicResource GhostHoverBrush}" />
         </Style>
         <Style Selector="Button.ghost:pressed">
-            <Setter Property="Background" Value="#1B6B2E" />
-            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+            <Setter Property="Background" Value="{DynamicResource GhostPressedBrush}" />
         </Style>
 
         <!-- 禁用态：无灰色背景，仅整体淡化（替代 Fluent 默认灰底） -->
@@ -398,11 +400,10 @@
             <Setter Property="FontSize" Value="11" />
         </Style>
         <Style Selector="Button.danger:pointerover">
-            <Setter Property="Background" Value="#DC2626" />
-            <Setter Property="Foreground" Value="White" />
+            <Setter Property="Background" Value="#33F87171" />
         </Style>
         <Style Selector="Button.danger:pressed">
-            <Setter Property="Background" Value="#B91C1C" />
+            <Setter Property="Background" Value="#4DF87171" />
         </Style>
 
         <!-- ═══ 窗口标题栏 macOS 红绿灯按钮（三平台统一自绘，配合 SystemDecorations=None） ═══ -->
