@@ -6,4 +6,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Aeterni.Tunnel.Common\Aeterni.Tunnel.Common.csproj" />
+  </ItemGroup>
+
 </Project>
