@@ -12,242 +12,70 @@
         TransparencyLevelHint="AcrylicBlur,Blur" Background="{DynamicResource WindowBgBrush}">
 
     <Panel>
-        <Grid x:Name="MainRoot" RowDefinitions="Auto,*,Auto">
+        <Grid x:Name="MainRoot" ColumnDefinitions="196,*">
 
-        <!-- ═══ 顶栏：品牌 + 页面导航 + 主题/状态/连接 ═══ -->
-        <Border Grid.Row="0" BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="0,0,0,1" Padding="16,10">
-            <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="18">
-                <TextBlock Text="AETERNI TUNNEL" FontWeight="Bold" FontSize="17"
-                           Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
+            <!-- ═══ 左侧边栏：品牌 + 导航菜单 + 主题 + 状态 ═══ -->
+            <Border Grid.Column="0" BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="0,0,1,0"
+                    Background="{DynamicResource BgBrush}">
+                <Grid RowDefinitions="Auto,*,Auto" Margin="14,16">
 
-                <!-- 页面导航 -->
-                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                    <Button Classes="ghost" Background="Transparent" BorderThickness="0" Padding="10,6"
-                            Content="首页" Foreground="{Binding NavHomeBrush}" Command="{Binding NavigateHomeCommand}" />
-                    <Button Classes="ghost" Background="Transparent" BorderThickness="0" Padding="10,6"
-                            Content="隧道" Foreground="{Binding NavTunnelsBrush}" Command="{Binding NavigateTunnelsCommand}"
-                            IsEnabled="{Binding TunnelsNavEnabled}" />
-                    <Button Classes="ghost" Background="Transparent" BorderThickness="0" Padding="10,6"
-                            Content="设置" Foreground="{Binding NavSettingsBrush}" Command="{Binding NavigateSettingsCommand}" />
-                    <Button Classes="ghost" Background="Transparent" BorderThickness="0" Padding="10,6"
-                            Content="🎮 开服" Foreground="{Binding NavLauncherBrush}" Command="{Binding NavigateLauncherCommand}" />
-                </StackPanel>
-
-                <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
-                    <!-- 主题分段控制器：明亮 / 黑暗 / 跟随系统（选择持久化到 agent.toml） -->
-                    <Border Background="{DynamicResource InputBgBrush}" CornerRadius="9" Padding="3" VerticalAlignment="Center">
-                        <StackPanel Orientation="Horizontal" Spacing="2">
-                            <RadioButton Classes="seg" Content="☀" ToolTip.Tip="明亮" IsChecked="{Binding IsLightChecked}" />
-                            <RadioButton Classes="seg" Content="🌙" ToolTip.Tip="黑暗" IsChecked="{Binding IsDarkChecked}" />
-                            <RadioButton Classes="seg" Content="◐" ToolTip.Tip="跟随系统" IsChecked="{Binding IsSystemChecked}" />
-                        </StackPanel>
-                    </Border>
-                </StackPanel>
-            </Grid>
-        </Border>
-
-        <!-- ═══ 内容区（三页切换） ═══ -->
-        <Grid Grid.Row="1" Margin="16">
-
-            <!-- ── 首页：首启提示 + 统计卡 + 日志 ── -->
-            <Grid IsVisible="{Binding HomeVisible}" RowDefinitions="Auto,Auto,*" RowSpacing="12">
-                <Border IsVisible="{Binding IsFirstRun}" Grid.Row="0"
-                        Background="{DynamicResource BannerBgBrush}" BorderBrush="{DynamicResource BannerBorderBrush}" BorderThickness="1"
-                        CornerRadius="8" Padding="12,9">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <TextBlock Text="●" Foreground="{DynamicResource YellowBrush}" FontSize="12" VerticalAlignment="Center" />
-                        <TextBlock Text="{Binding FirstRunHint}" FontSize="12" Foreground="{DynamicResource BannerTextBrush}"
-                                   TextWrapping="Wrap" VerticalAlignment="Center" />
+                    <!-- 品牌 -->
+                    <StackPanel Grid.Row="0" Spacing="2" Margin="8,0,8,16">
+                        <TextBlock Text="AETERNI TUNNEL" FontWeight="Bold" FontSize="16"
+                                   Foreground="{DynamicResource AccentBrush}" />
+                        <TextBlock Text="ATC 客户端 · 内网穿透" FontSize="11"
+                                   Foreground="{DynamicResource MutedBrush}" />
                     </StackPanel>
-                </Border>
 
-                <!-- 统计卡 -->
-                <Grid Grid.Row="1" ColumnDefinitions="*,*,*" ColumnSpacing="12">
-                    <Border Classes="card" Grid.Column="0">
-                        <StackPanel Spacing="4">
-                            <TextBlock Classes="fieldLabel" Text="隧道总数" />
-                            <TextBlock Text="{Binding TunnelCount}" FontSize="16" FontWeight="Bold"
-                                       Foreground="{DynamicResource AccentBrush}" />
-                        </StackPanel>
-                    </Border>
-                    <Border Classes="card" Grid.Column="1">
-                        <StackPanel Spacing="4">
-                            <TextBlock Classes="fieldLabel" Text="分组数" />
-                            <TextBlock Text="{Binding GroupCount}" FontSize="16" FontWeight="Bold"
-                                       Foreground="{DynamicResource AccentBrush}" />
-                        </StackPanel>
-                    </Border>
-                    <Border Classes="card" Grid.Column="2">
-                        <StackPanel Spacing="4">
-                            <TextBlock Classes="fieldLabel" Text="实时速率" />
-                            <TextBlock FontSize="14" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}">
-                                <Run Text="▲ " /><Run Text="{Binding UpRateText}" />
-                                <Run Text="  ▼ " /><Run Text="{Binding DownRateText}" />
-                            </TextBlock>
-                        </StackPanel>
-                    </Border>
+                    <!-- 导航菜单 -->
+                    <StackPanel Grid.Row="1" Spacing="3">
+                        <Button Classes="navItem" Content="🏠 首页" Command="{Binding NavigateHomeCommand}"
+                                Foreground="{Binding NavHomeBrush}" Background="{Binding NavHomeBg}" />
+                        <Button Classes="navItem" Content="🔗 隧道" Command="{Binding NavigateTunnelsCommand}"
+                                Foreground="{Binding NavTunnelsBrush}" Background="{Binding NavTunnelsBg}"
+                                IsEnabled="{Binding TunnelsNavEnabled}" />
+                        <Button Classes="navItem" Content="🎮 开服" Command="{Binding NavigateLauncherCommand}"
+                                Foreground="{Binding NavLauncherBrush}" Background="{Binding NavLauncherBg}" />
+                        <Button Classes="navItem" Content="⚙ 设置" Command="{Binding NavigateSettingsCommand}"
+                                Foreground="{Binding NavSettingsBrush}" Background="{Binding NavSettingsBg}" />
+                    </StackPanel>
+
+                    <!-- 底部：主题 + 连接状态 -->
+                    <StackPanel Grid.Row="2" Spacing="10">
+                        <Border Background="{DynamicResource InputBgBrush}" CornerRadius="9" Padding="3"
+                                HorizontalAlignment="Stretch">
+                            <StackPanel Orientation="Horizontal" Spacing="2" HorizontalAlignment="Center">
+                                <RadioButton Classes="seg" Content="☀" ToolTip.Tip="明亮" IsChecked="{Binding IsLightChecked}" />
+                                <RadioButton Classes="seg" Content="🌙" ToolTip.Tip="黑暗" IsChecked="{Binding IsDarkChecked}" />
+                                <RadioButton Classes="seg" Content="◐" ToolTip.Tip="跟随系统" IsChecked="{Binding IsSystemChecked}" />
+                            </StackPanel>
+                        </Border>
+                        <Border Background="{DynamicResource InputBgBrush}" CornerRadius="8" Padding="10,8">
+                            <StackPanel Spacing="3">
+                                <TextBlock Text="{Binding StatusBarText}" FontSize="11" Foreground="{DynamicResource TextBrush}"
+                                           TextWrapping="Wrap" />
+                                <TextBlock Text="{Binding VersionText}" FontSize="10" Foreground="{DynamicResource MutedBrush}" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
                 </Grid>
+            </Border>
 
-                <!-- 日志 -->
-                <Border Grid.Row="2" Classes="card" Padding="16,12">
-                    <Grid RowDefinitions="Auto,*">
-                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,10">
-                            <Border Classes="titleBar" Width="3" Height="14" />
-                            <TextBlock Classes="cardTitle" Text="日志" />
-                        </StackPanel>
-                        <ScrollViewer Grid.Row="1" x:Name="LogScroll">
-                            <ItemsControl ItemsSource="{Binding Logs}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate x:DataType="vm:LogItemViewModel">
-                                        <Grid ColumnDefinitions="58,34,*" ColumnSpacing="6">
-                                            <TextBlock Text="{Binding TimeText}" Foreground="{Binding Brush}"
-                                                       FontFamily="Menlo, Consolas, monospace" FontSize="10" />
-                                            <TextBlock Grid.Column="1" Text="{Binding LevelText}" Foreground="{Binding Brush}"
-                                                       FontFamily="Menlo, Consolas, monospace" FontSize="10" />
-                                            <TextBlock Grid.Column="2" Text="{Binding Text}" Foreground="{Binding Brush}"
-                                                       FontFamily="Menlo, Consolas, monospace" FontSize="11" TextWrapping="Wrap" />
-                                        </Grid>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </ScrollViewer>
-                    </Grid>
-                </Border>
-            </Grid>
-
-            <!-- ── 隧道页：分组列表 + 添加按钮 ── -->
-            <Grid IsVisible="{Binding TunnelsVisible}" RowDefinitions="Auto,*">
-                <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,10">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <Border Classes="titleBar" Width="3" Height="14" />
-                        <TextBlock Classes="cardTitle" Text="{Binding TunnelCountText}" />
-                    </StackPanel>
-                    <Button Grid.Column="1" Classes="primary" Content="＋ 添加隧道" Command="{Binding AddTunnelCommand}" />
-                </Grid>
-
-                <Border Grid.Row="1" Classes="card" Padding="16,10">
-                    <ScrollViewer>
-                        <ItemsControl ItemsSource="{Binding TunnelGroups}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="vm:TunnelGroupViewModel">
-                                    <StackPanel Spacing="2" Margin="0,4,0,8">
-                                        <!-- 分组头 -->
-                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="12"
-                                                   Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,2" />
-                                        <!-- 成员行 -->
-                                        <ItemsControl ItemsSource="{Binding Items}">
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate x:DataType="vm:TunnelItemViewModel">
-                                                    <Border BorderBrush="{DynamicResource RowLineBrush}" BorderThickness="0,0,0,1" Padding="8,7"
-                                                            IsEnabled="{Binding IsEnabled}">
-                                                        <Grid ColumnDefinitions="Auto,110,Auto,*,Auto,Auto,Auto" ColumnSpacing="10">
-                                                            <Ellipse Width="8" Height="8" Fill="{Binding StateBrush}" VerticalAlignment="Center" />
-                                                            <TextBlock Grid.Column="1" Text="{Binding ProxyId}" FontWeight="SemiBold"
-                                                                       FontSize="12" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                                                            <Border Grid.Column="2" Classes="badge" VerticalAlignment="Center">
-                                                                <TextBlock Classes="badgeText" Text="{Binding Type}" Foreground="{Binding TypeBrush}" />
-                                                            </Border>
-                                                            <TextBlock Grid.Column="3" Text="{Binding RouteText}"
-                                                                       Foreground="{DynamicResource MutedBrush}" FontSize="11"
-                                                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                                                            <TextBlock Grid.Column="4" Text="{Binding StateText}"
-                                                                       Foreground="{Binding StateBrush}" FontSize="11" VerticalAlignment="Center" />
-                                                            <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                                                                <TextBlock Text="{Binding FlowText}" Foreground="{DynamicResource MutedBrush}"
-                                                                           FontSize="10" VerticalAlignment="Center" />
-                                                                <Button Classes="ghost" Padding="8,3" FontSize="11" Content="编辑" Command="{Binding EditCommand}" />
-                                                                <Button Classes="danger" Content="删除" Command="{Binding RemoveCommand}" />
-                                                            </StackPanel>
-                                                        </Grid>
-                                                    </Border>
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
-                                    </StackPanel>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </ScrollViewer>
-                </Border>
-            </Grid>
-
-            <!-- ── 设置页：连接设置表单 + 保存/加载 ── -->
-            <Grid IsVisible="{Binding SettingsVisible}" ColumnDefinitions="440,*" ColumnSpacing="12">
-                <Border Grid.Column="0" Classes="card" VerticalAlignment="Top">
-                    <StackPanel Spacing="12">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <Border Classes="titleBar" Width="3" Height="14" />
-                            <TextBlock Classes="cardTitle" Text="连接设置" />
-                        </StackPanel>
-
-                        <Grid ColumnDefinitions="72,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="8" ColumnSpacing="8">
-                            <TextBlock Classes="fieldLabel" Text="服务端" VerticalAlignment="Center" />
-                            <TextBox Grid.Column="1" Text="{Binding ServerAddr}" PlaceholderText="ATS 地址" />
-                            <TextBlock Grid.Row="1" Classes="fieldLabel" Text="端口" VerticalAlignment="Center" />
-                            <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding ServerPort}" PlaceholderText="7000" />
-                            <TextBlock Grid.Row="2" Classes="fieldLabel" Text="令牌" VerticalAlignment="Center" />
-                            <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Token}" PasswordChar="●" PlaceholderText="ATS token" />
-                            <TextBlock Grid.Row="3" Classes="fieldLabel" Text="客户端ID" VerticalAlignment="Center" />
-                            <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding ClientId}" PlaceholderText="留空自动生成" />
-                            <CheckBox Grid.Row="4" Grid.Column="1" Content="TLS 加密传输" IsChecked="{Binding UseTls}" FontSize="11" />
-                        </Grid>
-
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <Button Classes="primary" Content="保存设置" Command="{Binding SaveSettingsCommand}" />
-                            <Button Classes="ghost" Content="加载 agent.toml" Command="{Binding LoadConfigCommand}" />
-                        </StackPanel>
-
-                        <TextBlock Classes="fieldLabel" TextWrapping="Wrap"
-                                   Text="保存后写入 agent.toml，下次启动自动读取并自动连接；修改服务端参数后保存会自动重新连接。" />
-                    </StackPanel>
-                </Border>
-
-                <Border Grid.Column="1" Classes="card" VerticalAlignment="Top">
-                    <StackPanel Spacing="10">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <Border Classes="titleBar" Width="3" Height="14" />
-                            <TextBlock Classes="cardTitle" Text="使用说明" />
-                        </StackPanel>
-                        <TextBlock FontSize="12" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"
-                                   Text="1. 填写 ATS 服务端地址、端口与令牌（与服务端 server.toml 一致）。&#10;2. 点击「保存设置」写入 agent.toml，保存后自动连接。&#10;3. 客户端常连：启动读取配置自动连接，断线自动重连；重连期间隧道列表禁用。&#10;4. 隧道在「隧道」页统一管理；主题切换会一并保存，下次启动自动恢复。" />
-                    </StackPanel>
-                </Border>
+            <!-- ═══ 右侧内容区（页面切换：ViewLocator 按页面标记映射各 View） ═══ -->
+            <Grid Grid.Column="1" Margin="20">
+                <ContentControl Content="{Binding CurrentPage}" />
             </Grid>
         </Grid>
 
-        <!-- ═══ 状态栏（连接状态 + 实时速率；背景色随连接状态变化） ═══ -->
-        <Border Grid.Row="2" Background="{Binding StatusBarBg}"
-                BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="0,1,0,0" Padding="16,6">
-            <Grid ColumnDefinitions="*,Auto">
-                <StackPanel Orientation="Horizontal" Spacing="8">
-                    <Ellipse Width="8" Height="8" Classes.pulse="{Binding IsConnected}"
-                             Fill="{Binding StatusBrush}" VerticalAlignment="Center" />
-                    <TextBlock Text="{Binding StatusBarText}" FontSize="11"
-                               Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" />
-                </StackPanel>
-                <TextBlock Grid.Column="1" Text="{Binding VersionText}" FontSize="11" Foreground="{DynamicResource MutedBrush}" />
-            </Grid>
-        </Border>
-        </Grid>
-
-        <!-- ═══ Toast 提示（右上角叠加，3 秒自动消失） ═══ -->
-        <ItemsControl ItemsSource="{Binding Toasts}" IsHitTestVisible="False"
-                      HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,14,14,0" MaxWidth="400">
-            <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate>
-                    <StackPanel Spacing="8" />
-                </ItemsPanelTemplate>
-            </ItemsControl.ItemsPanel>
+        <!-- ═══ Toast 层（全局通知） ═══ -->
+        <ItemsControl ItemsSource="{Binding Toasts}" Margin="0,16,16,0"
+                      HorizontalAlignment="Right" VerticalAlignment="Top">
             <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:ToastItemViewModel">
-                    <Border Background="{DynamicResource BgBrush}" BorderBrush="{DynamicResource ToastBorderBrush}"
-                            BorderThickness="1" CornerRadius="10" Padding="12,9"
-                            Opacity="{Binding Opacity}">
-                        <Border.Transitions>
-                            <Transitions>
-                                <DoubleTransition Property="Opacity" Duration="0:0:0.25" />
-                            </Transitions>
-                        </Border.Transitions>
+                    <Border Background="{DynamicResource ToastBgBrush}"
+                            BorderBrush="{DynamicResource ToastBorderBrush}" BorderThickness="1"
+                            CornerRadius="10" Padding="12,9" Margin="0,0,0,8"
+                            BoxShadow="0 4 14 0 #40000000">
                         <Grid ColumnDefinitions="Auto,*">
                             <Border Width="4" CornerRadius="2" Background="{Binding Accent}"
                                     HorizontalAlignment="Left" VerticalAlignment="Stretch" Margin="0,0,10,0" />
@@ -258,42 +86,5 @@
                 </DataTemplate>
             </ItemsControl.ItemTemplate>
         </ItemsControl>
-            <!-- ── 开服页：游戏服务器实例卡片（示例界面） ── -->
-            <Grid IsVisible="{Binding LauncherVisible}" RowDefinitions="Auto,*" RowSpacing="12">
-                <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
-                    <TextBlock Text="游戏服务器" Classes="cardTitle" VerticalAlignment="Center" />
-                    <Button Grid.Column="1" Classes="primary" Content="＋ 新建游戏服务器" Padding="14,7" />
-                </Grid>
-                <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
-                    <ItemsControl ItemsSource="{Binding Servers}" Margin="0,0,8,0">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate x:DataType="vm:ServerCardViewModel">
-                                <Border Classes="card" Padding="14,12" Margin="0,0,0,10">
-                                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
-                                        <Ellipse Width="9" Height="9" Fill="{Binding StateBrush}" VerticalAlignment="Center" />
-                                        <StackPanel Grid.Column="1" Spacing="3">
-                                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="14"
-                                                           Foreground="{DynamicResource TextBrush}" />
-                                                <TextBlock Text="{Binding StateText}" FontSize="11" VerticalAlignment="Center"
-                                                           Foreground="{Binding StateBrush}" />
-                                            </StackPanel>
-                                            <TextBlock Text="{Binding Template}" FontSize="11" Foreground="{DynamicResource MutedBrush}" />
-                                            <TextBlock Text="{Binding Meta}" FontSize="11" Foreground="{DynamicResource MutedBrush}" />
-                                        </StackPanel>
-                                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                            <Button Classes="ghost" Content="▶ 启动" Padding="10,5" FontSize="11" IsVisible="{Binding IsStopped}" />
-                                            <Button Classes="ghost" Content="⏹ 停止" Padding="10,5" FontSize="11" IsVisible="{Binding IsRunning}" />
-                                            <Button Classes="ghost" Content="⌨ 控制台" Padding="10,5" FontSize="11" IsVisible="{Binding IsRunning}" />
-                                            <Button Classes="ghost" Content="📂 目录" Padding="10,5" FontSize="11" />
-                                            <Button Classes="danger" Content="🗑" Padding="8,5" FontSize="11" />
-                                        </StackPanel>
-                                    </Grid>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </ScrollViewer>
-            </Grid>
     </Panel>
 </Window>

@@ -45,6 +45,7 @@ public sealed class MainWindowViewModel : ObservableBase, IAsyncDisposable
         NavigateTunnelsCommand = new RelayCommand(() => Navigate("tunnels"));
         NavigateSettingsCommand = new RelayCommand(() => Navigate("settings"));
         NavigateLauncherCommand = new RelayCommand(() => Navigate("launcher"));
+        SelectServerCommand = new RelayCommand(s => { if (s is ServerCardViewModel card) SelectedServer = card; });
         // 客户端常连：无手动连接/断开；未连接（重连中）时隧道操作禁用
         AddTunnelCommand = new RelayCommand(() => EditTunnelRequested?.Invoke(null), () => IsConnected);
         LoadConfigCommand = new RelayCommand(() => _ = LoadConfigAsync());
@@ -63,23 +64,35 @@ public sealed class MainWindowViewModel : ObservableBase, IAsyncDisposable
 
     // ═════════ 页面导航 ═════════
 
-    public string CurrentPage { get; private set; } = "home";
+    public object CurrentPage { get; private set; } = new HomePage();
 
-    public bool HomeVisible => CurrentPage == "home";
+    public bool HomeVisible => CurrentPage is HomePage;
 
-    public bool TunnelsVisible => CurrentPage == "tunnels";
+    public bool TunnelsVisible => CurrentPage is TunnelsPage;
 
-    public bool SettingsVisible => CurrentPage == "settings";
+    public bool SettingsVisible => CurrentPage is SettingsPage;
 
-    public bool LauncherVisible => CurrentPage == "launcher";
+    public bool LauncherVisible => CurrentPage is LauncherPage;
 
-    public IBrush NavHomeBrush => CurrentPage == "home" ? NavActiveBrush : NavMutedBrush;
+    public IBrush NavHomeBrush => CurrentPage is HomePage ? NavActiveBrush : NavMutedBrush;
 
-    public IBrush NavTunnelsBrush => CurrentPage == "tunnels" ? NavActiveBrush : NavMutedBrush;
+    public IBrush NavTunnelsBrush => CurrentPage is TunnelsPage ? NavActiveBrush : NavMutedBrush;
 
-    public IBrush NavSettingsBrush => CurrentPage == "settings" ? NavActiveBrush : NavMutedBrush;
+    public IBrush NavSettingsBrush => CurrentPage is SettingsPage ? NavActiveBrush : NavMutedBrush;
 
-    public IBrush NavLauncherBrush => CurrentPage == "launcher" ? NavActiveBrush : NavMutedBrush;
+    public IBrush NavLauncherBrush => CurrentPage is LauncherPage ? NavActiveBrush : NavMutedBrush;
+
+    public IBrush NavHomeBg => CurrentPage is HomePage ? NavActiveBg : NavIdleBg;
+
+    public IBrush NavTunnelsBg => CurrentPage is TunnelsPage ? NavActiveBg : NavIdleBg;
+
+    public IBrush NavLauncherBg => CurrentPage is LauncherPage ? NavActiveBg : NavIdleBg;
+
+    public IBrush NavSettingsBg => CurrentPage is SettingsPage ? NavActiveBg : NavIdleBg;
+
+    private IBrush NavActiveBg => new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#1F34C759"));
+
+    private IBrush NavIdleBg => Avalonia.Media.Brushes.Transparent;
 
     private IBrush NavActiveBrush => IsDarkTheme ? NavActiveDark : NavActiveLight;
 
@@ -93,24 +106,45 @@ public sealed class MainWindowViewModel : ObservableBase, IAsyncDisposable
 
     public ICommand NavigateLauncherCommand { get; }
 
-    /// <summary>开服页实例列表（示例数据，后续接入 Launcher 服务）</summary>
-    public ObservableCollection<ServerCardViewModel> Servers { get; } = [];
+    /// <summary>开服页实例分组（左栏：组 → 实例，示例数据后续接入 Launcher 服务）</summary>
+    public ObservableCollection<ServerGroupViewModel> ServerGroups { get; } = [];
+
+    private ServerCardViewModel? _selectedServer;
+    public ServerCardViewModel? SelectedServer
+    {
+        get => _selectedServer;
+        set { _selectedServer = value; OnPropertyChanged(); }
+    }
+
+    public RelayCommand SelectServerCommand { get; }
 
     private void SeedSampleServers()
     {
-        Servers.Add(new ServerCardViewModel
+        var mine = new ServerGroupViewModel { Name = "我的服务器" };
+        mine.Items.Add(new ServerCardViewModel
         {
             Name = "lyzp-mc", Template = "Minecraft Paper 1.21", Java = "Java 21",
             Port = ":25565", Stats = "运行 2h31m · ↑1.2MB ↓800KB", IsRunning = true,
         });
-        Servers.Add(new ServerCardViewModel
+        mine.Items.Add(new ServerCardViewModel
         {
             Name = "skyblock", Template = "Minecraft Vanilla 1.21", Java = "Java 21",
             Port = ":25566", IsRunning = false,
         });
+        ServerGroups.Add(mine);
+
+        var archive = new ServerGroupViewModel { Name = "存档服" };
+        archive.Items.Add(new ServerCardViewModel
+        {
+            Name = "survival", Template = "Minecraft Paper 1.20", Java = "Java 17",
+            Port = ":25567", IsRunning = false,
+        });
+        ServerGroups.Add(archive);
+
+        SelectedServer = mine.Items[0];
     }
 
-    private void Navigate(string page)
+    private void Navigate(object page)
     {
         if (CurrentPage == page)
             return;
@@ -123,6 +157,10 @@ public sealed class MainWindowViewModel : ObservableBase, IAsyncDisposable
         OnPropertyChanged(nameof(NavTunnelsBrush));
         OnPropertyChanged(nameof(NavSettingsBrush));
         OnPropertyChanged(nameof(NavLauncherBrush));
+        OnPropertyChanged(nameof(NavHomeBg));
+        OnPropertyChanged(nameof(NavTunnelsBg));
+        OnPropertyChanged(nameof(NavLauncherBg));
+        OnPropertyChanged(nameof(NavSettingsBg));
     }
 
     // ═════════ 明暗主题（明亮 / 黑暗 / 跟随系统，选择持久化到 agent.toml 的 theme 键） ═════════

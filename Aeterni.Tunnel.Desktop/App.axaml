@@ -1,7 +1,12 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="Aeterni.Tunnel.Desktop.App"
+             xmlns:local="using:Aeterni.Tunnel.Desktop"
              RequestedThemeVariant="Dark">
+
+    <Application.DataTemplates>
+        <local:ViewLocator />
+    </Application.DataTemplates>
 
     <Application.Resources>
         <ResourceDictionary>
@@ -287,6 +292,40 @@
         </Style>
         <Style Selector="ComboBoxItem:selected /template/ ContentPresenter">
             <Setter Property="Background" Value="#2E34C759" />
+        </Style>
+
+        <!-- 侧边栏导航项：圆角、hover 微亮、激活背景由 VM 提供 -->
+        <!-- 开服页左栏实例项：圆角、hover 微亮 -->
+        <Style Selector="Button.serverItem">
+            <Setter Property="CornerRadius" Value="7" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Background" Duration="0:0:0.12" />
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button.serverItem:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#1434C759" />
+        </Style>
+
+        <Style Selector="Button.navItem">
+            <Setter Property="Padding" Value="12,9" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Background" Duration="0:0:0.15" />
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button.navItem:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#1434C759" />
+        </Style>
+        <Style Selector="Button.navItem:disabled /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
         </Style>
 
         <Style Selector="Button.primary">
