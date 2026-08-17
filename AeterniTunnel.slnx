@@ -3,4 +3,6 @@
   <Project Path="Aeterni.Tunnel.Desktop/Aeterni.Tunnel.Desktop.csproj" />
   <Project Path="Aeterni.Tunnel.Engine.Tests/Aeterni.Tunnel.Engine.Tests.csproj" Id="8b3d4f2a-1c9e-4d5b-8a77-0f6e2a9c3d21" />
   <Project Path="Aeterni.Tunnel.Web/Aeterni.Tunnel.Web.csproj" Id="d70d7148-2b31-41bf-baaa-c0dce6d50d1b" />
+  <Project Path="Aeterni.Tunnel.Launcher/Aeterni.Tunnel.Launcher.csproj" />
+  <Project Path="Aeterni.Tunnel.Common/Aeterni.Tunnel.Common.csproj" />
 </Solution>
