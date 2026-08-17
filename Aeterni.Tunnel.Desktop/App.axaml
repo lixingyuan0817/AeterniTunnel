@@ -13,6 +13,7 @@
                     <Color x:Key="AccentStrongColor">#16A34A</Color>
                     <Color x:Key="BgColor">#05070F</Color>
                     <Color x:Key="PanelColor">#0DFFFFFF</Color>
+                    <Color x:Key="DropdownBgColor">#F205070F</Color>
                     <Color x:Key="ToastBgColor">#E605070F</Color>
                     <Color x:Key="ToastBorderColor">#40FFFFFF</Color>
                     <Color x:Key="PanelBorderColor">#1FFFFFFF</Color>
@@ -40,6 +41,7 @@
                     <SolidColorBrush x:Key="ScrollThumbHoverBrush" Color="{StaticResource ScrollThumbHoverColor}" />
                     <SolidColorBrush x:Key="ScrollThumbPressedBrush" Color="{StaticResource ScrollThumbPressedColor}" />
                     <SolidColorBrush x:Key="PanelBrush" Color="{StaticResource PanelColor}" />
+                    <SolidColorBrush x:Key="DropdownBgBrush" Color="{StaticResource DropdownBgColor}" />
                     <SolidColorBrush x:Key="ToastBgBrush" Color="{StaticResource ToastBgColor}" />
                     <SolidColorBrush x:Key="ToastBorderBrush" Color="{StaticResource ToastBorderColor}" />
                     <SolidColorBrush x:Key="PanelBorderBrush" Color="{StaticResource PanelBorderColor}" />
@@ -91,6 +93,7 @@
                     <SolidColorBrush x:Key="ScrollThumbHoverBrush" Color="{StaticResource ScrollThumbHoverColor}" />
                     <SolidColorBrush x:Key="ScrollThumbPressedBrush" Color="{StaticResource ScrollThumbPressedColor}" />
                     <SolidColorBrush x:Key="PanelBrush" Color="{StaticResource PanelColor}" />
+                    <SolidColorBrush x:Key="DropdownBgBrush" Color="{StaticResource DropdownBgColor}" />
                     <SolidColorBrush x:Key="ToastBgBrush" Color="{StaticResource ToastBgColor}" />
                     <SolidColorBrush x:Key="ToastBorderBrush" Color="{StaticResource ToastBorderColor}" />
                     <SolidColorBrush x:Key="PanelBorderBrush" Color="{StaticResource PanelBorderColor}" />
@@ -246,7 +249,7 @@
                                PlacementTarget="Background"
                                IsLightDismissEnabled="True">
                             <Border x:Name="PopupBorder"
-                                    Background="{DynamicResource PanelBrush}"
+                                    Background="{DynamicResource DropdownBgBrush}"
                                     BorderBrush="{DynamicResource PanelBorderBrush}"
                                     BorderThickness="1"
                                     CornerRadius="8"
