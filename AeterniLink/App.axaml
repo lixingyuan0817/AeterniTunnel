@@ -44,7 +44,7 @@
                     <SolidColorBrush x:Key="ToastBorderBrush" Color="{StaticResource ToastBorderColor}" />
                     <SolidColorBrush x:Key="PanelBorderBrush" Color="{StaticResource PanelBorderColor}" />
                     <SolidColorBrush x:Key="InputBgBrush" Color="{StaticResource InputBgColor}" />
-                    <SolidColorBrush x:Key="DropdownBgBrush" Color="#99FFFFFF" />
+                    <SolidColorBrush x:Key="DropdownBgBrush" Color="#1E293B" />
                     <SolidColorBrush x:Key="InputBorderBrush" Color="{StaticResource InputBorderColor}" />
                     <SolidColorBrush x:Key="InputBgFocusBrush" Color="{StaticResource InputBgFocusColor}" />
                     <SolidColorBrush x:Key="RowLineBrush" Color="{StaticResource RowLineColor}" />
@@ -95,7 +95,7 @@
                     <SolidColorBrush x:Key="ToastBgBrush" Color="{StaticResource ToastBgColor}" />
                     <SolidColorBrush x:Key="ToastBorderBrush" Color="{StaticResource ToastBorderColor}" />
                     <SolidColorBrush x:Key="PanelBorderBrush" Color="{StaticResource PanelBorderColor}" />
-                    <SolidColorBrush x:Key="DropdownBgBrush" Color="#99FFFFFF" />
+                    <SolidColorBrush x:Key="DropdownBgBrush" Color="#F1F5F9" />
                     <SolidColorBrush x:Key="InputBgBrush" Color="{StaticResource InputBgColor}" />
                     <SolidColorBrush x:Key="InputBorderBrush" Color="{StaticResource InputBorderColor}" />
                     <SolidColorBrush x:Key="InputBgFocusBrush" Color="{StaticResource InputBgFocusColor}" />
@@ -286,6 +286,20 @@
             <Setter Property="Background" Value="#2E34C759" />
         </Style>
 
+        <!-- ═══ Button 全局基础：按下缩放动画（悬浮/按下保持主题色，不落灰） ═══ -->
+        <Style Selector="Button">
+            <Setter Property="RenderTransformOrigin" Value="50%,50%" />
+            <Setter Property="RenderTransform" Value="scale(1)" />
+            <Setter Property="Transitions">
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.1" />
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button:pressed">
+            <Setter Property="RenderTransform" Value="scale(0.96)" />
+        </Style>
+
         <Style Selector="Button.primary">
             <Setter Property="Background" Value="{DynamicResource AccentStrongColor}" />
             <Setter Property="Foreground" Value="White" />
@@ -296,6 +310,9 @@
         </Style>
         <Style Selector="Button.primary:pointerover">
             <Setter Property="Background" Value="{DynamicResource AccentColor}" />
+        </Style>
+        <Style Selector="Button.primary:pressed">
+            <Setter Property="Background" Value="#12853A" />
         </Style>
 
         <Style Selector="Button.ghost">
@@ -308,7 +325,11 @@
             <Setter Property="FontSize" Value="12" />
         </Style>
         <Style Selector="Button.ghost:pointerover">
-            <Setter Property="Background" Value="{DynamicResource InputBgBrush}" />
+            <Setter Property="Background" Value="#1A34C759" />
+        </Style>
+        <Style Selector="Button.ghost:pressed">
+            <Setter Property="Background" Value="#2E34C759" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
         </Style>
 
         <!-- 禁用态：无灰色背景，仅整体淡化（替代 Fluent 默认灰底） -->
@@ -376,6 +397,9 @@
         </Style>
         <Style Selector="Button.danger:pointerover">
             <Setter Property="Background" Value="#22F87171" />
+        </Style>
+        <Style Selector="Button.danger:pressed">
+            <Setter Property="Background" Value="#33F87171" />
         </Style>
 
         <!-- ═══ 窗口标题栏 macOS 红绿灯按钮（三平台统一自绘，配合 SystemDecorations=None） ═══ -->
