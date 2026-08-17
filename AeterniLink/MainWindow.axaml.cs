@@ -16,7 +16,8 @@ public partial class MainWindow : AeterniWindow
     /// <summary>顶栏主题切换：明亮 / 黑暗 / 跟随系统 → RequestedThemeVariant（所有 DynamicResource 即时联动）</summary>
     private void OnThemeChecked(object? sender, RoutedEventArgs e)
     {
-        if (sender is not RadioButton rb || Application.Current is not { } app)
+        // IsCheckedChanged 在取消勾选时也会触发，仅在“被选中”那一刻执行切换
+        if (sender is not RadioButton rb || rb.IsChecked != true || Application.Current is not { } app)
             return;
         app.RequestedThemeVariant = rb.Tag?.ToString() switch
         {

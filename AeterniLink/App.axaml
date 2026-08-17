@@ -326,10 +326,11 @@
             <Setter Property="FontSize" Value="12" />
         </Style>
         <Style Selector="Button.ghost:pointerover">
-            <Setter Property="Background" Value="#1A34C759" />
+            <Setter Property="Background" Value="#2E9E44" />
+            <Setter Property="Foreground" Value="White" />
         </Style>
         <Style Selector="Button.ghost:pressed">
-            <Setter Property="Background" Value="#2E34C759" />
+            <Setter Property="Background" Value="#1B6B2E" />
             <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
         </Style>
 
@@ -397,10 +398,11 @@
             <Setter Property="FontSize" Value="11" />
         </Style>
         <Style Selector="Button.danger:pointerover">
-            <Setter Property="Background" Value="#22F87171" />
+            <Setter Property="Background" Value="#DC2626" />
+            <Setter Property="Foreground" Value="White" />
         </Style>
         <Style Selector="Button.danger:pressed">
-            <Setter Property="Background" Value="#33F87171" />
+            <Setter Property="Background" Value="#B91C1C" />
         </Style>
 
         <!-- ═══ 窗口标题栏 macOS 红绿灯按钮（三平台统一自绘，配合 SystemDecorations=None） ═══ -->
