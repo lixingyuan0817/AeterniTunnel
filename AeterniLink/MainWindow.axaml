@@ -37,19 +37,73 @@
                     </Grid>
                 </Border>
 
-                <!-- ═══ 内容区：首页（空态欢迎页，模块页面后续接入） ═══ -->
-                <Grid Grid.Row="2">
-                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10">
-                        <TextBlock Text="AETERNI LINK" FontSize="30" FontWeight="Bold"
-                                   Foreground="{DynamicResource TextBrush}" HorizontalAlignment="Center" />
-                        <TextBlock Text="内网穿透 · 游戏开服 · 联机房间" FontSize="13"
-                                   Foreground="{DynamicResource MutedBrush}" HorizontalAlignment="Center" />
-                        <Border Classes="badge" HorizontalAlignment="Center" Margin="0,6,0,0">
-                            <TextBlock Classes="badgeText" Text="模块化客户端 · 功能陆续接入"
-                                       Foreground="{DynamicResource AccentBrush}" />
-                        </Border>
+                <!-- ═══ 内容区：组件示例展示 ═══ -->
+                <ScrollViewer Grid.Row="2" Margin="16">
+                    <StackPanel Spacing="12">
+
+                        <controls:AeterniSectionCard Title="统计概览 · AeterniStatCard">
+                            <Grid ColumnDefinitions="*,*,*" ColumnSpacing="12">
+                                <controls:AeterniStatCard Label="隧道总数">
+                                    <TextBlock Text="42" FontSize="28" FontWeight="Bold" Foreground="{DynamicResource TextBrush}" />
+                                </controls:AeterniStatCard>
+                                <controls:AeterniStatCard Label="连接状态">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <Ellipse Width="9" Height="9" Classes.pulse="True"
+                                                 Fill="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
+                                        <TextBlock Text="运行中" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" />
+                                    </StackPanel>
+                                </controls:AeterniStatCard>
+                                <controls:AeterniStatCard Label="实时速率">
+                                    <TextBlock FontSize="18" FontWeight="Bold" Foreground="{DynamicResource TextBrush}">
+                                        <Run Text="1.2" /><Run Text=" MB/s" FontSize="12" Foreground="{DynamicResource MutedBrush}" />
+                                    </TextBlock>
+                                </controls:AeterniStatCard>
+                            </Grid>
+                        </controls:AeterniSectionCard>
+
+                        <controls:AeterniSectionCard Title="表单 · AeterniFormField">
+                            <StackPanel Spacing="12">
+                                <controls:AeterniFormField Label="服务器地址">
+                                    <TextBox PlaceholderText="play.aeterni.dev" />
+                                </controls:AeterniFormField>
+                                <controls:AeterniFormField Label="认证令牌">
+                                    <TextBox PlaceholderText="输入令牌…" />
+                                </controls:AeterniFormField>
+                            </StackPanel>
+                        </controls:AeterniSectionCard>
+
+                        <controls:AeterniSectionCard Title="按钮与控件">
+                            <StackPanel Spacing="14">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Button Classes="primary" Content="主要操作" />
+                                    <Button Classes="ghost" Content="次要操作" />
+                                    <Button Classes="danger" Content="危险操作" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="12">
+                                    <CheckBox Content="自动重连" IsChecked="True" VerticalAlignment="Center" />
+                                    <ComboBox SelectedIndex="0" VerticalAlignment="Center">
+                                        <ComboBoxItem Content="Paper" />
+                                        <ComboBoxItem Content="Vanilla" />
+                                        <ComboBoxItem Content="Forge" />
+                                    </ComboBox>
+                                    <Border Background="{DynamicResource InputBgBrush}" CornerRadius="9" Padding="3" VerticalAlignment="Center">
+                                        <StackPanel Orientation="Horizontal" Spacing="2">
+                                            <RadioButton Classes="seg" Content="☀" ToolTip.Tip="明亮" />
+                                            <RadioButton Classes="seg" Content="🌙" ToolTip.Tip="黑暗" IsChecked="True" />
+                                            <RadioButton Classes="seg" Content="◐" ToolTip.Tip="跟随系统" />
+                                        </StackPanel>
+                                    </Border>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Border Classes="badge"><TextBlock Classes="badgeText" Text="绿色主题" Foreground="{DynamicResource AccentBrush}" /></Border>
+                                    <Border Classes="badge"><TextBlock Classes="badgeText" Text="毛玻璃" /></Border>
+                                    <Border Classes="badge"><TextBlock Classes="badgeText" Text="中等圆角" /></Border>
+                                </StackPanel>
+                            </StackPanel>
+                        </controls:AeterniSectionCard>
+
                     </StackPanel>
-                </Grid>
+                </ScrollViewer>
 
                 <!-- ═══ 状态栏 ═══ -->
                 <Border Grid.Row="3" Background="{DynamicResource PanelBrush}"
