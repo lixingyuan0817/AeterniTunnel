@@ -7,6 +7,7 @@
 | 文档 | 说明 |
 |---|---|
 | [ATS 模式可视化](./ats-modes-visual.html) | ATS 工作模式与流量路径的可视化说明 |
+| [重构计划](./refactor-plan.md) | 服务端 Blazor Server、客户端 Tauri + Blazor WASM、组件库统一和 P2P 扩展路线图 |
 
 ## 维护规则
 
