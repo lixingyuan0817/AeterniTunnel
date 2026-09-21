@@ -268,7 +268,7 @@ EN-040 的依赖刻意不包含性能优化：若接口设计出现后端可行�
 - 验证：首次完整测试为 87/88，通过之外唯一失败是 ControlPlaneTests 注册回执订阅竞态；调整测试时序后，控制面筛选测试 3/3 通过；随后 dotnet test AeterniTunnel.slnx --no-restore 为 88/88 通过，耗时 31 秒。测试在沙箱外运行，因为 MSBuild 命名管道和真实 socket 在沙箱内被拒绝。
 - 剩余：性能基线归 EN-001；认证缺口归 EN-002；资源事务归 EN-021；慢消费者隔离归 EN-030。
 - 下一动作：EN-002 增加原始协议负面测试，确保未登录消息不分配端口，错误/重复 Hello 关闭会话。
-- 提交：未提交。
+- 提交：81a4655（refactor(engine): establish authenticated session baseline）。
 
 ### 2026-09-21 / Asia/Shanghai — EN-002 / Codex
 
@@ -279,7 +279,7 @@ EN-040 的依赖刻意不包含性能优化：若接口设计出现后端可行�
 - 兼容影响：合法客户端协议不变；任何在 Hello 成功前发送其他控制消息、发送错误/空身份 Hello 或在同一连接重复 Hello 的客户端现在会被明确拒绝并断开。
 - 剩余：稳定设备身份及授权提供者归 EN-012；TLS、凭证和安全迁移归 EN-003；未开始性能测量。
 - 下一动作：领取 EN-001，建立可复现的 FrameCodec/ChannelMultiplexer/TCP-TLS 基线和冻结门槛。
-- 提交：未提交。
+- 提交：81a4655（refactor(engine): establish authenticated session baseline）。
 
 ### 2026-09-21 / Asia/Shanghai — DOC-001 / Codex
 
@@ -289,7 +289,7 @@ EN-040 的依赖刻意不包含性能优化：若接口设计出现后端可行�
 - 未执行：.NET 测试、性能基准、跨网络验证和 CSS 构建；本轮仅文档，未改变运行代码。
 - 剩余：DOC-001 无剩余；实现、数值门槛与 P2P 选型均留待对应任务，不能据此标记代码完成。
 - 下一动作：收到实现任务后，先核对 git status --short 和本台账，再将 EN-000 标为 DOING，运行 dotnet test AeterniTunnel.slnx，并记录环境与结果；阅读 ServerSession 和相关认证/控制面测试确定负面测试入口。
-- 提交：未提交。
+- 提交：81a4655（refactor(engine): establish authenticated session baseline）。
 
 ### 2026-09-21 / Asia/Shanghai — DOC-002 / Codex
 
@@ -300,7 +300,7 @@ EN-040 的依赖刻意不包含性能优化：若接口设计出现后端可行�
 - 未执行：.NET/CSS 构建及运行测试；本轮只添加源码导航，未修改代码。
 - 剩余：DOC-002 无剩余。
 - 下一动作：后续实现从 EN-000 开始，按项目索引定位源码与测试，并在任务开始时同步台账。
-- 提交：未提交。
+- 提交：81a4655（refactor(engine): establish authenticated session baseline）。
 
 ### 2026-09-21 / Asia/Shanghai — DOC-003 / Codex
 
@@ -310,4 +310,4 @@ EN-040 的依赖刻意不包含性能优化：若接口设计出现后端可行�
 - 未执行：.NET/CSS 构建、UI/Engine 实现；现有 Avalonia 项目与发布入口未变更。
 - 剩余：DOC-003 无剩余；客户端迁移与 Avalonia 退役待 Engine 完成后执行。
 - 下一动作：后续实现主线从 EN-000 开始，领取任务后同步台账并建立回归基线。
-- 提交：未提交。
+- 提交：81a4655（refactor(engine): establish authenticated session baseline）。
