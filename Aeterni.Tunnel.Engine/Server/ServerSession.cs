@@ -31,6 +31,7 @@ public sealed class ServerSession : IAsyncDisposable
     private readonly Dictionary<string, Traffic.TrafficCounter> _traffic = new();
     private readonly CancellationTokenSource _cts = new();
     private long _lastHeartbeat;
+    private int _authenticated;
     private int _disposed;
 
     /// <summary>已登录的 Agent 标识</summary>
@@ -70,12 +71,25 @@ public sealed class ServerSession : IAsyncDisposable
     private async ValueTask HandleControlAsync(ushort channelId, byte[] payload)
     {
         var msg = MessageCodec.Deserialize(payload);
+
+        // Hello 是认证前唯一允许的控制消息。拒绝后关闭连接，避免未认证连接
+        // 继续占用会话、心跳或隧道资源。
+        if (msg is HelloMessage hello)
+        {
+            await HandleHelloAsync(hello);
+            return;
+        }
+
+        if (Volatile.Read(ref _authenticated) == 0)
+        {
+            LogLine?.Invoke("server", $"认证前控制消息被拒：{msg?.GetType().Name ?? "null"}");
+            await SendAsync(new ErrorMessage(401, "需要先完成 Hello 登录"));
+            await DisposeAsync();
+            return;
+        }
+
         switch (msg)
         {
-            case HelloMessage hello:
-                await HandleHelloAsync(hello);
-                break;
-
             case RegisterProxyMessage reg:
                 await HandleRegisterAsync(reg);
                 break;
@@ -97,15 +111,33 @@ public sealed class ServerSession : IAsyncDisposable
 
     private async Task HandleHelloAsync(HelloMessage hello)
     {
+        if (Volatile.Read(ref _authenticated) != 0)
+        {
+            LogLine?.Invoke("server", $"重复登录被拒：{hello.ClientId}");
+            await SendAsync(new HelloAckMessage(false, "会话已完成登录", ServerVersion));
+            await DisposeAsync();
+            return;
+        }
+
         if (hello.Token != _serverToken)
         {
             LogLine?.Invoke("server", $"登录被拒：token 不匹配 ({hello.ClientId})");
             await SendAsync(new HelloAckMessage(false, "token 不匹配", ServerVersion));
+            await DisposeAsync();
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(hello.ClientId))
+        {
+            LogLine?.Invoke("server", "登录被拒：clientId 为空");
+            await SendAsync(new HelloAckMessage(false, "clientId 不能为空", ServerVersion));
+            await DisposeAsync();
             return;
         }
 
         ClientId = hello.ClientId;
         Hostname = hello.Hostname;
+        Volatile.Write(ref _authenticated, 1);
         LoggedIn?.Invoke(this);
         LogLine?.Invoke("server", $"Agent 登录成功：{hello.ClientId} ({hello.Hostname})");
         await SendAsync(new HelloAckMessage(true, null, ServerVersion));
