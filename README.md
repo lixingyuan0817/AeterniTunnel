@@ -2,6 +2,10 @@
 
 轻量级内网穿透工具：把内网服务通过一台公网服务器暴露给外部访问。包含服务端（**ATS**）、客户端（**ATC**）和 Web 管理台，开箱即用。
 
+开发接手请先阅读 [AGENTS.md](./AGENTS.md) 和 [文档索引](./docs/README.md)，通过 [项目索引](./docs/project-index.md) 定位源码、项目依赖与测试入口。当前规划优先重构 Engine 通信层，范围与单一客户端接入端口约束见 [重构方案](./docs/refactor-plan.md)，执行进度与交接见 [todolist](./docs/todolist.md)。这些是开发计划，P2P、安全默认值和新协议能力以实际实现及任务验收为准；下文仍描述现有使用方式。
+
+目标架构已确定：服务端继续使用 **Blazor Interactive Server**，客户端在 Engine 重构完成后迁移为 **Tauri + Blazor WebAssembly**，通过原生 .NET 宿主使用 Engine，最终替换 Avalonia。当前客户端代码仍为 Avalonia，迁移与退役任务已列入 todolist，尚未实施。
+
 ```
 外网用户 ──▶ ATS（公网服务器） ──加密通道──▶ ATC（内网机器） ──▶ 内网服务
                     ↕
@@ -78,7 +82,7 @@ localPort = 5000
 remotePort = 17062
 ```
 
-启动 ATC：桌面客户端 `Aeterni.Tunnel.Desktop`（Avalonia）——界面管理隧道；引擎层 `AgentHost`（`Engine/Hosting`）也可被任何宿主直接嵌入，读取上述 `agent.toml` 建立隧道。
+当前启动 ATC：桌面客户端 `Aeterni.Tunnel.Desktop`（待迁移的 Avalonia 实现）——界面管理隧道；引擎层 `AgentHost`（`Engine/Hosting`）也可被任何宿主直接嵌入，读取上述 `agent.toml` 建立隧道。后续客户端目标为 Tauri + Blazor WebAssembly，当前尚无对应启动入口。
 
 之后在管理台即可看到该客户端及其隧道；`remotePort` 即对外访问端口。
 

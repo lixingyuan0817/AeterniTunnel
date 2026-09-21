@@ -1,395 +1,238 @@
-# Aeterni Tunnel 重构计划
-
-## 1. 目标
-
-在保持已有 ATS/ATC/Engine 架构稳定的前提下，将项目拆分为更清晰的职责边界：
-
-- 服务端继续保留为 Blazor Server 管理台，作为集中控制面和运维入口。
-- 客户端切换为 Tauri + Blazor WebAssembly 模式，负责本地托管、健康检查、隧道状态展示和用户交互。
-- 引擎层保持稳定，作为跨平台核心能力的唯一真实实现，不做大规模重写。
-- 组件库项目负责统一 UI 设计系统，服务端和客户端共用同一套组件、样式和交互规范。
-- 在不破坏现有协议与部署方式的前提下，预留 P2P、设备直连和更低延迟链路的扩展空间。
-
-## 2. 设计原则
-
-1. Engine 维持“核心与协议”不可随意替换。
-2. UI 层与业务层解耦，避免 Web、Desktop、Tauri 互相耦合。
-3. 共享协议、配置模型和 DTO 明确落到公共项目中。
-4. 渐进式切换：先抽离共享层，再迁移客户端，再统一组件库。
-5. 保持跨平台兼容，避免依赖特定 OS 或浏览器能力。
-6. P2P 能力作为增强能力实现，不打破现有 ATS/ATC 模式。
-
-## 3. 目标架构
-
-```mermaid
-flowchart LR
-    subgraph Server[ATS / Blazor Server]
-        Web[Aeterni.Tunnel.Web]
-        Host[ServerHost]
-        Engine[Aeterni.Tunnel.Engine]
-    end
-
-    subgraph Shared[Shared Contracts]
-        Comps[Component Library]
-        Common[Aeterni.Tunnel.Common]
-        DTO[Protocol / DTO / Config Models]
-    end
-
-    subgraph Client[ATC / Tauri + Blazor WASM]
-        Tauri[Tauri Shell]
-        WASM[Blazor WebAssembly UI]
-        ClientHost[ClientHost]
-    end
-
-    Web --> Host
-    Host --> Engine
-    WASM --> ClientHost
-    ClientHost --> Engine
-    Web -.shared components.-> Comps
-    WASM -.shared components.-> Comps
-    Common --> DTO
-    Engine --> DTO
-```
-
-### 3.1 服务端：Blazor Server 保持不变
-
-- 继续承载管理台、登录、配置、日志和隧道状态展示。
-- 继续使用 `Aeterni.Tunnel.Web` 作为 UI 与 ATS 的宿主入口。
-- 仅对边界进行整理：
-  - 将 UI 逻辑与后台服务逻辑分离。
-  - 将可复用的 DTO、配置项、协议模型抽离到共享层。
-  - 将大量页面状态与交互逻辑提炼成 ViewModel / Service 层。
-
-### 3.2 客户端：Tauri + Blazor WASM
-
-- 新增 Tauri Shell 作为原生桌面进程入口。
-- Blazor WASM 负责页面渲染、表单、列表、状态视图和用户交互。
-- Tauri 主要负责：
-  - 本地设备能力调用
-  - 文件读写与配置目录
-  - 系统托盘、窗口管理、日志输出
-  - 进程与桥接通信
-- `Aeterni.Tunnel.Engine` 仍然作为底层能力层，不由 WASM 直接运行复杂系统服务；必要时通过 Tauri bridge 或本地 host 调度。
-
-### 3.3 组件库：统一 UI 设计系统
-
-- 组件库项目统一定义视觉规范、基础组件和交互模式。
-- 所有项目按统一规则实现：
-  - 颜色、间距、圆角、深浅主题
-  - 表单、按钮、对话框、表格、状态卡片
-  - 统一错误/成功/警告状态样式
-- Server 与 Tauri Client 共用组件库，以保证一致性。
+# Engine 通信层重构方案
 
-## 4. 重构分阶段
+更新日期：2026-09-21。状态：架构与实施计划，尚未实现。
 
-### Phase 0：基线与隔离
+本文取代此前以 Tauri/WASM、组件库迁移为先的执行顺序。目标技术栈已确定：服务端采用 Blazor Interactive Server，客户端采用 Tauri + Blazor WebAssembly，后续替换 Avalonia；先完成 Engine 通信层重构，再迁移客户端。Engine 只提供安全、高效的通信能力；房间、聊天、语音等由上层业务组合。唯一进度台账为 [todolist](./todolist.md)，协作规则见 [AGENTS.md](../AGENTS.md)。本文不记录完成百分比，不代表下列接口或配置已存在。
 
-- 识别当前 `Aeterni.Tunnel.Web`、`Aeterni.Tunnel.Desktop`、`Aeterni.Tunnel.Engine` 的职责边界。
-- 形成“共享层 / 业务层 / UI 层”清单。
-- 明确哪些代码可以保留，哪些代码应搬迁到公共项目。
-- 目标：确保当前功能在改造前可回归测试。
+## 1. 范围与约束
 
-### Phase 1：抽离共享契约
+### 1.1 Engine 负责什么
 
-- 建立共享库（例如 `Aeterni.Tunnel.Common`、`Aeterni.Tunnel.Contracts` 或设计系统基础项目）。
-- 抽离：
-  - `Protocol` 相关 DTO
-  - `Config` 模型
-  - `Tunnel` / `Client` / `Host` 公共视图模型
-  - 日志、状态枚举和事件定义
-- 作用：减少服务端和客户端重复定义、降低 UI 与 Engine 的耦合。
+- 客户端/服务端连接、连接身份认证、会话生命周期、心跳、重连。
+- 协议封装、版本与能力协商、可靠流、可靠消息、实时数据报。
+- 加密传输、对端身份绑定、通信授权执行、重放防护、资源配额。
+- TCP/UDP/HTTP/HTTPS 隧道通信、端口资源和转发管理。
+- Peer 发现所需的受控查询、信令转发、候选地址交换、连通性检查、直连与中继策略。
+- 通信质量、流量、失败原因、状态事件及可嵌入的宿主 API。
 
-### Phase 2：服务端整理
+### 1.2 Engine 不负责什么
 
-- 保持 Blazor Server 不变，重点进行内部整理：
-  - 抽离页面服务层（PageService / HubService / ConfigService）
-  - 抽离状态管理与配置更新逻辑
-  - 对管理端与 Engine 的适配层收敛到单一入口
-- 目标：减少 UI 和宿主 API 混杂。
+- 账号注册、好友、房间、频道成员、房主、禁言、邀请等业务模型。
+- 聊天历史、离线投递、业务消息排序、持久化和跨设备同步。
+- 音频采集/播放、编解码、回声消除、降噪、混音和媒体播放缓冲。
+- 游戏规则、状态同步算法、匹配、UI 或客户端框架迁移。
 
-### Phase 3：客户端 Tauri 化
+上层通过授权提供者把业务权限映射为“哪个已认证 Peer 可以访问哪个通信服务”；Engine 默认拒绝未授权访问，不读取房间数据库。业务负载保持不透明。编码后的音频可使用数据报能力，但获得完整语音体验仍需上层媒体栈。现有隧道健康检查属于通信服务可用性检测，可以保留。
 
-- 新增 Tauri 应用工程，保留 Blazor WASM 前端。
-- 定义：
-  - Tauri shell
-  - Tauri 命令桥接层
-  - 进程生命周期管理
-  - 本地配置文件与日志目录
-- 客户端 UI 通过 WASM 渲染，后台能力通过桥接调用本地宿主服务。
+### 1.3 固定约束
 
-### Phase 4：组件库统一
+1. 先完成 Engine；Web/桌面仅在宿主兼容和配置接入确有需要时适配。
+2. 保留 .NET 10、跨平台和现有 ATS/ATC 部署模型。
+3. 服务端只提供一个客户端接入端口；隧道和 P2P 数据通信允许其他端口，具体见第 2 节。
+4. 不自创密码算法或加密握手；安全与正确性优先于微基准吞吐量。
+5. 性能结论必须有可复现测量；不承诺未测量的延迟、吞吐或 P2P 成功率。
+6. 渐进式替换，先建立行为基线；每步有回归检查、兼容边界和回滚办法。
 
-- 引入组件库项目。
-- 将 Web 管理台和 Tauri 前端统一切换到同一套组件定义。
-- 统一统一主题、组件 API 和交互行为。
-- 逐步将旧页面组件迁移到设计系统目录。
+## 2. 单一客户端接入端口
 
-### Phase 5：P2P 能力扩展
+### 2.1 含义
 
-- 保持现有 ATS/ATC 中继链路兼容，增加可选的 P2P 扩展层。
-- P2P 采用“直连优先、ATS 中继回退”策略，不将直连成功作为运行前提。
-- 第一阶段优先支持 UDP hole punching；TCP/HTTP 等可靠流量在后续基于可靠 UDP 或 QUIC 扩展。
-- 详细实施计划见下方“P2P 分阶段实施计划（P1-P6）”。
+客户端只需配置一个 ATS 地址和一个接入端口。登录、认证、心跳、版本协商、服务注册、Peer 查询、信令和控制扩展全部经过该入口，不新增独立的登录、信令或客户端 RPC 端口。
 
-### Phase 6：验证与回归
+第一阶段以现有 TCP 监听为基础，升级安全默认值至 TLS。单端口不等于单条 TCP 连接：协商成功后，可以向同一端口建立受配额限制的数据连接，隔离大流量与控制消息。新连接必须在加密通道内以短期、一次性凭证绑定到既有认证会话；不能仅凭 SessionId 或来源 IP 绑定。
 
-- 补充单元测试和端到端测试：
-  - Engine 协议兼容
-  - server config updates
-  - tunneling reconnect behavior
-  - Tauri bridge commands
-  - UI component snapshots / interaction checks
-- 执行 `dotnet test AeterniTunnel.slnx`
-- 若改动 Web CSS/前端样式，执行 `npm run css:build`
+| 用途 | 端口规则 | 生命周期与授权 |
+|---|---|---|
+| ATC 接入 ATS | 唯一配置的接入端口，初期 TCP/TLS | 认证、控制与信令；附加数据连接也连接此端口 |
+| 公网 TCP/UDP 隧道、HTTP/HTTPS vhost | 允许独立业务端口 | 沿用端口允许列表、资源配额及注册/注销机制 |
+| Peer 直连 | 允许客户端本地及 NAT 映射端口 | 认证后交换候选，授权通过后检查和建连 |
+| STUN/TURN 或其他 P2P 数据中继 | 允许独立辅助/数据端口及必要端口范围 | 经统一入口下发地址与短期凭证；关闭 P2P 时不是基础接入依赖 |
+| Web 管理台 | 保持现有管理入口 | 属于管理员访问，不作为客户端接入或信令入口 |
 
-### P2P 分阶段实施计划（P1-P6）
+客户端最小配置仍只有 ATS 接入地址/端口；部署方需要按启用的业务明确开放数据端口，不能用“自动协商”掩盖防火墙要求。TCP 与 UDP 即使使用相同数字也是两个监听/防火墙规则，不能把增加 UDP 接入解释成没有增加入口。
 
-以下六个阶段是 Phase 5 的具体落地计划。每个阶段都应保持现有 ATS/ATC 中继功能可用，并以可独立验证、可回滚为交付边界。
+### 2.2 验收
 
-#### P1：协议与数据模型
+- 关闭隧道/P2P、独立管理监听时，Engine 只有一个客户端接入监听端口。
+- 无额外信令/认证端口时，两个客户端仍能登录、协商、注册服务并交换 Peer 信令。
+- 附加连接只到原接入端口；未绑定、伪造、跨会话和重放绑定均被拒绝。
+- 禁止额外业务数据端口时，基础控制与已有可用路径继续工作；P2P 按策略回退或明确失败。
+- 启用辅助服务后，部署文档逐项列出协议、端口/范围、用途及关闭影响。
 
-**目标**
+## 3. 已核对的代码基线
 
-- 在不破坏现有控制消息和数据帧的前提下，定义 P2P 会话、能力协商和链路状态模型。
-- 明确客户端身份、会话绑定、候选地址和短期授权凭证的生命周期。
+以下为源码检查结果，尚未执行本轮测试或性能测量。
 
-**主要工作**
+| 位置 | 现状 | 重构依据 |
+|---|---|---|
+| [AgentSession](../Aeterni.Tunnel.Engine/Client/AgentSession.cs) | 直接创建 TcpTlsTransport，并处理登录、重连及本地转发 | 通过工厂注入传输，拆分控制会话与隧道职责 |
+| [ServerListener](../Aeterni.Tunnel.Engine/Server/ServerListener.cs) | 已有按 ClientId 查询的在线会话索引 | 复用并加强认证绑定，不重复建设一套无关联注册表 |
+| [ServerSession](../Aeterni.Tunnel.Engine/Server/ServerSession.cs) | 已要求首条受理消息为 Hello；认证前其他控制消息、错误/空身份和重复 Hello 会被拒绝并关闭 | 后续在 EN-012 将共享 token 身份升级为稳定 Peer 身份与授权边界 |
+| [AgentOptions](../Aeterni.Tunnel.Engine/Client/AgentOptions.cs) | UseTls 默认为 false | 安全默认值迁移必须覆盖宿主与配置，不能只改一个默认参数 |
+| [ITunnelConnection](../Aeterni.Tunnel.Engine/Transport/ITunnelConnection.cs) | 只暴露 Stream | 可靠流与数据报需要不同契约 |
+| [ChannelMultiplexer](../Aeterni.Tunnel.Engine/Channels/ChannelMultiplexer.cs)、[Channel](../Aeterni.Tunnel.Engine/Channels/Channel.cs) | 单连接读循环等待各通道入队；队列按 64 个包限制 | 慢消费者会阻塞分发；还需要字节预算、公平性和取消语义 |
+| [FrameCodec](../Aeterni.Tunnel.Engine/Wire/FrameCodec.cs) | 固定 v1 帧头、4 MiB 负载上限，读写分配并复制数组 | 先测量，再改内存所有权、批量写与帧预算 |
+| [UdpProxyListener](../Aeterni.Tunnel.Engine/Server/UdpProxyListener.cs) | 固定通道、只保存最近来源地址；经 TCP 连接转发 | 补齐多来源关联，不能直接视作实时 UDP 数据面 |
+| [MessageCodecTests](../Aeterni.Tunnel.Engine.Tests/MessageCodecTests.cs) | 未知 JSON 消息类型抛异常 | 不向旧端发送未经协商的新消息 |
 
-- 新增可选 P2P 能力协商，例如 `PeerCapabilities`、`PeerTransport`、`PeerMode`。
-- 新增协议消息：Peer 请求、Peer 接受/拒绝、候选地址交换、探测结果、链路切换和会话关闭。
-- 为每次 P2P 会话生成唯一 `SessionId`、短期 `SessionToken` 和双方绑定信息。
-- 设计协议版本与未知消息兼容规则；不支持 P2P 的旧客户端继续使用原有中继模式。
-- 定义 `Direct`、`Relay`、`Hybrid` 三种策略，以及 `Pending`、`Probing`、`Direct`、`Relayed`、`Failed` 等状态。
+枚举中存在某个 LinkType 不代表已经提供对应传输。接口注释声称已加密，也不等于所有实际连接都启用了加密。
 
-**涉及模块**
+## 4. 目标模块与依赖
 
-- `Aeterni.Tunnel.Engine/Protocol`
-- `Aeterni.Tunnel.Common` 或后续 `Aeterni.Tunnel.Contracts`
-- `Aeterni.Tunnel.Engine.Tests` 的消息编解码与兼容性测试
+先通过 Engine 内目录和内部接口拆分，实际修改时沿用现有命名风格；无需先批量搬文件或新建大量项目。
 
-**验收标准**
+| 模块 | 职责 |
+|---|---|
+| Hosting | 组合模块，维持 AgentHost / ServerHost 兼容入口 |
+| Control | 认证会话、心跳、信令、命令分发、请求关联 |
+| Security | 身份校验、授权接口、会话凭证及安全策略 |
+| Protocol / Wire | 版本化契约、帧编解码、边界验证 |
+| Transport | 可靠流 / 消息 / 数据报传输适配 |
+| Channels | 通道复用、背压、调度、内存所有权 |
+| Peers | 候选检查、PeerSession、路径策略与恢复 |
+| Relay | 授权中继会话与资源限制 |
+| Tunneling | 现有 TCP/UDP/vhost 转发适配 |
+| Diagnostics | 流量、质量、状态及错误原因 |
 
-- 新旧客户端可以完成正常 Hello、隧道注册和 ATS 中继。
-- 新消息可被旧客户端安全忽略或收到明确的“不支持”结果。
-- Session Token 不能跨会话、跨 Peer 或重复使用。
+依赖方向：宿主组合服务；隧道与上层业务使用通信契约；通信契约不依赖 UI、房间、音频或存储。协议 DTO 不自动等于公共业务 DTO。只有出现实际跨项目复用需求时才抽 Contracts 项目，不向 Common 堆入所有模型。
 
-#### P2：ATS 信令与 Peer 授权
+建议能力契约（名称待 EN-010 冻结，尚未实现）：
 
-**目标**
+| 契约 | 语义 |
+|---|---|
+| 可靠字节流 | 有序读写、背压、取消、半关闭和明确的中断错误 |
+| 可靠消息 | 保留消息边界、最大长度、可协商顺序；不承诺跨重连 exactly-once |
+| 实时数据报 | 保留包边界；允许丢失/乱序；有大小、队列和有效期限制 |
+| PeerSession | 对端身份、能力、路径状态、授权租约、关闭和质量事件 |
+| 授权提供者 | 认证主体 + 对端 + 服务标识 → 允许/拒绝及范围；默认拒绝 |
 
-- 让 ATS 成为 Peer 发现、鉴权和候选地址交换中心，但不预先承担直连成功后的数据转发。
+控制扩展处理器必须受命名空间、负载大小、速率和执行超时限制；业务处理不能阻塞 socket 读循环。通信连接状态、对端可达状态和上层业务在线状态分别表示。
 
-**主要工作**
+## 5. 安全与协议兼容
 
-- 增加在线 Agent/Peer 注册表，以及按 `ClientId` 查询在线会话的能力。
-- 实现 Peer 连接请求、目标端同意/拒绝、候选地址转发和会话超时清理。
-- 增加最小权限授权：请求方、目标方、隧道/服务标识和 Session Token 必须绑定。
-- 为信令流程增加超时、取消、重复请求和客户端断线处理。
-- 对不具备 P2P 能力或未同意 P2P 的任一端自动选择 ATS 中继。
+### 5.1 安全边界
 
-**涉及模块**
+- 先认证后服务注册、Peer 查询、资源分配和中继；认证失败关闭会话并回收资源。
+- 新安全模式强制 TLS 与服务端身份验证；客户端凭证绑定到稳定设备/Peer 身份，不能信任自报 ClientId。
+- 旧共享 token 仅作为迁移接入方式；新 Peer 权限由认证后的主体和服务授权决定。
+- 数据连接绑定凭证、Peer 授权和中继凭证区分用途，绑定双方身份、会话、服务、有效期；支持撤销、重放检测与轮换。
+- 直连与中继的 Peer 数据都要求端到端加密，密钥由经认证的标准握手建立，不把登录 token 当数据加密密钥。中继只转发密文。
+- ATS 是可信认证/信令协调方；如未来要求抵抗恶意 ATS，需额外的带外身份校验方案，不在当前安全保证中。
+- 现有公网端口转发的安全边界仍是 ATC—ATS；ATS 及本地/公网服务端点可能接触明文，不能与 Peer 端到端安全混为一谈。
+- 对未认证连接、握手时长、候选数量、探测频率、最大帧、每会话字节预算及中继带宽设限；限制候选探测滥用与 UDP 放大风险。
+- 日志不记录凭证、密钥、完整敏感业务负载；诊断信息避免泄漏不必要的候选地址。
 
-- `Server/ServerListener.cs`
-- `Server/ServerSession.cs`
-- `Protocol/Messages`
-- Web/管理端的 Peer 授权与状态展示适配层
+### 5.2 新旧协议
 
-**验收标准**
+先保留现有 v1 帧边界与源生成 JSON 控制消息；通过经测试可兼容的 Hello/HelloAck 可选字段协商协议范围和能力。未得到明确能力确认时不发新消息。线协议版本、能力版本与产品版本分别定义。
 
-- 两个在线 Agent 可以通过 ATS 完成一次完整的请求、授权和候选地址交换。
-- 未授权 Peer、过期 Token、目标离线和重复会话均被拒绝并记录原因。
-- 信令失败不会影响既有隧道和重连流程。
+如确需 v2 帧，先协商再切换并定义失败行为，或明确版本不兼容；禁止直接改常量后称为向后兼容。新端之间定义未知可选扩展和必需扩展的处理，不能指望旧二进制安全忽略未知 type。
 
-#### P3：UDP hole punching 与直连建立
+安全迁移要明确区分“旧协议”与“旧明文配置”：安全模式可兼容经过 TLS 的旧隧道协议；旧明文部署需要显式迁移或隔离的兼容部署。默认禁止自动降级、关闭证书校验或明文重试。不要为了双协议共存另开强制客户端接入端口；同一入口的迁移方式在 EN-003 中冻结并测试。
 
-**目标**
+## 6. 性能与实时通信
 
-- 在 Agent 之间建立经认证的 UDP 直连，优先承载 P2P UDP 隧道。
+- 先建立基准：帧编解码、分配字节、吞吐、并发连接、混合负载下控制消息 p50/p95/p99 延迟。
+- 通道与会话同时限制排队字节数和消息数；实时数据报过期可丢弃，可靠流满队列需背压或明确关闭，不能静默丢数据。
+- 处理慢消费者不能无限阻塞全局读循环；调度要防止数据饿死控制和控制无限挤占数据。
+- 控制与大流量使用同一接入端口上的独立认证连接或真正独立的传输流。应用层优先级无法消除同一 TCP 流的网络队头阻塞。
+- 优化 Memory/Span、缓冲池或 Pipelines 前定义所有权、异步生命周期、归还时机；避免 use-after-return 和敏感缓冲复用泄漏。
+- 数据报定义 MTU/最大负载、拥塞与速率控制；不把 4 MiB 流帧直接当 UDP 包。不默认开启无限分片和重组。
+- 保留二进制数据帧；控制 JSON 是否替换由测量决定，不同时重写编码、传输和业务适配。
 
-**主要工作**
+EN-001 必须记录硬件、OS、SDK、构建模式、负载、预热、重复次数和基线结果，并冻结后续数值门槛。EN-031 按同环境比较，不得在看到回归后随意放宽标准；权衡须记录理由和证据。
 
-- 为 Agent 增加长期复用的 UDP socket 和 Peer 数据报收发器。
-- 通过 ATS 观测客户端对外映射端点；必要时支持本地候选地址和多个候选端点。
-- 实现双方同步探测、nonce 校验、Session Token 校验、重放保护和握手超时。
-- 增加 NAT 类型/探测结果记录；探测失败时明确转换到 Relay 状态。
-- 将 Peer 数据报与现有 ATS Channel 数据面隔离，避免破坏当前帧协议。
-- 第一阶段仅将 `LinkType.Udp` 纳入 P2P 直连范围；TCP/HTTP 不在本阶段强行复用 UDP。
+## 7. P2P 与中继
 
-**涉及模块**
+### 7.1 建连及状态
 
-- `Client`
-- 新增 `Peer` 或 `P2P` 目录
-- `Transport`
-- `Protocol`
-- `Aeterni.Tunnel.Engine.Tests`
+流程：单端口认证 → 服务授权 → Peer 信令 → 候选交换/检查 → 加密对端认证 → 选择路径 → 质量监测与恢复。复用现有在线索引并绑定认证主体。ATS 控制连接观测到的 TCP 地址不能当作 UDP NAT 映射。
 
-**验收标准**
+每对 Peer 独立维护状态，建议区分 Negotiating、Checking、Direct、Relayed、Reconnecting、Closed、Failed；策略与状态分离：
 
-- 在可打洞的 NAT/网络环境下，双方能够建立双向认证的 UDP 直连。
-- 未通过认证的探测包不进入业务数据面。
-- 直连建立后，ATS 不再转发该会话的业务数据。
-- 本地网络不支持打洞时，能在规定超时内返回失败原因并进入 P4。
+| 策略 | 结果 |
+|---|---|
+| PreferDirect | 默认优先直连，失败后仅在授权允许时中继 |
+| DirectOnly | 禁止中继，直连失败给出明确原因 |
+| RelayOnly | 仅用授权中继 |
 
-#### P4：ATS 中继回退与链路策略
+不得因“不支持 P2P”“拒绝授权”而自动扩大成允许中继。中继是路径变化，不是权限绕过。
 
-**目标**
+采用 ICE/STUN/TURN 等成熟机制评估候选，NAT 标签只作为诊断信息，不承诺全部环境直连。ICE 使用 STUN 与 TURN 完成候选收集和检查：[RFC 8445](https://www.rfc-editor.org/rfc/rfc8445)。TURN 分配与中继有自己的数据端点及生命周期：[RFC 8656](https://www.rfc-editor.org/rfc/rfc8656)。
 
-- 确保 P2P 不可用时业务仍然可靠运行，并允许运行时在直连与中继之间切换。
+### 7.2 实现选型门槛
 
-**主要工作**
+EN-040 只做有界通信原型，对 ICE + WebRTC 数据通道、ICE + 安全数据报/可靠传输等候选验证：跨平台交付、标准加密、数据报语义、可靠消息、取消释放、套接字所有权、NAT 重绑定、辅助端口和原生依赖。原型交换合成负载，不实现语音房间。选定一条主路线后再进入产品实现，不同时维护多个未经验证的数据面。
 
-- 复用现有 `ChannelMultiplexer` 和 ATS 会话实现 Peer Relay。
-- 实现 `Direct -> Relay` 的自动回退，以及必要的 `Relay -> Direct` 重试策略。
-- 抽象统一的 Peer 数据通道接口，使业务隧道不感知底层链路。
-- 对回退设置明确的超时、重试次数、最大会话时长和取消语义。
-- 保持原有单 Agent 隧道完全不经过 P2P 逻辑，降低回归风险。
+QUIC 是候选传输，不能替代发现、授权及 NAT 检查；也不能从 QUIC 标准能力推断 .NET API 已支持需要的数据报、套接字复用和全部平台。核对标准和实际运行时：[RFC 9000](https://www.rfc-editor.org/rfc/rfc9000)、[.NET QUIC 支持](https://learn.microsoft.com/en-us/dotnet/fundamentals/networking/quic/quic-overview)。完整媒体栈保持 Engine 外置。
 
-**涉及模块**
+实时数据报回退必须保持所声明的实时语义；TCP 中继可提供显式标记的退化模式，不能声称与 UDP 等价。TURN 本身不替代端到端数据加密。只有旧隧道协议的客户端继续使用原有隧道，不自动具备 Peer Relay 能力。
 
-- `Channels`
-- `Transport`
-- `Server`
-- `Client`
-- P2P 策略/适配层
+### 7.3 故障和迁移
 
-**验收标准**
+- ATS 短暂断开时，既有 Peer 数据连接可在授权租约内继续；不接受新授权，租约到期关闭，记录撤销生效上界。
+- 网络变化触发重新检查/协商；重连次数、并发探测、退避和抖动均有上限。
+- 实时数据报允许短暂丢失；可靠通道若不能保持顺序和完整性则明确中断，由上层恢复。
+- 首版不承诺 TCP 透明无损切换；如未来需要，另立有界缓存、序号、确认、去重和恢复窗口方案。
+- Peer 公网地址会暴露给获准直连的对端；敏感场景可选择 RelayOnly，不把 P2P 描述为地址匿名化。
 
-- 直连失败后，业务在配置的超时时间内自动切换到 ATS 中继。
-- 中继链路仍支持当前 TCP/UDP/HTTP/HTTPS 隧道能力。
-- 链路切换不会泄露明文、重复投递数据或导致会话无限重试。
-- Dashboard/TUI 能区分 `Direct`、`Relay`、`Probing` 和 `Offline`。
+## 8. 分阶段交付
 
-#### P5：可靠传输、配置、指标与运维
+详细任务、依赖、状态和证据仅在 [todolist](./todolist.md) 维护。
 
-**目标**
+| 优先级 | 阶段 | 放行条件 |
+|---|---|---|
+| P0 | 基线、安全与兼容约定 | 回归/性能基线可复现，登录前操作拒绝，安全迁移和单端口规则冻结 |
+| P1 | 通信边界、协议能力及生命周期 | 原宿主 API 可用，旧端互操作，新功能能力门控，取消释放可靠 |
+| P1 | 多来源 UDP 与端口正确性 | 多访问者隔离，失败回滚不泄漏端口 |
+| P2 | 背压、单端口连接隔离与优化 | 慢消费者隔离、队列有界、控制延迟和吞吐达到冻结门槛 |
+| P3 | P2P 选型、信令、安全直连与中继 | 跨网络通信、授权/加密/回退验证，不引入独立客户端信令端口 |
+| P4 | 长稳、故障、部署与发布 | 平台矩阵、旧功能回归、安全负面测试、部署/回滚资料完整 |
 
-- 在 UDP P2P MVP 稳定后，补齐可靠流量支持、配置入口和可观测性。
+安全问题不等待所属功能阶段才修复。每个任务都有测试；最后阶段补跨模块系统验证，不把所有测试推迟到末尾。
 
-**主要工作**
+## 9. 双端 Blazor 目标与后续迁移
 
-- 评估并实现 QUIC 或可靠 UDP 传输，为 TCP/HTTP/HTTPS P2P 提供有序、可靠、拥塞控制的数据流。
-- 保留 TCP/TLS ATS 中继作为所有场景的最终 fallback。
-- 增加配置项：P2P 总开关、允许的 Peer、优先策略、探测超时、回退开关、带宽/并发限制。
-- 增加指标：直连成功率、回退率、建连耗时、RTT、丢包率、重传、NAT 类型和当前链路。
-- 在日志中记录 SessionId、PeerId、链路状态和失败原因，但不记录 Token 或敏感凭证。
-- 增加管理台操作：查看 Peer 会话、撤销授权、强制回退中继和关闭会话。
+### 9.1 已确定的技术栈
 
-**涉及模块**
+| 层 | 当前实现 | 目标与执行时机 |
+|---|---|---|
+| 服务端管理 UI | Aeterni.Tunnel.Web，Blazor Interactive Server | 保持 Blazor Interactive Server 与内嵌 ServerHost，不因客户端迁移改为 WASM 服务端 |
+| 客户端 UI | Desktop/AeterniLink 中的 Avalonia 实现 | Engine 完成后迁移为 Blazor WebAssembly；最终不再使用 Avalonia |
+| 客户端桌面壳 | 当前由 Avalonia 提供 | 改用 Tauri，负责窗口、托盘、系统集成及本地宿主生命周期 |
+| 客户端通信执行 | Desktop 进程内的 AgentHost | 由原生 .NET 本地宿主运行 Engine，通过受控桥接供 Blazor UI 调用 |
+| 通信核心 | Aeterni.Tunnel.Engine | 优先完成当前 P0～P4；不依赖 Blazor、Tauri、Avalonia 或业务 UI |
 
-- `Config`
-- `Transport`
-- `Traffic`
-- `Logging`
-- `Aeterni.Tunnel.Web`
-- Desktop/Tauri 配置与状态适配层
+此处确认的是迁移目标，当前仓库仍保留 Avalonia 项目；不把目标写成已经完成的代码结构。
 
-**验收标准**
+### 9.2 客户端边界
 
-- TCP/HTTP 类可靠流量仅在可靠传输实现和能力协商成功时启用 P2P。
-- 配置关闭 P2P 后，系统行为与当前版本一致。
-- 关键指标可查询、可定位失败原因，且不包含敏感信息。
-- 管理操作不会绕过 Peer 授权和会话鉴权。
+目标调用关系：Blazor WebAssembly UI → Tauri 本地桥接 → .NET Engine 宿主 → ATS 统一接入端口 / 协商后的业务数据端点。
 
-#### P6：测试、兼容性与发布
+- Blazor WebAssembly 负责渲染、交互和状态展示；Engine 的原生网络、隧道及 P2P 执行留在本地 .NET 宿主，不要求将 Engine 移植到浏览器沙箱。
+- Tauri 管理窗口/托盘和原生宿主进程；不在 Rust 层重写 Engine 的协议、安全或连接逻辑。
+- 桥接定义版本、请求/响应、事件订阅、取消、错误及退出清理；客户端本地凭证由受控宿主管理。
+- 本地 IPC 形式在 UI-001 验证后确定。优先避免开放本地网络 API；如确需监听，只绑定本机并校验访问身份。它不增加 ATS 的登录、信令或 RPC 端口。
+- 服务端和客户端均使用 Blazor；按实际需求共享 DTO、组件和样式，服务端 Cookie/SSR 认证与客户端原生生命周期仍分别管理。
+- Engine 当前阶段只需稳定、可嵌入的宿主 API 和状态事件，不提前实现 Tauri 桥接或引入 UI 依赖。
 
-**目标**
+### 9.3 执行顺序与退役条件
 
-- 对 P1-P5 的协议、网络行为、安全边界和回归风险进行系统验证，形成可发布能力。
+EN-051 完成后，依次推进 UI-001（框架与原生宿主）、UI-002（ATC 功能迁移）、UI-003（三平台交付与 Avalonia 退役）。验收与状态见 todolist。
 
-**主要工作**
+迁移覆盖现有连接配置、隧道管理、状态/日志/流量和配置文件；替代客户端经功能与打包验证后，再清理 Desktop/AeterniLink 的 Avalonia 工程、解决方案引用和旧发布作业。过渡期间旧客户端只保留必要兼容与缺陷修复，不继续新增 Avalonia 产品能力。
 
-- 单元测试：消息编解码、状态机、Token 生命周期、候选地址筛选、重试和超时。
-- 集成测试：两个 Agent 经 ATS 完成信令、直连、拒绝、断线重连和会话关闭。
-- 网络测试：同网、全锥 NAT、受限 NAT、对称 NAT、端口变化、高延迟、丢包和乱序环境。
-- 回退测试：直连失败自动中继、直连中断切换中继、旧客户端互操作。
-- 数据面测试：UDP P2P 双向转发，以及可靠传输实现后的 TCP/HTTP/HTTPS。
-- 安全测试：伪造候选端点、重放探测包、越权 Peer、Token 泄露、资源耗尽和异常报文。
-- 补充部署、配置迁移、日志字段和故障排查文档。
-- 执行 `dotnet test AeterniTunnel.slnx`；涉及 Web 前端时执行 `npm run css:build`。
+房间与语音产品、聊天存储、SFU、虚拟网卡/VPN 和广播发现仍在本次 Engine 重构之外。后续业务只能依赖已验证的通信能力，不因计划中提及就认为已经可用。
 
-**发布门槛**
+## 10. 决策记录
 
-- 现有 ATS/ATC 中继测试全部通过。
-- P2P 失败场景均能安全回退或给出明确错误，不影响其他客户端。
-- 新旧协议互操作通过，P2P 默认行为符合配置约定。
-- 无高危安全问题；Session Token、Peer 授权和数据加密经过审查。
-- 完成灰度开关、回滚方案和版本兼容说明。
+| 编号 | 日期 | 决策 | 原因/后续 |
+|---|---|---|---|
+| DEC-001 | 2026-09-21 | Engine 限定为通信、安全、协议和链路管理 | 用户明确范围；上层保留业务和媒体处理 |
+| DEC-002 | 2026-09-21 | 一个客户端接入端口，业务数据允许其他端口 | 用户部署约束；多连接仍可使用相同入口 |
+| DEC-003 | 2026-09-21 | Engine 优先，替代 UI 迁移先行路线 | 用户优先级；原 refactor-plan 全文已被本方案替代 |
+| DEC-004 | 2026-09-21 | P2P 后端在 EN-040 实测后冻结 | 防止未经验证承诺平台/API/媒体能力 |
+| DEC-005 | 2026-09-21 | 本轮仅文档，代码任务全部未开始 | 完成状态和接手动作见 todolist |
+| DEC-006 | 2026-09-21 | 服务端 Blazor Interactive Server；客户端 Tauri + Blazor WebAssembly；最终退役 Avalonia | 用户明确技术栈；补充 DEC-003，替代的是 UI 优先顺序而非 Tauri 目标，迁移在 Engine 完成后执行 |
 
-## 5. suggested project structure
-
-```text
-AeterniTunnel/
-├── Aeterni.Tunnel.Engine/                # 保持不变，作为核心能力层
-├── Aeterni.Tunnel.Common/               # 公共模型 / DTO / 配置约定
-├── Aeterni.Tunnel.Contracts/            # 可选：协议契约、接口定义
-├── Aeterni.Tunnel.ComponentLibrary/     # 组件库：统一 UI 设计系统
-├── Aeterni.Tunnel.Web/                  # Blazor Server 管理台
-├── Aeterni.Tunnel.Tauri/                # 新增 Tauri Shell
-├── Aeterni.Tunnel.Client/               # 新增 WASM 前端或客户端 UI
-├── Aeterni.Tunnel.Engine.Tests/         # 引擎测试
-├── Aeterni.Tunnel.Web.Tests/            # 可选 UI/服务测试
-├── docs/                                # 文档索引与重构说明
-├── AeterniTunnel.slnx
-└── README.md
-```
-
-## 6. P2P 扩展建议
-
-保持现有 `Engine` 主链路稳定可行，但 P1-P6 需要通过协议扩展和可插拔适配层逐步接入，而不是直接重写核心数据面：
-
-1. 基础能力保持：ATS、ATC、隧道、健康检查、断线重连。
-2. 按 P1-P6 增加 P2P 适配层：
-   - P1-P2 负责协议、身份、信令和授权
-   - P3-P4 负责 UDP hole punching、直连和 relay fallback
-   - P5-P6 负责可靠传输、配置、指标、测试和发布
-   - 评估并落地 `PeerNodeId`, `SessionId`, `SessionToken`, `RouteInfo` 等协议字段
-3. 以策略模式让业务在不同网络条件下动态选择：
-   - `Direct`：优先直连
-   - `Relay`：降级中继
-   - `Hybrid`：混合模式
-4. 优先在 `Engine` 外层封装策略；必须进入 Engine 的协议字段和传输实现均采用可选扩展，不破坏原有通信协议向后兼容。
-
-> 结论：P2P 可以作为“增强能力”在 Engine 上面扩展，而不是重写 Engine。工程上最稳妥的方案，是先稳定现有隧道能力，再增量增加 P2P 适配层。
-
-## 7. 风险与规避
-
-- 风险：Web、Desktop、Tauri 三端耦合过深，导致重复开发。
-  - 对策：统一共享契约和组件库，让前端不直接依赖 Engine 具体实现。
-- 风险：Tauri + WASM 与本地宿主互通复杂。
-  - 对策：限制桥接接口为单一稳定 API，避免散落大规模命令。
-- 风险：P2P 扩展引入协议破坏。
-  - 对策：默认保持老协议兼容，新字段以扩展消息和可选能力方式加入。
-- 风险：重构期间功能回归。
-  - 对策：分阶段提交，先共享层，再客户端，再 UI 统一，确保每阶段可测试。
-
-## 8. 实施建议
-
-建议按下面顺序推进：
-
-1. 先抽离公共模型与配置契约。
-2. 再统一组件库和 UI 规范。
-3. 然后重构 Blazor Server 内部服务边界。
-4. 最后新增 Tauri + Blazor WASM 客户端。
-5. 最后按照 P2P 策略扩展 Engine 增强层。
-
-以上顺序可以最大限度减少回归风险，并确保“保持原有功能稳定”的前提下完成重构。
-
-## 9. 交付标准
-
-- 现有 ATS / ATC 运行逻辑保持兼容
-- 服务端和客户端 UI 统一视觉规范
-- 共享层和配置模型可复用于多个宿主
-- Tauri 客户端可连接本地 Engine 进程或桥接 API
-- P2P 扩展模块以插件化方式接入，不破坏主链路
-- 测试覆盖关键协议、连接恢复和 UI 状态路径
-
-## 10. 后续动作
-
-下一步建议直接由当前仓库开始执行：
-
-- 先创建共享契约项目与组件库项目
-- 再拆分服务端业务层
-- 然后逐步落地 Tauri 客户端
-- 最后补充 P2P 扩展接口与测试
-
-这是一份“低风险、可迭代”的重构路线，适合本项目当前阶段。
+后续改变端口模型、协议、传输选型或兼容行为时，在此追加决策、证据及被替代条目，并同步任务依赖。用户新要求优先，文档同步解释变化。
