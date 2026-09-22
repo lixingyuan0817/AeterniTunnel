@@ -16,7 +16,6 @@ internal static class Program
     private const int FrameRepeats = 5;
     private const int ChannelMessages = 5_000;
     private const int TransportMessages = 500;
-    private const int ConcurrentConnections = 4;
     private const int ControlSamples = 500;
 
     private static async Task Main(string[] args)
@@ -27,17 +26,25 @@ internal static class Program
         var transportMessages = quick ? 100 : TransportMessages;
 
         PrintEnvironment(quick);
+        var processMetrics = new ProcessMetrics();
+        processMetrics.Start();
 
         foreach (var size in new[] { 64, 1_024, 65_536 })
             RunFrameCodec(size, frameRepeats);
 
         await RunChannelMultiplexerAsync(channelMessages);
+        await RunSlowConsumerAsync();
         await RunControlLatencyAsync(useTls: false, quick ? 100 : ControlSamples);
         await RunControlLatencyAsync(useTls: true, quick ? 100 : ControlSamples);
         await RunTransportAsync(useTls: false, transportMessages);
         await RunTransportAsync(useTls: true, transportMessages);
-        await RunConcurrentTransportAsync(useTls: false, transportMessages / 2);
-        await RunConcurrentTransportAsync(useTls: true, transportMessages / 2);
+        foreach (var connections in quick ? new[] { 1, 4 } : new[] { 1, 4, 8 })
+        {
+            await RunConcurrentTransportAsync(useTls: false, transportMessages / 2, connections);
+            await RunConcurrentTransportAsync(useTls: true, transportMessages / 2, connections);
+        }
+
+        processMetrics.StopAndPrint();
     }
 
     private static void PrintEnvironment(bool quick)
@@ -153,6 +160,48 @@ internal static class Program
         Console.WriteLine($"channel_multiplexer,payload={payload.Length},messages={messages},mib_per_sec={mib / timer.Elapsed.TotalSeconds:0.00},elapsed_ms={timer.Elapsed.TotalMilliseconds:0.0}");
     }
 
+    private static async Task RunSlowConsumerAsync()
+    {
+        await using var server = TcpTlsTransport.Server(IPAddress.Loopback, 0);
+        var port = GetListeningPort(server);
+        await using var client = TcpTlsTransport.Client("127.0.0.1", port, useTls: false);
+        var clientConnect = client.ConnectAsync("127.0.0.1", port).AsTask();
+        var serverAccept = server.AcceptAsync().AsTask();
+        var clientConnection = await clientConnect;
+        var serverConnection = await serverAccept;
+        await using var clientMux = new ChannelMultiplexer(clientConnection);
+        await using var serverMux = new ChannelMultiplexer(serverConnection);
+        clientMux.Start();
+        serverMux.Start();
+        var clientChannel = clientMux.OpenChannel();
+        var serverChannel = serverMux.AcceptChannel(clientChannel.ChannelId);
+        var payload = new byte[65_536];
+        Random.Shared.NextBytes(payload);
+        const int messages = 128;
+
+        var writer = Task.Run(async () =>
+        {
+            for (var i = 0; i < messages; i++)
+                await clientChannel.WriteAsync(payload);
+        });
+        await Task.Delay(50);
+        var completedBeforeConsume = writer.IsCompleted;
+        if (completedBeforeConsume)
+            throw new InvalidOperationException("Slow-consumer writer finished before the receiver drained its bounded queue.");
+        var timer = Stopwatch.StartNew();
+        for (var i = 0; i < messages; i++)
+        {
+            var value = await serverChannel.ReadAsync();
+            if (value is null || value.Length != payload.Length)
+                throw new InvalidDataException("Slow-consumer benchmark received an invalid payload.");
+        }
+
+        await writer;
+        timer.Stop();
+        var mib = (double)messages * payload.Length / 1024 / 1024;
+        Console.WriteLine($"slow_consumer,payload={payload.Length},messages={messages},writer_completed_before_consume={completedBeforeConsume},drain_mib_per_sec={mib / timer.Elapsed.TotalSeconds:0.00},drain_ms={timer.Elapsed.TotalMilliseconds:0.0}");
+    }
+
     private static async Task RunTransportAsync(bool useTls, int messages)
     {
         using var certificate = useTls ? CreateCertificate() : null;
@@ -220,16 +269,16 @@ internal static class Program
         return sorted[lower] + (sorted[upper] - sorted[lower]) * (index - lower);
     }
 
-    private static async Task RunConcurrentTransportAsync(bool useTls, int messages)
+    private static async Task RunConcurrentTransportAsync(bool useTls, int messages, int connections)
     {
         using var certificate = useTls ? CreateCertificate() : null;
         await using var server = TcpTlsTransport.Server(IPAddress.Loopback, 0, certificate);
         var port = GetListeningPort(server);
         await using var client = TcpTlsTransport.Client("127.0.0.1", port, useTls, "localhost", validateCertificate: false);
         var connectTimer = Stopwatch.StartNew();
-        var clientTasks = Enumerable.Range(0, ConcurrentConnections)
+        var clientTasks = Enumerable.Range(0, connections)
             .Select(_ => client.ConnectAsync("127.0.0.1", port).AsTask()).ToArray();
-        var serverTasks = Enumerable.Range(0, ConcurrentConnections)
+        var serverTasks = Enumerable.Range(0, connections)
             .Select(_ => server.AcceptAsync().AsTask()).ToArray();
         var clientConnections = await Task.WhenAll(clientTasks);
         var serverConnections = await Task.WhenAll(serverTasks);
@@ -245,8 +294,8 @@ internal static class Program
 
         await DisposeConnectionsAsync(clientConnections);
         await DisposeConnectionsAsync(serverConnections);
-        var mib = (double)ConcurrentConnections * messages * payload.Length / 1024 / 1024;
-        Console.WriteLine($"transport_concurrent,mode={(useTls ? "tcp_tls" : "tcp")},connections={ConcurrentConnections},payload={payload.Length},messages_per_connection={messages},connect_ms={connectTimer.Elapsed.TotalMilliseconds:0.0},mib_per_sec={mib / timer.Elapsed.TotalSeconds:0.00},elapsed_ms={timer.Elapsed.TotalMilliseconds:0.0}");
+        var mib = (double)connections * messages * payload.Length / 1024 / 1024;
+        Console.WriteLine($"transport_concurrent,mode={(useTls ? "tcp_tls" : "tcp")},connections={connections},payload={payload.Length},messages_per_connection={messages},connect_ms={connectTimer.Elapsed.TotalMilliseconds:0.0},mib_per_sec={mib / timer.Elapsed.TotalSeconds:0.00},elapsed_ms={timer.Elapsed.TotalMilliseconds:0.0}");
     }
 
     private static async Task RunEchoAsync(string mode, ITunnelConnection client, ITunnelConnection server, int messages, TimeSpan connectElapsed)
@@ -318,5 +367,60 @@ internal static class Program
     {
         foreach (var connection in connections)
             await connection.DisposeAsync();
+    }
+
+    private sealed class ProcessMetrics
+    {
+        private readonly Process _process = Process.GetCurrentProcess();
+        private Timer? _timer;
+        private Stopwatch? _wall;
+        private TimeSpan _cpuStart;
+        private long _peakWorkingSet;
+        private long _peakManaged;
+
+        public void Start()
+        {
+            _process.Refresh();
+            _cpuStart = _process.TotalProcessorTime;
+            _wall = Stopwatch.StartNew();
+            Sample();
+            _timer = new Timer(_ => Sample(), null, TimeSpan.Zero, TimeSpan.FromMilliseconds(10));
+        }
+
+        public void StopAndPrint()
+        {
+            _timer?.Dispose();
+            _timer = null;
+            Sample();
+            _wall!.Stop();
+            TimeSpan cpu;
+            lock (_process)
+            {
+                _process.Refresh();
+                cpu = _process.TotalProcessorTime - _cpuStart;
+            }
+            var cpuPercent = cpu.TotalMilliseconds / _wall.Elapsed.TotalMilliseconds * 100;
+            Console.WriteLine($"process_metrics,wall_ms={_wall.Elapsed.TotalMilliseconds:0.0},cpu_ms={cpu.TotalMilliseconds:0.0},cpu_percent_of_one_core={cpuPercent:0.0},peak_working_set_mib={_peakWorkingSet / 1024d / 1024d:0.0},peak_managed_mib={_peakManaged / 1024d / 1024d:0.0}");
+        }
+
+        private void Sample()
+        {
+            lock (_process)
+            {
+                _process.Refresh();
+                InterlockedMax(ref _peakWorkingSet, _process.WorkingSet64);
+                InterlockedMax(ref _peakManaged, GC.GetTotalMemory(forceFullCollection: false));
+            }
+        }
+
+        private static void InterlockedMax(ref long location, long value)
+        {
+            while (true)
+            {
+                var current = Volatile.Read(ref location);
+                if (value <= current || Interlocked.CompareExchange(ref location, value, current) == current)
+                    return;
+            }
+        }
     }
 }

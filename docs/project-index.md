@@ -16,7 +16,7 @@
 | [Aeterni.Tunnel.Desktop](../Aeterni.Tunnel.Desktop/Aeterni.Tunnel.Desktop.csproj) | 已接入 Engine 的 Avalonia ATC 客户端 | Engine | [Program.cs](../Aeterni.Tunnel.Desktop/Program.cs)、[App.axaml.cs](../Aeterni.Tunnel.Desktop/App.axaml.cs) |
 | [AeterniLink](../AeterniLink/AeterniLink.csproj) | 独立 Avalonia 界面、控件及托盘入口；目前未引用 Engine | 无 | [Program.cs](../AeterniLink/Program.cs)、[App.axaml.cs](../AeterniLink/App.axaml.cs) |
 | [Aeterni.Tunnel.Engine.Tests](../Aeterni.Tunnel.Engine.Tests/Aeterni.Tunnel.Engine.Tests.csproj) | xUnit 通信/配置/宿主等测试，包含真实 socket 场景 | Engine、Common | 测试运行器 |
-| [Aeterni.Tunnel.Engine.Benchmarks](../Aeterni.Tunnel.Engine.Benchmarks/Aeterni.Tunnel.Engine.Benchmarks.csproj) | Engine 性能基线控制台；固定负载测量编解码、通道和 TCP/TLS | Engine | [Program.cs](../Aeterni.Tunnel.Engine.Benchmarks/Program.cs) |
+| [Aeterni.Tunnel.Engine.Benchmarks](../Aeterni.Tunnel.Engine.Benchmarks/Aeterni.Tunnel.Engine.Benchmarks.csproj) | Engine 性能基线控制台；固定负载测量编解码、通道背压、TCP/TLS、CPU 和峰值内存 | Engine | [Program.cs](../Aeterni.Tunnel.Engine.Benchmarks/Program.cs) |
 
 AeterniLink 已加入解决方案，但不能据名称认为它是现有 ATC 实现的替代入口。当前 ATC 功能应优先从 Desktop 的 AgentClientService 和 Engine 的 AgentHost 查找。
 

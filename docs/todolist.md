@@ -4,15 +4,15 @@
 
 ## 1. 当前交接快照
 
-- 本轮范围：建立 Engine 编解码、复用通道和 TCP/TLS 端到端性能基线。
-- 当前活动任务：EN-001 性能基线（DOING）。
-- 已完成代码任务：EN-000、EN-002。性能数值、TLS 迁移和 P2P 后端尚未验证。
-- 下一项：EN-001 性能基线；完成后再按依赖推进 EN-003 TLS 安全默认值与兼容迁移。
+- 本轮范围：完成 EN-001 的 CPU/内存、慢消费者、多并发测量和性能回归门槛。
+- 当前活动任务：无；EN-001 已完成，等待下一阶段任务。
+- 已完成代码任务：EN-000、EN-001、EN-002。EN-001 已有本机基线；TLS 迁移、跨网络结果和 P2P 后端尚未验证。
+- 下一项：EN-003 TLS 安全默认值与单入口兼容迁移。
 - 当前阻塞：无；待执行的测试与选型是任务，不记作阻塞。
 - 首要约束：Engine 只提供通信；单一 ATS 客户端接入端口；隧道/P2P 数据允许其他端口。
 - 已替代路线：先迁移 Tauri/WASM、统一组件库、再加 P2P。被替代的是执行顺序；Tauri + Blazor WebAssembly 已确定为客户端目标，仍排在 Engine 重构之后。
 - UI 目标：服务端保留 Blazor Interactive Server；客户端迁移到 Tauri + Blazor WebAssembly，最终替换 Desktop 和 AeterniLink 中的 Avalonia 实现；现有代码尚未迁移。
-- 待冻结事项：TLS 迁移细节（EN-003）、通信契约（EN-010）、性能门槛（EN-001）、P2P 后端（EN-040）。
+- 待冻结事项：TLS 迁移细节（EN-003）、通信契约（EN-010）、P2P 后端（EN-040）；EN-001 的本机筛查和相对门槛已冻结于性能报告，跨平台性能留待 EN-050。
 - 接手前核对：工作区变更、任务活动状态、最近执行记录；不能把本文的“计划”当成已实现功能。
 
 ## 2. 状态与实时同步
@@ -60,7 +60,7 @@
 | DOC-002 | P0 | 项目索引与源码导航 | DOC-001 | DONE | Codex / 2026-09-21 |
 | DOC-003 | P0 | 确认双端 Blazor 与客户端迁移顺序 | DOC-002 | DONE | Codex / 2026-09-21 |
 | EN-000 | P0 | 功能回归与代码安全边界基线 | DOC-001 | DONE | Codex / 2026-09-21 |
-| EN-001 | P0 | 性能基线与数值验收门槛 | EN-000 | DOING | Codex / 2026-09-22 |
+| EN-001 | P0 | 性能基线与数值验收门槛 | EN-000 | DONE | Codex / 2026-09-22 |
 | EN-002 | P0 | 登录状态机与未授权资源操作修复 | EN-000 | DONE | Codex / 2026-09-21 |
 | EN-003 | P0 | TLS 安全默认值与单入口兼容迁移 | EN-002 | TODO | — |
 | EN-010 | P1 | 通信契约及依赖边界 | EN-003 | TODO | — |
@@ -258,7 +258,16 @@ EN-040 的依赖刻意不包含性能优化：若接口设计出现后端可行�
 
 ## 6. 执行记录
 
-### 2026-09-22 / Asia/Shanghai — EN-001 / Codex
+### 2026-09-22 / Asia/Shanghai — EN-001 / Codex（第二阶段）
+
+- 状态：DOING → DONE。
+- 已完成：扩展基准覆盖 128 个 64 KiB 消息的慢消费者场景、1/4/8 条 TCP/TLS 连接、进程总 CPU 时间以及 10 ms 采样的峰值工作集与托管堆；在 [performance-baseline.md](./performance-baseline.md) 记录三轮原始摘要，冻结本机绝对筛查、同机 A/B 相对门槛和波动重测规则。
+- 验证：`dotnet build Aeterni.Tunnel.Engine.Benchmarks/Aeterni.Tunnel.Engine.Benchmarks.csproj -c Release --no-restore` 通过（0 警告/错误）；完整 Release 基准连续 3 次成功，慢消费者写入在排空前均未完成；`dotnet test AeterniTunnel.slnx --no-restore` 为 91/91 通过；`git diff --check` 通过。
+- 限制：本机回环数值不能外推到其他硬件或公网；控制帧只含编解码回显，CPU/内存采样含基准进程自身开销。EN-031 同机比较复测；跨平台、跨 NAT 归 EN-050。
+- 下一动作：EN-003 先核对配置和 TLS 现状，定义旧明文部署到单入口安全模式的兼容迁移方案，再实现安全默认值和证书校验测试。
+- 提交：本阶段尚未提交；初始基线提交 4ba9887。
+
+### 2026-09-22 / Asia/Shanghai — EN-001 / Codex（第一阶段）
 
 - 状态：TODO → DOING（基线入口与第一轮结果已完成，验收未完成）。
 - 已完成：新增 `Aeterni.Tunnel.Engine.Benchmarks` 控制台项目并加入解决方案；覆盖 FrameCodec 64 B/1 KiB/64 KiB、ChannelMultiplexer 1 KiB、控制帧 p50/p95/p99、TCP/TLS 单连接和 4 连接回显。没有修改 Engine 通信热路径。
