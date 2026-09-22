@@ -265,7 +265,7 @@ EN-040 的依赖刻意不包含性能优化：若接口设计出现后端可行�
 - 验证：`dotnet build Aeterni.Tunnel.Engine.Benchmarks/Aeterni.Tunnel.Engine.Benchmarks.csproj -c Release --no-restore` 通过（0 警告/错误）；完整 Release 基准连续 3 次成功，慢消费者写入在排空前均未完成；`dotnet test AeterniTunnel.slnx --no-restore` 为 91/91 通过；`git diff --check` 通过。
 - 限制：本机回环数值不能外推到其他硬件或公网；控制帧只含编解码回显，CPU/内存采样含基准进程自身开销。EN-031 同机比较复测；跨平台、跨 NAT 归 EN-050。
 - 下一动作：EN-003 先核对配置和 TLS 现状，定义旧明文部署到单入口安全模式的兼容迁移方案，再实现安全默认值和证书校验测试。
-- 提交：本阶段尚未提交；初始基线提交 4ba9887。
+- 提交：cc0ac3d（perf(engine): complete baseline sampling and regression gates）；初始基线提交 4ba9887。
 
 ### 2026-09-22 / Asia/Shanghai — EN-001 / Codex（第一阶段）
 
