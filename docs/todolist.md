@@ -267,6 +267,7 @@ EN-040 的依赖刻意不包含性能优化：若接口设计出现后端可行�
 - 已补充：自定义根证书成功握手、证书不受信拒绝、server name 不匹配拒绝；默认 TLS 缺证书拒绝启动；明文必须显式 `AllowInsecureTransport`；配置和同一端口迁移规则写入 README/重构方案。
 - 当前限制：Web 设置页尚未提供证书路径/密码表单，需手动维护 server.toml；服务端 TLS 证书密码仍由部署配置提供，后续应迁移到受保护的环境/密钥注入；跨平台和真实网络互操作归 EN-050。
 - 下一步：进入 EN-010，冻结通信契约及依赖边界；保留 EN-003 的安全矩阵作为后续回归入口。
+- 提交：946f656（test(engine): verify TLS trust and migration matrix）；实现提交 2ba4128。
 
 ### 2026-09-22 / Asia/Shanghai — EN-001 / Codex（第二阶段）
 
