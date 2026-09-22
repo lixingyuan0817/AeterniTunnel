@@ -265,7 +265,7 @@ EN-040 的依赖刻意不包含性能优化：若接口设计出现后端可行�
 - 验证：`dotnet build Aeterni.Tunnel.Engine.Benchmarks/Aeterni.Tunnel.Engine.Benchmarks.csproj -c Release --no-restore` 通过；完整 Release 命令连续运行 2 次，均完成；`dotnet test Aeterni.Tunnel.Engine.Tests/Aeterni.Tunnel.Engine.Tests.csproj --no-build --no-restore` 为 91/91 通过；环境、负载、两次结果和限制记录于 [performance-baseline.md](./performance-baseline.md)。沙箱内绑定回环端口会收到 Permission denied，完整基线在授权环境运行。
 - 已知限制：当前只测同机回环；FrameCodec 分配为单线程近似；尚未统一采集进程 CPU、峰值托管内存、慢消费者和更多并发档位，也尚未冻结绝对/相对门槛。
 - 下一步：补齐 CPU/峰值内存与慢消费者采样规则，增加并发档位后复测；达到 EN-001 验收条件再标记 DONE，并把稳定范围交给 EN-031 优化复测使用。
-- 提交：未提交。
+- 提交：4ba9887（perf(engine): add reproducible performance baseline）。
 
 ### 2026-09-21 / Asia/Shanghai — EN-000 / Codex
 
