@@ -59,7 +59,7 @@ public sealed class AeterniServerStatusService
     public async Task<bool> SaveConfig(ServerConfig cfg)
     {
         ConfigLoader.SaveServer(_serverToml, cfg);
-        await _host.RestartAsync(ConfigLoader.ToHostOptions(cfg));
+        await _host.RestartAsync(ConfigLoader.ToHostOptions(cfg, Path.GetDirectoryName(_serverToml)));
         return true;
     }
 
@@ -73,7 +73,7 @@ public sealed class AeterniServerStatusService
         var cfg = ConfigLoader.Load(_serverToml) ?? new ServerConfig();
         cfg.BindPort = newBindPort;
         ConfigLoader.SaveServer(_serverToml, cfg);
-        await _host.RestartAsync(ConfigLoader.ToHostOptions(cfg));
+        await _host.RestartAsync(ConfigLoader.ToHostOptions(cfg, Path.GetDirectoryName(_serverToml)));
         return true;
     }
 

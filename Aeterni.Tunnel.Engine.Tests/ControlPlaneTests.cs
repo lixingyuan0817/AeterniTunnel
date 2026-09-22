@@ -52,6 +52,7 @@ public class ControlPlaneTests
             ServerPort: listener.BindPort,
             Token: token,
             ClientId: clientId,
+            UseTls: false,
             HeartbeatInterval: TimeSpan.FromMilliseconds(500)));
         beforeConnect?.Invoke(agent);
         await agent.ConnectAsync();
@@ -105,6 +106,7 @@ public class ControlPlaneTests
             ServerPort: port,
             Token: "wrong-token",
             ClientId: "agent-bad",
+            UseTls: false,
             HeartbeatInterval: TimeSpan.FromMilliseconds(500)));
         var logs = new System.Collections.Concurrent.ConcurrentQueue<string>();
         agent.LogLine += s => { logs.Enqueue(s); loginTcs.TrySetResult(s); };

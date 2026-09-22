@@ -26,8 +26,8 @@ public static class AgentTomlWriter
             sb.AppendLine($"token = \"{Escape(token)}\"");
         if (!string.IsNullOrWhiteSpace(clientId))
             sb.AppendLine($"clientId = \"{Escape(clientId)}\"");
-        if (useTls)
-            sb.AppendLine("useTls = true");
+        // 始终写出安全开关，避免旧配置缺字段时无法表达明确的明文迁移。
+        sb.AppendLine($"useTls = {useTls.ToString().ToLowerInvariant()}");
         sb.AppendLine();
 
         foreach (var t in tunnels)

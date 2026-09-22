@@ -103,6 +103,7 @@ public class DataPlaneTests
             ServerPort: serverPort,
             Token: TestToken,
             ClientId: "agent-e2e",
+            UseTls: false,
             HeartbeatInterval: TimeSpan.FromMilliseconds(500)));
         agent.LogLine += s => loginTcs.TrySetResult(s);
         await agent.ConnectAsync();

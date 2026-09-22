@@ -17,8 +17,14 @@ public sealed class AgentConfig
     /// <summary>客户端标识（空 = 自动生成 agent-主机名-随机后缀，避免重复）</summary>
     public string ClientId { get; set; } = "";
 
-    /// <summary>TLS 加密传输</summary>
-    public bool UseTls { get; set; }
+    /// <summary>TLS 加密传输（生产默认启用）</summary>
+    public bool UseTls { get; set; } = true;
+
+    /// <summary>TLS 证书中的 DNS 名称；为空时使用 serverAddr。</summary>
+    public string TlsServerName { get; set; } = "";
+
+    /// <summary>可选自定义根证书路径；为空时使用系统信任库。</summary>
+    public string TlsCaCertificatePath { get; set; } = "";
 
     /// <summary>断线重连间隔（秒）</summary>
     public int ReconnectIntervalSec { get; set; } = 5;

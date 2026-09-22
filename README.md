@@ -66,6 +66,9 @@ serverAddr = "your-server.com"   # ATS 公网地址
 serverPort = 17070               # 与服务端 server.toml 的 bindPort 一致
 token = "..."                    # 与服务端 server.toml 的 token 一致（首次启动自动生成，见启动日志）
 clientId = ""                    # 留空自动生成（agent-主机名-随机数）
+useTls = true                     # 与 ATS 保持一致；默认启用 TLS
+# tlsServerName = "your-server.com"       # 证书 DNS 名称不同于 serverAddr 时填写
+# tlsCaCertificatePath = "certs/ats-ca.crt" # 私有 CA；不填则使用系统信任库
 
 [[tunnels]]
 name = "web"                     # 隧道名
@@ -94,6 +97,10 @@ remotePort = 17062
 |---|---|---|
 | `bindPort` | `7000` | ATS 控制通道端口（ATC 连接用） |
 | `token` | 首次自动生成 | ATC 接入凭据（服务端唯一） |
+| `useTls` | `true` | ATS 客户端接入启用 TLS；与 agent.toml 保持一致 |
+| `tlsCertificatePath` | 空 | PFX/PKCS#12 接入证书路径；`useTls=true` 且未配置时 ATS 拒绝启动 |
+| `tlsCertificatePassword` | 空 | PFX 私钥密码；不写入日志 |
+| `allowInsecureTransport` | `false` | 仅旧明文迁移临时使用；必须与 `useTls=false` 同时显式配置，不会自动降级 |
 | `webToken` / `webTokenSalt` | 首次自动生成 | 管理台登录，加盐 SHA256 哈希存储 |
 | `allowPorts` | 空 = 不限 | 客户端可注册的公网端口或区间，如 `[7071, "7071-7171"]` |
 | `maxPortsPerClient` | `0` = 不限 | 单个客户端最多隧道数 |
@@ -102,6 +109,19 @@ remotePort = 17062
 | `webBind` | `127.0.0.1:7500` | 遗留字段，当前未使用 |
 
 > 配置修改可在管理台「设置」页在线完成（保存后自动重启 ATS 生效）。
+
+ATS 客户端接入默认使用同一个 `bindPort` 的 TLS，不新增登录/信令端口。服务端示例：
+
+```toml
+bindPort = 7000
+useTls = true
+tlsCertificatePath = "certs/ats.pfx"
+tlsCertificatePassword = "通过受保护的部署注入"
+```
+
+`tlsCertificatePath` 使用 `server.toml` 所在目录解析相对路径；证书文件和密码应通过受保护的部署材料提供，不能提交到仓库。
+
+客户端 `agent.toml` 默认 `useTls = true`，可选设置 `tlsServerName` 指定证书 DNS 名称，或 `tlsCaCertificatePath` 使用自定义根证书；默认仍使用系统信任库。旧明文部署迁移时必须在两端明确写入 `useTls = false`，并在服务端同时写入 `allowInsecureTransport = true`，迁移完成后删除该选项并恢复证书校验。TLS 握手失败、证书不受信或名称不匹配都会失败，不会重试明文。
 
 ## 目录结构
 

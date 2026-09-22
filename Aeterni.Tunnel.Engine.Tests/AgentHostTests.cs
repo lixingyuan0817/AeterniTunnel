@@ -25,6 +25,7 @@ public class AgentHostTests
 
         var fake = new FakeHealthChecker();
         var host = new AgentHost(new AgentOptions("127.0.0.1", controlPort, TestToken, "hc-test",
+            UseTls: false,
             HeartbeatInterval: TimeSpan.FromMilliseconds(300)), healthIntervalSeconds: 1,
             checkerFactory: _ => fake);
         host.AddProxy(new ProxyDefinition("svc", LinkType.Tcp, "127.0.0.1", 25565, proxyPort));
@@ -56,6 +57,7 @@ public class AgentHostTests
         listener.Start();
 
         var host = new AgentHost(new AgentOptions("127.0.0.1", controlPort, TestToken, "reconn",
+            UseTls: false,
             HeartbeatInterval: TimeSpan.FromMilliseconds(200)));
         host.AddProxy(new ProxyDefinition("p1", LinkType.Tcp, "127.0.0.1", 25565, proxyPort));
         await using var _h = host;
@@ -91,6 +93,7 @@ public class AgentHostTests
         await using var _l = listener;
 
         var host = new AgentHost(new AgentOptions("127.0.0.1", controlPort, TestToken, "reload",
+            UseTls: false,
             HeartbeatInterval: TimeSpan.FromMilliseconds(300)));
         host.AddProxy(new ProxyDefinition("keep", LinkType.Tcp, "127.0.0.1", 25565, 19001));
         host.AddProxy(new ProxyDefinition("old", LinkType.Tcp, "127.0.0.1", 25566, 19002));
@@ -186,6 +189,7 @@ public class AgentHostTests
         await using var _l = listener;
 
         var host = new AgentHost(new AgentOptions("127.0.0.1", controlPort, TestToken, "policy-test",
+            UseTls: false,
             HeartbeatInterval: TimeSpan.FromMilliseconds(200)));
         await using var _h = host;
 

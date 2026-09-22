@@ -1,18 +1,18 @@
 # Engine 重构 todolist
 
-最后更新：2026-09-21。唯一进度台账；架构约束见 [重构方案](./refactor-plan.md)，协作规则见 [AGENTS.md](../AGENTS.md)。
+最后更新：2026-09-22。唯一进度台账；架构约束见 [重构方案](./refactor-plan.md)，协作规则见 [AGENTS.md](../AGENTS.md)。
 
 ## 1. 当前交接快照
 
-- 本轮范围：已完成 Engine P0 的 EN-000 基线和 EN-002 最小认证状态机修复。
-- 当前活动任务：无；本轮可独立交付部分已完成。
-- 已完成代码任务：EN-000、EN-002。性能数值、TLS 迁移和 P2P 后端尚未验证。
-- 下一项：EN-001 性能基线；完成后再按依赖推进 EN-003 TLS 安全默认值与兼容迁移。
+- 本轮范围：TLS 安全默认值、证书加载和单入口兼容迁移已完成。
+- 当前活动任务：无；EN-003 已完成，下一阶段领取 EN-010。
+- 已完成代码任务：EN-000、EN-001、EN-002、EN-003。EN-001/EN-003 已有本机验证；跨网络结果和 P2P 后端尚未验证。
+- 下一项：EN-010 通信契约及依赖边界。
 - 当前阻塞：无；待执行的测试与选型是任务，不记作阻塞。
 - 首要约束：Engine 只提供通信；单一 ATS 客户端接入端口；隧道/P2P 数据允许其他端口。
 - 已替代路线：先迁移 Tauri/WASM、统一组件库、再加 P2P。被替代的是执行顺序；Tauri + Blazor WebAssembly 已确定为客户端目标，仍排在 Engine 重构之后。
 - UI 目标：服务端保留 Blazor Interactive Server；客户端迁移到 Tauri + Blazor WebAssembly，最终替换 Desktop 和 AeterniLink 中的 Avalonia 实现；现有代码尚未迁移。
-- 待冻结事项：TLS 迁移细节（EN-003）、通信契约（EN-010）、性能门槛（EN-001）、P2P 后端（EN-040）。
+- 待冻结事项：通信契约（EN-010）、P2P 后端（EN-040）；TLS 迁移规则已冻结于 EN-003 记录，EN-001 的本机筛查和相对门槛已冻结于性能报告，跨平台性能留待 EN-050。
 - 接手前核对：工作区变更、任务活动状态、最近执行记录；不能把本文的“计划”当成已实现功能。
 
 ## 2. 状态与实时同步
@@ -60,9 +60,9 @@
 | DOC-002 | P0 | 项目索引与源码导航 | DOC-001 | DONE | Codex / 2026-09-21 |
 | DOC-003 | P0 | 确认双端 Blazor 与客户端迁移顺序 | DOC-002 | DONE | Codex / 2026-09-21 |
 | EN-000 | P0 | 功能回归与代码安全边界基线 | DOC-001 | DONE | Codex / 2026-09-21 |
-| EN-001 | P0 | 性能基线与数值验收门槛 | EN-000 | TODO | — |
+| EN-001 | P0 | 性能基线与数值验收门槛 | EN-000 | DONE | Codex / 2026-09-22 |
 | EN-002 | P0 | 登录状态机与未授权资源操作修复 | EN-000 | DONE | Codex / 2026-09-21 |
-| EN-003 | P0 | TLS 安全默认值与单入口兼容迁移 | EN-002 | TODO | — |
+| EN-003 | P0 | TLS 安全默认值与单入口兼容迁移 | EN-002 | DONE | Codex / 2026-09-22 |
 | EN-010 | P1 | 通信契约及依赖边界 | EN-003 | TODO | — |
 | EN-011 | P1 | 版本、能力协商及扩展消息边界 | EN-010 | TODO | — |
 | EN-012 | P1 | 控制会话、身份授权和生命周期拆分 | EN-011 | TODO | — |
@@ -257,6 +257,35 @@ EN-040 的依赖刻意不包含性能优化：若接口设计出现后端可行�
 - 约束：替代客户端尚未验证前不删除旧客户端；过渡期间只做必要兼容与缺陷修复，不新增 Avalonia 产品能力。
 
 ## 6. 执行记录
+
+### 2026-09-22 / Asia/Shanghai — EN-003 / Codex
+
+- 状态：TODO → DOING → DONE。
+- 目标：将生产配置的客户端接入切换为 TLS 安全默认值，要求 ATS 配置证书后才启动安全监听；明文仅作为显式测试/迁移选项，不在失败时静默降级；保持同一 `bindPort` 单入口。
+- 已完成：`AgentOptions`、Agent/Server 配置默认启用 TLS；`ServerHost` 在 TLS 缺证书或明文未显式允许时拒绝启动；支持 PFX 路径/密码、TLS server name 和自定义根证书；Desktop 写配置始终落盘 `useTls`，避免旧字段无法表达迁移选择；Web/配置相对证书路径按 `server.toml` 目录解析。
+- 验证：新增 TLS 策略测试 3/3 通过；Engine 全量测试 96/96 通过；Engine.Tests 构建通过（现有 5 个分析器警告）；Desktop 使用 `-p:UseSharedCompilation=false` 构建通过（现有 6 个 Avalonia 警告）。Web 构建未完成，因环境缺少 `node_modules/.bin/tailwindcss`，未修改 CSS。
+- 已补充：自定义根证书成功握手、证书不受信拒绝、server name 不匹配拒绝；默认 TLS 缺证书拒绝启动；明文必须显式 `AllowInsecureTransport`；配置和同一端口迁移规则写入 README/重构方案。
+- 当前限制：Web 设置页尚未提供证书路径/密码表单，需手动维护 server.toml；服务端 TLS 证书密码仍由部署配置提供，后续应迁移到受保护的环境/密钥注入；跨平台和真实网络互操作归 EN-050。
+- 下一步：进入 EN-010，冻结通信契约及依赖边界；保留 EN-003 的安全矩阵作为后续回归入口。
+- 提交：946f656（test(engine): verify TLS trust and migration matrix）；实现提交 2ba4128。
+
+### 2026-09-22 / Asia/Shanghai — EN-001 / Codex（第二阶段）
+
+- 状态：DOING → DONE。
+- 已完成：扩展基准覆盖 128 个 64 KiB 消息的慢消费者场景、1/4/8 条 TCP/TLS 连接、进程总 CPU 时间以及 10 ms 采样的峰值工作集与托管堆；在 [performance-baseline.md](./performance-baseline.md) 记录三轮原始摘要，冻结本机绝对筛查、同机 A/B 相对门槛和波动重测规则。
+- 验证：`dotnet build Aeterni.Tunnel.Engine.Benchmarks/Aeterni.Tunnel.Engine.Benchmarks.csproj -c Release --no-restore` 通过（0 警告/错误）；完整 Release 基准连续 3 次成功，慢消费者写入在排空前均未完成；`dotnet test AeterniTunnel.slnx --no-restore` 为 91/91 通过；`git diff --check` 通过。
+- 限制：本机回环数值不能外推到其他硬件或公网；控制帧只含编解码回显，CPU/内存采样含基准进程自身开销。EN-031 同机比较复测；跨平台、跨 NAT 归 EN-050。
+- 下一动作：EN-003 先核对配置和 TLS 现状，定义旧明文部署到单入口安全模式的兼容迁移方案，再实现安全默认值和证书校验测试。
+- 提交：cc0ac3d（perf(engine): complete baseline sampling and regression gates）；初始基线提交 4ba9887。
+
+### 2026-09-22 / Asia/Shanghai — EN-001 / Codex（第一阶段）
+
+- 状态：TODO → DOING（基线入口与第一轮结果已完成，验收未完成）。
+- 已完成：新增 `Aeterni.Tunnel.Engine.Benchmarks` 控制台项目并加入解决方案；覆盖 FrameCodec 64 B/1 KiB/64 KiB、ChannelMultiplexer 1 KiB、控制帧 p50/p95/p99、TCP/TLS 单连接和 4 连接回显。没有修改 Engine 通信热路径。
+- 验证：`dotnet build Aeterni.Tunnel.Engine.Benchmarks/Aeterni.Tunnel.Engine.Benchmarks.csproj -c Release --no-restore` 通过；完整 Release 命令连续运行 2 次，均完成；`dotnet test Aeterni.Tunnel.Engine.Tests/Aeterni.Tunnel.Engine.Tests.csproj --no-build --no-restore` 为 91/91 通过；环境、负载、两次结果和限制记录于 [performance-baseline.md](./performance-baseline.md)。沙箱内绑定回环端口会收到 Permission denied，完整基线在授权环境运行。
+- 已知限制：当前只测同机回环；FrameCodec 分配为单线程近似；尚未统一采集进程 CPU、峰值托管内存、慢消费者和更多并发档位，也尚未冻结绝对/相对门槛。
+- 下一步：补齐 CPU/峰值内存与慢消费者采样规则，增加并发档位后复测；达到 EN-001 验收条件再标记 DONE，并把稳定范围交给 EN-031 优化复测使用。
+- 提交：4ba9887（perf(engine): add reproducible performance baseline）。
 
 ### 2026-09-21 / Asia/Shanghai — EN-000 / Codex
 

@@ -68,7 +68,7 @@
 | [AgentSession](../Aeterni.Tunnel.Engine/Client/AgentSession.cs) | 直接创建 TcpTlsTransport，并处理登录、重连及本地转发 | 通过工厂注入传输，拆分控制会话与隧道职责 |
 | [ServerListener](../Aeterni.Tunnel.Engine/Server/ServerListener.cs) | 已有按 ClientId 查询的在线会话索引 | 复用并加强认证绑定，不重复建设一套无关联注册表 |
 | [ServerSession](../Aeterni.Tunnel.Engine/Server/ServerSession.cs) | 已要求首条受理消息为 Hello；认证前其他控制消息、错误/空身份和重复 Hello 会被拒绝并关闭 | 后续在 EN-012 将共享 token 身份升级为稳定 Peer 身份与授权边界 |
-| [AgentOptions](../Aeterni.Tunnel.Engine/Client/AgentOptions.cs) | UseTls 默认为 false | 安全默认值迁移必须覆盖宿主与配置，不能只改一个默认参数 |
+| [AgentOptions](../Aeterni.Tunnel.Engine/Client/AgentOptions.cs) | UseTls 默认为 true，证书校验默认开启，可配置 server name/自定义根证书 | 安全默认值迁移覆盖宿主、配置、证书加载与旧明文显式迁移，不能只改一个默认参数 |
 | [ITunnelConnection](../Aeterni.Tunnel.Engine/Transport/ITunnelConnection.cs) | 只暴露 Stream | 可靠流与数据报需要不同契约 |
 | [ChannelMultiplexer](../Aeterni.Tunnel.Engine/Channels/ChannelMultiplexer.cs)、[Channel](../Aeterni.Tunnel.Engine/Channels/Channel.cs) | 单连接读循环等待各通道入队；队列按 64 个包限制 | 慢消费者会阻塞分发；还需要字节预算、公平性和取消语义 |
 | [FrameCodec](../Aeterni.Tunnel.Engine/Wire/FrameCodec.cs) | 固定 v1 帧头、4 MiB 负载上限，读写分配并复制数组 | 先测量，再改内存所有权、批量写与帧预算 |
@@ -128,7 +128,7 @@
 
 如确需 v2 帧，先协商再切换并定义失败行为，或明确版本不兼容；禁止直接改常量后称为向后兼容。新端之间定义未知可选扩展和必需扩展的处理，不能指望旧二进制安全忽略未知 type。
 
-安全迁移要明确区分“旧协议”与“旧明文配置”：安全模式可兼容经过 TLS 的旧隧道协议；旧明文部署需要显式迁移或隔离的兼容部署。默认禁止自动降级、关闭证书校验或明文重试。不要为了双协议共存另开强制客户端接入端口；同一入口的迁移方式在 EN-003 中冻结并测试。
+安全迁移要明确区分“旧协议”与“旧明文配置”：安全模式可兼容经过 TLS 的旧隧道协议；旧明文部署需要显式迁移或隔离的兼容部署。默认禁止自动降级、关闭证书校验或明文重试。不要为了双协议共存另开强制客户端接入端口。当前 EN-003 的迁移规则是：`useTls` 两端默认 `true`；ATS 只有加载 `tlsCertificatePath` 后才启动 TLS 接入；旧明文必须在服务端同时配置 `useTls=false` 与 `allowInsecureTransport=true`，客户端明确 `useTls=false`，不匹配即失败；迁移完成后删除明文许可并恢复证书校验。所有模式继续使用同一 `bindPort`，不新增登录/信令端口。
 
 ## 6. 性能与实时通信
 

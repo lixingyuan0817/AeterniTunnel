@@ -7,7 +7,7 @@ Aeterni Tunnel 是 .NET 10 跨平台内网穿透工程：
 - ATS：公网服务端，提供客户端接入、隧道、端口/vhost 路由及管理。
 - ATC：内网客户端，连接 ATS、注册隧道、健康检查和自动重连。
 - Engine：共享通信引擎；Web 当前为 Blazor Interactive Server 管理台；Desktop/AeterniLink 当前仍含 Avalonia 实现，属于后续迁移对象。
-- Common：现有共享基础代码；Engine.Tests：xUnit 测试；解决方案为 AeterniTunnel.slnx。
+- Common：现有共享基础代码；Engine.Tests：xUnit 测试；Engine.Benchmarks：可重复的 Engine 性能基线控制台；解决方案为 AeterniTunnel.slnx。
 
 目标技术栈已确定：**服务端 Blazor Interactive Server，客户端 Tauri + Blazor WebAssembly，最终不再使用 Avalonia**。当前主线仍是 **Engine 通信层重构优先**；EN-051 完成后再按 UI-001～UI-003 迁移客户端。推迟的是执行时间，不是技术栈决定。
 

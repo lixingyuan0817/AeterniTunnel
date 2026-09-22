@@ -71,7 +71,9 @@ public sealed class AgentSession : IAsyncDisposable
         LogLine?.Invoke($"正在连接 {_options.ServerAddr}:{_options.ServerPort}{(string.IsNullOrEmpty(_options.ClientId) ? "" : $"（{_options.ClientId}）")}…");
         var transport = TcpTlsTransport.Client(
             _options.ServerAddr, _options.ServerPort, _options.UseTls,
-            validateCertificate: _options.ValidateCertificate);
+            targetHost: _options.TlsServerName,
+            validateCertificate: _options.ValidateCertificate,
+            caCertificatePath: _options.TlsCaCertificatePath);
         var conn = await transport.ConnectAsync(_options.ServerAddr, _options.ServerPort, ct);
 
         _mux = new ChannelMultiplexer(conn);

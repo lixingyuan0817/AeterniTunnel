@@ -1,6 +1,6 @@
 # 项目索引
 
-核对日期：2026-09-21。本文是当前仓库的源码导航，不是重构后的目录承诺，也不代表构建/测试已通过。项目清单以 [解决方案](../AeterniTunnel.slnx) 和各项目文件为依据。
+核对日期：2026-09-22。本文是当前仓库的源码导航，不是重构后的目录承诺，也不代表构建/测试已通过。项目清单以 [解决方案](../AeterniTunnel.slnx) 和各项目文件为依据。
 
 阅读分工：[AGENTS.md](../AGENTS.md) 定义协作规则；[文档索引](./README.md) 导航文档；本文定位项目和代码；[重构方案](./refactor-plan.md) 定义目标；[todolist](./todolist.md) 是唯一任务进度来源。
 
@@ -16,6 +16,7 @@
 | [Aeterni.Tunnel.Desktop](../Aeterni.Tunnel.Desktop/Aeterni.Tunnel.Desktop.csproj) | 已接入 Engine 的 Avalonia ATC 客户端 | Engine | [Program.cs](../Aeterni.Tunnel.Desktop/Program.cs)、[App.axaml.cs](../Aeterni.Tunnel.Desktop/App.axaml.cs) |
 | [AeterniLink](../AeterniLink/AeterniLink.csproj) | 独立 Avalonia 界面、控件及托盘入口；目前未引用 Engine | 无 | [Program.cs](../AeterniLink/Program.cs)、[App.axaml.cs](../AeterniLink/App.axaml.cs) |
 | [Aeterni.Tunnel.Engine.Tests](../Aeterni.Tunnel.Engine.Tests/Aeterni.Tunnel.Engine.Tests.csproj) | xUnit 通信/配置/宿主等测试，包含真实 socket 场景 | Engine、Common | 测试运行器 |
+| [Aeterni.Tunnel.Engine.Benchmarks](../Aeterni.Tunnel.Engine.Benchmarks/Aeterni.Tunnel.Engine.Benchmarks.csproj) | Engine 性能基线控制台；固定负载测量编解码、通道背压、TCP/TLS、CPU 和峰值内存 | Engine | [Program.cs](../Aeterni.Tunnel.Engine.Benchmarks/Program.cs) |
 
 AeterniLink 已加入解决方案，但不能据名称认为它是现有 ATC 实现的替代入口。当前 ATC 功能应优先从 Desktop 的 AgentClientService 和 Engine 的 AgentHost 查找。
 
@@ -38,6 +39,7 @@ flowchart TD
     Tests["Aeterni.Tunnel.Engine.Tests"] --> Engine
     Tests --> Common["Aeterni.Tunnel.Common"]
     Engine --> Common
+    Benchmarks["Aeterni.Tunnel.Engine.Benchmarks"] --> Engine
     Link["AeterniLink：当前无项目引用"]
 ~~~
 
@@ -110,7 +112,7 @@ Engine 的 AgentHost 可被其他宿主直接使用；目前解决方案没有�
 | 通道 | [ChannelMultiplexer](../Aeterni.Tunnel.Engine/Channels/ChannelMultiplexer.cs)、[Channel](../Aeterni.Tunnel.Engine/Channels/Channel.cs)、[TcpBridge](../Aeterni.Tunnel.Engine/Channels/TcpBridge.cs) | 控制/数据分发、队列、背压、连接桥接 |
 | 帧协议 | [FrameContract](../Aeterni.Tunnel.Engine/Protocol/FrameContract.cs)、[Frame](../Aeterni.Tunnel.Engine/Protocol/Frame.cs)、[FrameType](../Aeterni.Tunnel.Engine/Protocol/FrameType.cs)、[FrameCodec](../Aeterni.Tunnel.Engine/Wire/FrameCodec.cs)、[ProtocolException](../Aeterni.Tunnel.Engine/Wire/ProtocolException.cs) | 帧头、版本、负载边界、半包粘包 |
 | 控制消息 | [Messages/](../Aeterni.Tunnel.Engine/Protocol/Messages)、[MessageCodec](../Aeterni.Tunnel.Engine/Protocol/Messages/MessageCodec.cs)、[MessageJsonContext](../Aeterni.Tunnel.Engine/Protocol/Messages/MessageJsonContext.cs)、[LinkType](../Aeterni.Tunnel.Engine/Protocol/LinkType.cs) | Hello、注册、命令、JSON 类型与源生成；枚举不等于已实现传输 |
-| 配置 | [ConfigLoader](../Aeterni.Tunnel.Engine/Config/ConfigLoader.cs)、[ServerConfig](../Aeterni.Tunnel.Engine/Config/ServerConfig.cs)、[AgentConfig](../Aeterni.Tunnel.Engine/Config/AgentConfig.cs)、[LogConfig](../Aeterni.Tunnel.Engine/Config/LogConfig.cs) | TOML 读写、默认值、配置到宿主选项转换 |
+| 配置 | [ConfigLoader](../Aeterni.Tunnel.Engine/Config/ConfigLoader.cs)、[ServerConfig](../Aeterni.Tunnel.Engine/Config/ServerConfig.cs)、[AgentConfig](../Aeterni.Tunnel.Engine/Config/AgentConfig.cs)、[LogConfig](../Aeterni.Tunnel.Engine/Config/LogConfig.cs) | TOML 读写、TLS 安全默认值、证书路径/信任配置、配置到宿主选项转换 |
 | 日志与流量 | [Logging/](../Aeterni.Tunnel.Engine/Logging)、[TrafficCounter](../Aeterni.Tunnel.Engine/Traffic/TrafficCounter.cs) | 滚动日志、日志级别、环形缓冲和字节统计 |
 | 引擎状态接口 | [DashboardListener](../Aeterni.Tunnel.Engine/Server/DashboardListener.cs)、[StatusResponse](../Aeterni.Tunnel.Engine/Server/StatusResponse.cs)、[StatusJsonContext](../Aeterni.Tunnel.Engine/Server/StatusJsonContext.cs) | 可选引擎 HTTP 状态接口与快照；区别于 Blazor 管理台 |
 
@@ -145,6 +147,7 @@ Control、Security、Peers、Relay、Tunneling、Diagnostics 是重构方案中�
 | 帧格式、长度、半包粘包 | [FrameCodecTests](../Aeterni.Tunnel.Engine.Tests/FrameCodecTests.cs) |
 | 消息序列化、未知类型行为 | [MessageCodecTests](../Aeterni.Tunnel.Engine.Tests/MessageCodecTests.cs) |
 | TCP/TLS 传输 | [TcpTlsTransportTests](../Aeterni.Tunnel.Engine.Tests/TcpTlsTransportTests.cs) |
+| TLS 默认值、证书信任和明文迁移策略 | [TlsPolicyTests](../Aeterni.Tunnel.Engine.Tests/TlsPolicyTests.cs) |
 | 通道隔离、关闭、Ping 和背压 | [ChannelMultiplexerTests](../Aeterni.Tunnel.Engine.Tests/ChannelMultiplexerTests.cs)、[AdvancedTests](../Aeterni.Tunnel.Engine.Tests/AdvancedTests.cs) |
 | 登录、注册和控制流程 | [ControlPlaneTests](../Aeterni.Tunnel.Engine.Tests/ControlPlaneTests.cs) |
 | TCP/UDP 端到端转发 | [DataPlaneTests](../Aeterni.Tunnel.Engine.Tests/DataPlaneTests.cs) |
@@ -185,6 +188,9 @@ dotnet test AeterniTunnel.slnx
 
 # 根目录：仅定位某组 Engine 测试
 dotnet test Aeterni.Tunnel.Engine.Tests/Aeterni.Tunnel.Engine.Tests.csproj --filter FullyQualifiedName~ControlPlaneTests
+
+# 根目录：运行 Engine 性能基线（--quick 用于快速冒烟）
+dotnet run --project Aeterni.Tunnel.Engine.Benchmarks/Aeterni.Tunnel.Engine.Benchmarks.csproj -c Release -- --quick
 
 # 根目录：已有 ATC 桌面入口
 dotnet run --project Aeterni.Tunnel.Desktop/Aeterni.Tunnel.Desktop.csproj

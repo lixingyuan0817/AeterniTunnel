@@ -110,6 +110,7 @@ public class AdvancedTests
 
         var loginTcs = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
         var agent = new AgentSession(new AgentOptions("127.0.0.1", controlPort, TestToken, "agent-hot",
+            UseTls: false,
             HeartbeatInterval: TimeSpan.FromMilliseconds(300)));
         agent.LogLine += s => loginTcs.TrySetResult(s);
         await agent.ConnectAsync();

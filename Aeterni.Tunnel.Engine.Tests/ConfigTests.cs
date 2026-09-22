@@ -71,6 +71,44 @@ public class MinimalTomlTests
 public class ConfigLoaderTests
 {
     [Fact]
+    public void SecurityDefaults_EnableTlsAndValidateCertificates()
+    {
+        var server = ConfigLoader.LoadString("bindPort = 7000")!;
+        var agentPath = WriteTempAgentConfig("serverAddr = \"example.test\"\n");
+        try
+        {
+            var agent = ConfigLoader.LoadAgentConfig(agentPath)!;
+
+            Assert.True(server.UseTls);
+            Assert.False(server.AllowInsecureTransport);
+            Assert.True(ConfigLoader.ToHostOptions(server).UseTls);
+            Assert.True(agent.UseTls);
+            Assert.True(ConfigLoader.ToAgentOptions(agent).UseTls);
+            Assert.True(ConfigLoader.ToAgentOptions(agent).ValidateCertificate);
+        }
+        finally
+        {
+            File.Delete(agentPath);
+        }
+    }
+
+    [Fact]
+    public void ExplicitPlaintextMigration_RoundTripsOnlyWithOptIn()
+    {
+        var cfg = ConfigLoader.LoadString("useTls = false\nallowInsecureTransport = true")!;
+        var options = ConfigLoader.ToHostOptions(cfg);
+        var text = ConfigLoader.Write(cfg);
+        var roundTrip = ConfigLoader.LoadString(text)!;
+
+        Assert.False(options.UseTls);
+        Assert.True(options.AllowInsecureTransport);
+        Assert.Contains("useTls = false", text);
+        Assert.Contains("allowInsecureTransport = true", text);
+        Assert.False(roundTrip.UseTls);
+        Assert.True(roundTrip.AllowInsecureTransport);
+    }
+
+    [Fact]
     public void Load_RoundTrips()
     {
         var dir = Path.Combine(Path.GetTempPath(), "at-cfg-" + Guid.NewGuid().ToString("N"));
@@ -109,6 +147,13 @@ public class ConfigLoaderTests
         {
             Directory.Delete(dir, recursive: true);
         }
+    }
+
+    private static string WriteTempAgentConfig(string content)
+    {
+        var path = Path.Combine(Path.GetTempPath(), "atc-security-" + Guid.NewGuid().ToString("N") + ".toml");
+        File.WriteAllText(path, content);
+        return path;
     }
 
     [Fact]

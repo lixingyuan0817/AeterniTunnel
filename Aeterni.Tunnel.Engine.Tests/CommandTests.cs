@@ -29,6 +29,7 @@ public class CommandTests
             ServerPort: controlPort,
             Token: TestToken,
             ClientId: clientId,
+            UseTls: false,
             HeartbeatInterval: TimeSpan.FromMilliseconds(300)));
         await agent.ConnectAsync();
         return agent;
