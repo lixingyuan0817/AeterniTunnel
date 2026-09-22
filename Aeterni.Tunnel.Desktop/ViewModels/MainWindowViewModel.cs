@@ -155,7 +155,7 @@ public sealed class MainWindowViewModel : ObservableBase, IAsyncDisposable
     private string _clientId = "";
     public string ClientId { get => _clientId; set => SetProperty(ref _clientId, value); }
 
-    private bool _useTls;
+    private bool _useTls = true;
     public bool UseTls { get => _useTls; set => SetProperty(ref _useTls, value); }
 
     // ═════════ 连接状态 ═════════

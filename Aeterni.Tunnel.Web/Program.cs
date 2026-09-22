@@ -124,7 +124,7 @@ static ServerHost BuildServerHost(IServiceProvider sp, string contentRoot)
     host.LogLine += line => logger.LogInformation("[ATS] {Line}", line);
     try
     {
-        host.Start(ConfigLoader.ToHostOptions(cfg));
+        host.Start(ConfigLoader.ToHostOptions(cfg, contentRoot));
         logger.LogInformation("ATS 已启动：bindPort={BindPort}", cfg.BindPort);
     }
     catch (Exception ex)

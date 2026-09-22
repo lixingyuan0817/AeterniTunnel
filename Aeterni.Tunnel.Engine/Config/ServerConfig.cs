@@ -7,6 +7,17 @@ public sealed class ServerConfig
 {
     public int BindPort { get; set; } = 7000;
     public string Token { get; set; } = "";
+    /// <summary>客户端接入是否启用 TLS；生产默认启用，明文迁移必须显式关闭并允许不安全传输。</summary>
+    public bool UseTls { get; set; } = true;
+
+    /// <summary>ATS 接入证书（PFX/PKCS#12）路径；UseTls=true 且为空时拒绝启动。</summary>
+    public string TlsCertificatePath { get; set; } = "";
+
+    /// <summary>ATS 接入证书私钥密码；不写入日志。</summary>
+    public string TlsCertificatePassword { get; set; } = "";
+
+    /// <summary>仅用于明确的旧明文迁移；不允许 TLS 失败后自动降级。</summary>
+    public bool AllowInsecureTransport { get; set; }
     public int VhostHttpPort { get; set; }
     public int VhostHttpsPort { get; set; }
     public string SubDomainHost { get; set; } = "";

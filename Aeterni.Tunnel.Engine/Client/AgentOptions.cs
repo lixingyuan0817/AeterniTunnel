@@ -8,6 +8,8 @@ public sealed record AgentOptions(
     int ServerPort,
     string Token,
     string ClientId,
-    bool UseTls = false,
+    bool UseTls = true,
     bool ValidateCertificate = true,
-    TimeSpan HeartbeatInterval = default);
+    TimeSpan HeartbeatInterval = default,
+    string? TlsServerName = null,
+    string? TlsCaCertificatePath = null);

@@ -29,6 +29,10 @@ public static class ConfigLoader
         {
             BindPort = GetInt(kv, "bindPort", 7000),
             Token = GetString(kv, "token", ""),
+            UseTls = GetBool(kv, "useTls", true),
+            TlsCertificatePath = GetString(kv, "tlsCertificatePath", ""),
+            TlsCertificatePassword = GetString(kv, "tlsCertificatePassword", ""),
+            AllowInsecureTransport = GetBool(kv, "allowInsecureTransport", false),
             VhostHttpPort = GetInt(kv, "vhostHttpPort", 0),
             VhostHttpsPort = GetInt(kv, "vhostHttpsPort", 0),
             SubDomainHost = GetString(kv, "subDomainHost", ""),
@@ -73,9 +77,13 @@ public static class ConfigLoader
         => File.WriteAllText(path, Write(cfg));
 
     /// <summary>ServerConfig → ServerHostOptions（用于 ServerHost 启动）</summary>
-    public static ServerHostOptions ToHostOptions(ServerConfig cfg)
+    public static ServerHostOptions ToHostOptions(ServerConfig cfg, string? baseDirectory = null)
         => new(            cfg.BindPort,
             cfg.Token,
+            UseTls: cfg.UseTls,
+            TlsCertificatePath: ResolvePath(cfg.TlsCertificatePath, baseDirectory),
+            TlsCertificatePassword: cfg.TlsCertificatePassword,
+            AllowInsecureTransport: cfg.AllowInsecureTransport,
             VhostHttpPort: cfg.VhostHttpPort,
             VhostHttpsPort: cfg.VhostHttpsPort,
             SubDomainHost: cfg.SubDomainHost,
@@ -100,7 +108,9 @@ public static class ConfigLoader
             ServerPort = GetInt(kv, "serverPort", 7000),
             Token = GetString(kv, "token", ""),
             ClientId = GetString(kv, "clientId", ""),
-            UseTls = GetBool(kv, "useTls", false),
+            UseTls = GetBool(kv, "useTls", true),
+            TlsServerName = GetString(kv, "tlsServerName", ""),
+            TlsCaCertificatePath = GetString(kv, "tlsCaCertificatePath", ""),
             ReconnectIntervalSec = GetInt(kv, "reconnectInterval", 5),
             HealthIntervalSec = GetInt(kv, "healthInterval", 10),
             LogFile = GetString(kv, "log.file", ""),
@@ -142,7 +152,9 @@ public static class ConfigLoader
             cfg.ServerPort,
             cfg.Token,
             clientId,
-            UseTls: cfg.UseTls);
+            UseTls: cfg.UseTls,
+            TlsServerName: string.IsNullOrWhiteSpace(cfg.TlsServerName) ? null : cfg.TlsServerName,
+            TlsCaCertificatePath: string.IsNullOrWhiteSpace(cfg.TlsCaCertificatePath) ? null : cfg.TlsCaCertificatePath);
     }
 
     /// <summary>生成唯一客户端标识：agent-主机名-随机4位（同机多客户端不冲突）</summary>
@@ -200,12 +212,24 @@ public static class ConfigLoader
 
     private static bool GetBool(Dictionary<string, object?> kv, string key, bool def)
         => kv.TryGetValue(key, out var v) && v is bool b ? b : def;
+
+    private static string ResolvePath(string path, string? baseDirectory)
+        => string.IsNullOrWhiteSpace(path) || string.IsNullOrWhiteSpace(baseDirectory) || Path.IsPathRooted(path)
+            ? path
+            : Path.GetFullPath(path, baseDirectory);
     /// <summary>序列化 ServerConfig → TOML 文本（token 写回用；保留可读结构）</summary>
     public static string Write(ServerConfig cfg)
     {
         var sb = new StringBuilder();
         sb.AppendLine($"bindPort = {cfg.BindPort}");
         sb.AppendLine($"token = \"{Escape(cfg.Token)}\"");
+        sb.AppendLine($"useTls = {cfg.UseTls.ToString().ToLowerInvariant()}");
+        if (!string.IsNullOrEmpty(cfg.TlsCertificatePath))
+            sb.AppendLine($"tlsCertificatePath = \"{Escape(cfg.TlsCertificatePath)}\"");
+        if (!string.IsNullOrEmpty(cfg.TlsCertificatePassword))
+            sb.AppendLine($"tlsCertificatePassword = \"{Escape(cfg.TlsCertificatePassword)}\"");
+        if (cfg.AllowInsecureTransport)
+            sb.AppendLine("allowInsecureTransport = true");
         if (!string.IsNullOrEmpty(cfg.WebToken))
             sb.AppendLine($"webToken = \"{Escape(cfg.WebToken)}\"");
         if (!string.IsNullOrEmpty(cfg.WebTokenSalt))

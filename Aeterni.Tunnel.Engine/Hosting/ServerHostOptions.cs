@@ -16,4 +16,8 @@ public sealed record ServerHostOptions(
     string DashboardPassword = "",
     int MaxPortsPerClient = 0,
     string WebBind = "127.0.0.1:7500",
-    bool ApiEnabled = false);
+    bool ApiEnabled = false,
+    bool UseTls = true,
+    string TlsCertificatePath = "",
+    string TlsCertificatePassword = "",
+    bool AllowInsecureTransport = false);

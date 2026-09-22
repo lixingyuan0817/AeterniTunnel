@@ -1,4 +1,5 @@
 using Aeterni.Tunnel.Engine.Server;
+using System.Security.Cryptography.X509Certificates;
 
 namespace Aeterni.Tunnel.Engine.Hosting;
 
@@ -20,6 +21,22 @@ public sealed class ServerHost : IAsyncDisposable
 
     public void Start(ServerHostOptions options)
     {
+        if (!options.UseTls && !options.AllowInsecureTransport)
+            throw new InvalidOperationException("明文客户端接入已禁用；如需旧部署迁移，必须同时显式设置 AllowInsecureTransport=true。");
+
+        X509Certificate2? certificate = options.TlsCertificate;
+        if (options.UseTls && certificate is null)
+        {
+            if (string.IsNullOrWhiteSpace(options.TlsCertificatePath))
+                throw new InvalidOperationException("TLS 客户端接入已启用，但未配置 TlsCertificatePath。");
+            if (!File.Exists(options.TlsCertificatePath))
+                throw new FileNotFoundException("TLS 接入证书不存在。", options.TlsCertificatePath);
+
+            certificate = X509CertificateLoader.LoadPkcs12(
+                File.ReadAllBytes(options.TlsCertificatePath),
+                string.IsNullOrEmpty(options.TlsCertificatePassword) ? null : options.TlsCertificatePassword);
+        }
+
         _listener = new ServerListener(
             options.BindPort,
             options.Token,
@@ -28,7 +45,7 @@ public sealed class ServerHost : IAsyncDisposable
             vhostHttpsPort: options.VhostHttpsPort,
             subDomainHost: options.SubDomainHost,
             dashboardPort: options.DashboardPort,
-            tlsCertificate: options.TlsCertificate,
+            tlsCertificate: certificate,
             dashboardUser: options.DashboardUser,
             dashboardPassword: options.DashboardPassword,
             maxPortsPerClient: options.MaxPortsPerClient);

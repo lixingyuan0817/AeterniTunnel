@@ -18,6 +18,7 @@ public sealed class TcpTlsTransport : ITunnelTransport, IAsyncDisposable
     private readonly X509Certificate2? _serverCertificate;
     private readonly string? _tlsTargetHost;
     private readonly bool _validateCertificate;
+    private readonly string? _caCertificatePath;
 
     public string Name => _useTls ? "tcp+tls" : "tcp";
 
@@ -26,21 +27,23 @@ public sealed class TcpTlsTransport : ITunnelTransport, IAsyncDisposable
         bool useTls,
         X509Certificate2? serverCertificate,
         string? tlsTargetHost,
-        bool validateCertificate)
+        bool validateCertificate,
+        string? caCertificatePath)
     {
         _listener = listener;
         _useTls = useTls;
         _serverCertificate = serverCertificate;
         _tlsTargetHost = tlsTargetHost;
         _validateCertificate = validateCertificate;
+        _caCertificatePath = caCertificatePath;
     }
 
     /// <summary>客户端侧工厂：连接 host:port，可选 TLS（targetHost 为 SNI，默认 host）</summary>
-    public static TcpTlsTransport Client(string host, int port, bool useTls, string? targetHost = null, bool validateCertificate = true)
+    public static TcpTlsTransport Client(string host, int port, bool useTls, string? targetHost = null, bool validateCertificate = true, string? caCertificatePath = null)
     {
         _ = host;
         _ = port;
-        return new TcpTlsTransport(null, useTls, null, targetHost, validateCertificate);
+        return new TcpTlsTransport(null, useTls, null, targetHost, validateCertificate, caCertificatePath);
     }
 
     /// <summary>服务端侧工厂：绑定 addr:port 监听；certificate 非空则接受 TLS 连接</summary>
@@ -48,7 +51,7 @@ public sealed class TcpTlsTransport : ITunnelTransport, IAsyncDisposable
     {
         var listener = new TcpListener(bindAddr, port);
         listener.Start();
-        return new TcpTlsTransport(listener, certificate is not null, certificate, null, false);
+        return new TcpTlsTransport(listener, certificate is not null, certificate, null, false, null);
     }
 
     public async ValueTask<ITunnelConnection> ConnectAsync(string host, int port, CancellationToken ct = default)
@@ -67,6 +70,19 @@ public sealed class TcpTlsTransport : ITunnelTransport, IAsyncDisposable
             };
             if (!_validateCertificate)
                 options.RemoteCertificateValidationCallback = (_, _, _, _) => true;
+            else if (!string.IsNullOrWhiteSpace(_caCertificatePath))
+            {
+                if (!File.Exists(_caCertificatePath))
+                    throw new FileNotFoundException("TLS 自定义根证书不存在。", _caCertificatePath);
+                var root = X509CertificateLoader.LoadCertificateFromFile(_caCertificatePath);
+                var policy = new X509ChainPolicy
+                {
+                    TrustMode = X509ChainTrustMode.CustomRootTrust,
+                    RevocationMode = X509RevocationMode.NoCheck,
+                };
+                policy.CustomTrustStore.Add(root);
+                options.CertificateChainPolicy = policy;
+            }
             await ssl.AuthenticateAsClientAsync(options, ct);
             stream = ssl;
         }

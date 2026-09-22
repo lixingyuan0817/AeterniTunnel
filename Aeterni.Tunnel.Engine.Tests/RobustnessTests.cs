@@ -25,6 +25,7 @@ public class RobustnessTests
             ServerPort: controlPort,
             Token: TestToken,
             ClientId: clientId,
+            UseTls: false,
             HeartbeatInterval: TimeSpan.FromMilliseconds(300)));
         await agent.ConnectAsync();
         return agent;
@@ -53,6 +54,7 @@ public class RobustnessTests
 
         var loginTcs = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
         var agent = new AgentSession(new AgentOptions("127.0.0.1", controlPort, TestToken, "agent-rc",
+            UseTls: false,
             HeartbeatInterval: TimeSpan.FromMilliseconds(300)));
         agent.LogLine += s => loginTcs.TrySetResult(s);
         await agent.ConnectAsync();
@@ -225,7 +227,7 @@ public class RobustnessTests
         {
             var agent = new AgentSession(new AgentOptions(
                 ServerAddr: "127.0.0.1", ServerPort: port,
-                Token: TestToken, ClientId: "agent-nonats"));
+                Token: TestToken, ClientId: "agent-nonats", UseTls: false));
             await using var _ = agent;
 
             // 握手 10s 超时 → 抛异常（不再立即标记"已连接"）

@@ -28,6 +28,7 @@ public class DashboardTests
 
         var loginTcs = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
         var agent = new AgentSession(new AgentOptions("127.0.0.1", controlPort, TestToken, "agent-dash",
+            UseTls: false,
             HeartbeatInterval: TimeSpan.FromMilliseconds(300)));
         agent.LogLine += s => loginTcs.TrySetResult(s);
         await agent.ConnectAsync();
@@ -159,6 +160,7 @@ public class DashboardTests
         // 连接 agent（先订阅再连接）
         var loginTcs = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
         var agent = new AgentSession(new AgentOptions("127.0.0.1", controlPort, TestToken, "max-ports",
+            UseTls: false,
             HeartbeatInterval: TimeSpan.FromMilliseconds(300)));
         agent.LogLine += s => loginTcs.TrySetResult(s);
         await agent.ConnectAsync();

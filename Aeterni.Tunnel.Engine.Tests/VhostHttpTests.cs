@@ -75,6 +75,7 @@ public class VhostHttpTests
             ServerPort: controlPort,
             Token: TestToken,
             ClientId: "agent-vhost",
+            UseTls: false,
             HeartbeatInterval: TimeSpan.FromMilliseconds(500)));
         agent.LogLine += s => loginTcs.TrySetResult(s);
         await agent.ConnectAsync();
