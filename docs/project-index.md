@@ -147,6 +147,7 @@ Control、Security、Peers、Relay、Tunneling、Diagnostics 是重构方案中�
 | 帧格式、长度、半包粘包 | [FrameCodecTests](../Aeterni.Tunnel.Engine.Tests/FrameCodecTests.cs) |
 | 消息序列化、未知类型行为 | [MessageCodecTests](../Aeterni.Tunnel.Engine.Tests/MessageCodecTests.cs) |
 | TCP/TLS 传输 | [TcpTlsTransportTests](../Aeterni.Tunnel.Engine.Tests/TcpTlsTransportTests.cs) |
+| TLS 默认值、证书信任和明文迁移策略 | [TlsPolicyTests](../Aeterni.Tunnel.Engine.Tests/TlsPolicyTests.cs) |
 | 通道隔离、关闭、Ping 和背压 | [ChannelMultiplexerTests](../Aeterni.Tunnel.Engine.Tests/ChannelMultiplexerTests.cs)、[AdvancedTests](../Aeterni.Tunnel.Engine.Tests/AdvancedTests.cs) |
 | 登录、注册和控制流程 | [ControlPlaneTests](../Aeterni.Tunnel.Engine.Tests/ControlPlaneTests.cs) |
 | TCP/UDP 端到端转发 | [DataPlaneTests](../Aeterni.Tunnel.Engine.Tests/DataPlaneTests.cs) |
