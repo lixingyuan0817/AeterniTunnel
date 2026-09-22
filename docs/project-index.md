@@ -1,6 +1,6 @@
 # 项目索引
 
-核对日期：2026-09-21。本文是当前仓库的源码导航，不是重构后的目录承诺，也不代表构建/测试已通过。项目清单以 [解决方案](../AeterniTunnel.slnx) 和各项目文件为依据。
+核对日期：2026-09-22。本文是当前仓库的源码导航，不是重构后的目录承诺，也不代表构建/测试已通过。项目清单以 [解决方案](../AeterniTunnel.slnx) 和各项目文件为依据。
 
 阅读分工：[AGENTS.md](../AGENTS.md) 定义协作规则；[文档索引](./README.md) 导航文档；本文定位项目和代码；[重构方案](./refactor-plan.md) 定义目标；[todolist](./todolist.md) 是唯一任务进度来源。
 
@@ -16,6 +16,7 @@
 | [Aeterni.Tunnel.Desktop](../Aeterni.Tunnel.Desktop/Aeterni.Tunnel.Desktop.csproj) | 已接入 Engine 的 Avalonia ATC 客户端 | Engine | [Program.cs](../Aeterni.Tunnel.Desktop/Program.cs)、[App.axaml.cs](../Aeterni.Tunnel.Desktop/App.axaml.cs) |
 | [AeterniLink](../AeterniLink/AeterniLink.csproj) | 独立 Avalonia 界面、控件及托盘入口；目前未引用 Engine | 无 | [Program.cs](../AeterniLink/Program.cs)、[App.axaml.cs](../AeterniLink/App.axaml.cs) |
 | [Aeterni.Tunnel.Engine.Tests](../Aeterni.Tunnel.Engine.Tests/Aeterni.Tunnel.Engine.Tests.csproj) | xUnit 通信/配置/宿主等测试，包含真实 socket 场景 | Engine、Common | 测试运行器 |
+| [Aeterni.Tunnel.Engine.Benchmarks](../Aeterni.Tunnel.Engine.Benchmarks/Aeterni.Tunnel.Engine.Benchmarks.csproj) | Engine 性能基线控制台；固定负载测量编解码、通道和 TCP/TLS | Engine | [Program.cs](../Aeterni.Tunnel.Engine.Benchmarks/Program.cs) |
 
 AeterniLink 已加入解决方案，但不能据名称认为它是现有 ATC 实现的替代入口。当前 ATC 功能应优先从 Desktop 的 AgentClientService 和 Engine 的 AgentHost 查找。
 
@@ -38,6 +39,7 @@ flowchart TD
     Tests["Aeterni.Tunnel.Engine.Tests"] --> Engine
     Tests --> Common["Aeterni.Tunnel.Common"]
     Engine --> Common
+    Benchmarks["Aeterni.Tunnel.Engine.Benchmarks"] --> Engine
     Link["AeterniLink：当前无项目引用"]
 ~~~
 
@@ -185,6 +187,9 @@ dotnet test AeterniTunnel.slnx
 
 # 根目录：仅定位某组 Engine 测试
 dotnet test Aeterni.Tunnel.Engine.Tests/Aeterni.Tunnel.Engine.Tests.csproj --filter FullyQualifiedName~ControlPlaneTests
+
+# 根目录：运行 Engine 性能基线（--quick 用于快速冒烟）
+dotnet run --project Aeterni.Tunnel.Engine.Benchmarks/Aeterni.Tunnel.Engine.Benchmarks.csproj -c Release -- --quick
 
 # 根目录：已有 ATC 桌面入口
 dotnet run --project Aeterni.Tunnel.Desktop/Aeterni.Tunnel.Desktop.csproj

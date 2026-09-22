@@ -1,11 +1,11 @@
 # Engine 重构 todolist
 
-最后更新：2026-09-21。唯一进度台账；架构约束见 [重构方案](./refactor-plan.md)，协作规则见 [AGENTS.md](../AGENTS.md)。
+最后更新：2026-09-22。唯一进度台账；架构约束见 [重构方案](./refactor-plan.md)，协作规则见 [AGENTS.md](../AGENTS.md)。
 
 ## 1. 当前交接快照
 
-- 本轮范围：已完成 Engine P0 的 EN-000 基线和 EN-002 最小认证状态机修复。
-- 当前活动任务：无；本轮可独立交付部分已完成。
+- 本轮范围：建立 Engine 编解码、复用通道和 TCP/TLS 端到端性能基线。
+- 当前活动任务：EN-001 性能基线（DOING）。
 - 已完成代码任务：EN-000、EN-002。性能数值、TLS 迁移和 P2P 后端尚未验证。
 - 下一项：EN-001 性能基线；完成后再按依赖推进 EN-003 TLS 安全默认值与兼容迁移。
 - 当前阻塞：无；待执行的测试与选型是任务，不记作阻塞。
@@ -60,7 +60,7 @@
 | DOC-002 | P0 | 项目索引与源码导航 | DOC-001 | DONE | Codex / 2026-09-21 |
 | DOC-003 | P0 | 确认双端 Blazor 与客户端迁移顺序 | DOC-002 | DONE | Codex / 2026-09-21 |
 | EN-000 | P0 | 功能回归与代码安全边界基线 | DOC-001 | DONE | Codex / 2026-09-21 |
-| EN-001 | P0 | 性能基线与数值验收门槛 | EN-000 | TODO | — |
+| EN-001 | P0 | 性能基线与数值验收门槛 | EN-000 | DOING | Codex / 2026-09-22 |
 | EN-002 | P0 | 登录状态机与未授权资源操作修复 | EN-000 | DONE | Codex / 2026-09-21 |
 | EN-003 | P0 | TLS 安全默认值与单入口兼容迁移 | EN-002 | TODO | — |
 | EN-010 | P1 | 通信契约及依赖边界 | EN-003 | TODO | — |
@@ -257,6 +257,15 @@ EN-040 的依赖刻意不包含性能优化：若接口设计出现后端可行�
 - 约束：替代客户端尚未验证前不删除旧客户端；过渡期间只做必要兼容与缺陷修复，不新增 Avalonia 产品能力。
 
 ## 6. 执行记录
+
+### 2026-09-22 / Asia/Shanghai — EN-001 / Codex
+
+- 状态：TODO → DOING（基线入口与第一轮结果已完成，验收未完成）。
+- 已完成：新增 `Aeterni.Tunnel.Engine.Benchmarks` 控制台项目并加入解决方案；覆盖 FrameCodec 64 B/1 KiB/64 KiB、ChannelMultiplexer 1 KiB、控制帧 p50/p95/p99、TCP/TLS 单连接和 4 连接回显。没有修改 Engine 通信热路径。
+- 验证：`dotnet build Aeterni.Tunnel.Engine.Benchmarks/Aeterni.Tunnel.Engine.Benchmarks.csproj -c Release --no-restore` 通过；完整 Release 命令连续运行 2 次，均完成；`dotnet test Aeterni.Tunnel.Engine.Tests/Aeterni.Tunnel.Engine.Tests.csproj --no-build --no-restore` 为 91/91 通过；环境、负载、两次结果和限制记录于 [performance-baseline.md](./performance-baseline.md)。沙箱内绑定回环端口会收到 Permission denied，完整基线在授权环境运行。
+- 已知限制：当前只测同机回环；FrameCodec 分配为单线程近似；尚未统一采集进程 CPU、峰值托管内存、慢消费者和更多并发档位，也尚未冻结绝对/相对门槛。
+- 下一步：补齐 CPU/峰值内存与慢消费者采样规则，增加并发档位后复测；达到 EN-001 验收条件再标记 DONE，并把稳定范围交给 EN-031 优化复测使用。
+- 提交：未提交。
 
 ### 2026-09-21 / Asia/Shanghai — EN-000 / Codex
 

@@ -19,6 +19,7 @@ README 描述已实现功能；重构方案描述目标与约束；todolist 是�
 | [项目索引](./project-index.md) | 当前解决方案、依赖、模块、测试/构建入口，以及现有 Avalonia 与目标 Blazor 客户端的区别 |
 | [Engine 重构 todolist](./todolist.md) | 唯一进度台账：Engine 优先级/依赖/验收及证据，后续 UI 迁移与 Avalonia 退役任务 |
 | [Engine 通信层重构方案](./refactor-plan.md) | 通信范围、单一接入端口、安全/性能、P2P，以及 Engine 完成后的双端 Blazor 架构 |
+| [Engine 性能基线](./performance-baseline.md) | EN-001 的可重复运行方式、环境和已记录的编解码/通道/TCP/TLS 基线结果 |
 | [ATS 模式可视化](./ats-modes-visual.html) | ATS 模式与流量路径辅助说明；不作为本轮实现状态或单端口约束的依据 |
 
 ## 维护规则
