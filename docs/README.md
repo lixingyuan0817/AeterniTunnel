@@ -18,10 +18,10 @@ README 描述已实现功能；重构方案描述目标与约束；todolist 是�
 |---|---|
 | [项目索引](./project-index.md) | 当前解决方案、依赖、模块、测试/构建入口，以及现有 Avalonia 与目标 Blazor 客户端的区别 |
 | [Engine 重构 todolist](./todolist.md) | 唯一进度台账：Engine 优先级/依赖/验收及证据，后续 UI 迁移与 Avalonia 退役任务 |
-| [Engine 通信层重构方案](./refactor-plan.md) | 通信范围、单一接入端口、安全/性能、P2P，以及 Engine 完成后的双端 Blazor 架构 |
+| [Engine 通信层重构方案](./refactor-plan.md) | 通信范围、单一接入端口、安全/性能、P2P，以及 Engine 完成后的双端 Blazor 架构；含 EN-040 后端选型决策 |
 | [Engine 通信契约](./communication-contract.md) | EN-010 冻结的流、消息、数据报、Peer、授权和传输工厂边界 |
-| [Engine 协议兼容](./protocol-compatibility.md) | EN-011 的 Hello 能力协商、兼容矩阵和 UDP 来源关联封装规则 |
-| [Engine 性能基线](./performance-baseline.md) | EN-001 的可重复运行方式、环境和已记录的编解码/通道/TCP/TLS 基线结果 |
+| [Engine 协议兼容](./protocol-compatibility.md) | Hello 能力协商、兼容矩阵、UDP 来源关联，以及同入口数据连接/可靠窗口扩展规则 |
+| [Engine 性能基线](./performance-baseline.md) | EN-001 门槛及 EN-031 五轮编解码/通道/TCP/TLS 优化复测结果 |
 | [ATS 模式可视化](./ats-modes-visual.html) | ATS 模式与流量路径辅助说明；不作为本轮实现状态或单端口约束的依据 |
 
 ## 维护规则

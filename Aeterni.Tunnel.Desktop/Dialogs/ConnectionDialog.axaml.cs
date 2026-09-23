@@ -20,6 +20,8 @@ public partial class ConnectionDialog : Window
 
     public bool UseTls { get; private set; }
 
+    public ConnectionDialog() : this("", "", "", true) { }
+
     public ConnectionDialog(string address, string port, string token, bool useTls)
     {
         InitializeComponent();

@@ -1,5 +1,8 @@
 using Aeterni.Tunnel.Engine.Channels;
+using Aeterni.Tunnel.Engine.Protocol;
+using Aeterni.Tunnel.Engine.Protocol.Messages;
 using Aeterni.Tunnel.Engine.Transport;
+using Aeterni.Tunnel.Engine.Wire;
 using System.Net;
 
 namespace Aeterni.Tunnel.Engine.Server;
@@ -23,6 +26,13 @@ public sealed class ServerListener : IAsyncDisposable
     private readonly int _allowPortsCount;
     private readonly int _maxPortsPerClient;
     private readonly IClientIdentityResolver? _identityResolver;
+    private readonly DataConnectionBindingRegistry _dataConnectionBindings;
+    private readonly int _maxDataConnectionsPerClient;
+    private readonly PeerSignalingRegistry _peerSignaling;
+    private readonly HashSet<Task> _connectionInitializers = [];
+    private readonly object _connectionInitializersLock = new();
+    private readonly SemaphoreSlim _pendingConnectionSlots;
+    private Task? _acceptLoopTask;
     private readonly DateTime _startedAt = DateTime.UtcNow;
 
     /// <summary>新会话接入（用于测试/宿主收集）</summary>
@@ -40,7 +50,7 @@ public sealed class ServerListener : IAsyncDisposable
     /// <summary>主域名后缀（subdomain 拼接用）</summary>
     public string SubDomainHost { get; }
 
-    public ServerListener(int bindPort, string token, PortManager? ports = null, int vhostHttpPort = 0, int vhostHttpsPort = 0, string subDomainHost = "", int dashboardPort = 0, System.Security.Cryptography.X509Certificates.X509Certificate2? tlsCertificate = null, string dashboardUser = "", string dashboardPassword = "", int maxPortsPerClient = 0, IClientIdentityResolver? identityResolver = null, ITransportFactory? transportFactory = null)
+    public ServerListener(int bindPort, string token, PortManager? ports = null, int vhostHttpPort = 0, int vhostHttpsPort = 0, string subDomainHost = "", int dashboardPort = 0, System.Security.Cryptography.X509Certificates.X509Certificate2? tlsCertificate = null, string dashboardUser = "", string dashboardPassword = "", int maxPortsPerClient = 0, IClientIdentityResolver? identityResolver = null, ITransportFactory? transportFactory = null, int maxDataConnectionsPerClient = 2, TimeSpan? dataConnectionTokenLifetime = null, int maxPendingConnections = 64, ICommunicationAuthorizationProvider? communicationAuthorization = null)
     {
         _transport = transportFactory ?? TcpTlsTransport.Server(IPAddress.Any, bindPort, tlsCertificate);
         BindPort = bindPort;
@@ -53,6 +63,12 @@ public sealed class ServerListener : IAsyncDisposable
         _allowPortsCount = _ports.GetAllowedCount();
         _maxPortsPerClient = maxPortsPerClient;
         _identityResolver = identityResolver;
+        _maxDataConnectionsPerClient = Math.Max(0, maxDataConnectionsPerClient);
+        _peerSignaling = new PeerSignalingRegistry(communicationAuthorization);
+        _dataConnectionBindings = new DataConnectionBindingRegistry(dataConnectionTokenLifetime);
+        if (maxPendingConnections <= 0)
+            throw new ArgumentOutOfRangeException(nameof(maxPendingConnections));
+        _pendingConnectionSlots = new SemaphoreSlim(maxPendingConnections, maxPendingConnections);
 
         if (vhostHttpPort > 0)
         {
@@ -155,7 +171,7 @@ public sealed class ServerListener : IAsyncDisposable
 
     public void Start()
     {
-        _ = AcceptLoopAsync();
+        _acceptLoopTask ??= AcceptLoopAsync();
     }
 
     private async Task AcceptLoopAsync()
@@ -165,22 +181,91 @@ public sealed class ServerListener : IAsyncDisposable
             while (!_cts.IsCancellationRequested)
             {
                 var conn = await _transport.AcceptAsync(_cts.Token);
-                var mux = new ChannelMultiplexer(conn);
-                var session = new ServerSession(mux, _ports, _token, VhostHttp, VhostHttps, SubDomainHost, _maxPortsPerClient, _identityResolver);
-                lock (_sessionsLock)
-                    _sessions.Add(session);
-                session.LoggedIn += OnSessionLoggedIn;
-                session.Closed += OnSessionClosed;
-                SessionAccepted?.Invoke(session);
-                session.Start();
+                if (!_pendingConnectionSlots.Wait(0))
+                {
+                    await conn.DisposeAsync();
+                    continue;
+                }
+                var initializer = InitializeConnectionAsync(conn);
+                lock (_connectionInitializersLock)
+                    _connectionInitializers.Add(initializer);
+                _ = initializer.ContinueWith(completed =>
+                {
+                    lock (_connectionInitializersLock)
+                        _connectionInitializers.Remove(completed);
+                }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
             }
         }
         catch (OperationCanceledException) { }
+        catch (ObjectDisposedException) when (_cts.IsCancellationRequested) { }
+    }
+
+    private async Task InitializeConnectionAsync(ITunnelConnection connection)
+    {
+        var ownershipTransferred = false;
+        ServerSession? controlSession = null;
+        try
+        {
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token);
+            timeout.CancelAfter(TimeSpan.FromSeconds(10));
+            var frame = await FrameCodec.ReadAsync(connection.Stream, timeout.Token);
+            if (frame.Type != FrameType.Control || frame.ChannelId != FrameContract.ControlChannel)
+                throw new ProtocolException("连接首帧必须是控制消息");
+
+            var message = MessageCodec.Deserialize(frame.Payload);
+            if (message is BindDataConnectionMessage bind)
+            {
+                var mux = new ChannelMultiplexer(connection);
+                if (!_dataConnectionBindings.TryConsume(bind.Token, out var session, out var error) ||
+                    session is null || !session.TryAttachDataConnection(mux, out error))
+                {
+                    await mux.SendControlAsync(MessageCodec.Serialize(
+                        new BindDataConnectionAckMessage(false, error)));
+                    await mux.DisposeAsync();
+                    return;
+                }
+
+                ownershipTransferred = true;
+                await mux.SendControlAsync(MessageCodec.Serialize(
+                    new BindDataConnectionAckMessage(true, null)));
+                return;
+            }
+
+            var controlMux = new ChannelMultiplexer(connection);
+            controlSession = new ServerSession(controlMux, _ports, _token,
+                VhostHttp, VhostHttps, SubDomainHost, _maxPortsPerClient, _identityResolver,
+                _dataConnectionBindings, _maxDataConnectionsPerClient);
+            ownershipTransferred = true;
+            lock (_sessionsLock)
+                _sessions.Add(controlSession);
+            controlSession.LoggedIn += OnSessionLoggedIn;
+            controlSession.Closed += OnSessionClosed;
+            controlSession.PeerRequestReceived += (sender, request) => _peerSignaling.HandleRequestAsync(sender, request);
+            controlSession.PeerDescriptionReceived += (sender, description) => _peerSignaling.HandleDescriptionAsync(sender, description);
+            controlSession.PeerCandidateReceived += (sender, candidate) => _peerSignaling.HandleCandidateAsync(sender, candidate);
+            SessionAccepted?.Invoke(controlSession);
+            await controlSession.StartAsync(frame.Payload);
+        }
+        catch (OperationCanceledException) when (_cts.IsCancellationRequested) { }
+        catch
+        {
+            // 握手/首帧错误只关闭当前连接，不影响统一接入监听。
+            if (controlSession is not null)
+                await controlSession.DisposeAsync();
+        }
+        finally
+        {
+            if (!ownershipTransferred)
+                await connection.DisposeAsync();
+            _pendingConnectionSlots.Release();
+        }
     }
 
     /// <summary>登录成功：同 clientId 的旧会话立即替换（客户端快速重启不再等心跳过期）</summary>
     private void OnSessionLoggedIn(ServerSession session)
     {
+        if (session.AuthenticatedPeerId is not null)
+            _peerSignaling.Register(session);
         lock (_sessionsLock)
         {
             if (session.ClientId is not null &&
@@ -217,6 +302,8 @@ public sealed class ServerListener : IAsyncDisposable
     /// <summary>会话关闭：从会话列表移除 + 清理 clientId 映射</summary>
     private void OnSessionClosed(ServerSession session)
     {
+        if (session.AuthenticatedPeerId is not null)
+            _peerSignaling.Unregister(session);
         lock (_sessionsLock)
         {
             // 必须从 _sessions 移除：否则断开/被替换的旧会话残留在列表，
@@ -231,26 +318,35 @@ public sealed class ServerListener : IAsyncDisposable
         }
     }
 
-    public ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         _cts.Cancel();
+        if (_transport is IAsyncDisposable disposableTransport)
+            await disposableTransport.DisposeAsync();
+        if (_acceptLoopTask is not null)
+        {
+            try { await _acceptLoopTask; }
+            catch (OperationCanceledException) { }
+        }
+        Task[] initializers;
+        lock (_connectionInitializersLock)
+            initializers = _connectionInitializers.ToArray();
+        await Task.WhenAll(initializers);
+        ServerSession[] sessions;
         lock (_sessionsLock)
         {
-            // 遍历副本：session.DisposeAsync 会触发 Closed → OnSessionClosed → _sessions.Remove，
-            // 直接枚举原集合会抛 "Collection was modified"
-            foreach (var session in _sessions.ToArray())
-                _ = session.DisposeAsync();
+            sessions = _sessions.ToArray();
             _sessions.Clear();
             _sessionsByClient.Clear();
         }
+        // 会话释放会关闭监听并回收端口/vhost；必须等待完成后再关闭共享注册表。
+        await Task.WhenAll(sessions.Select(session => session.DisposeAsync().AsTask()));
         if (VhostHttp is not null)
-            _ = VhostHttp.DisposeAsync();
+            await VhostHttp.DisposeAsync();
         if (VhostHttps is not null)
-            _ = VhostHttps.DisposeAsync();
+            await VhostHttps.DisposeAsync();
         if (Dashboard is not null)
-            _ = Dashboard.DisposeAsync();
-        return _transport is IAsyncDisposable disposable
-            ? disposable.DisposeAsync()
-            : ValueTask.CompletedTask;
+            await Dashboard.DisposeAsync();
+        _pendingConnectionSlots.Dispose();
     }
 }

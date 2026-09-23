@@ -70,8 +70,8 @@
 | [ServerSession](../Aeterni.Tunnel.Engine/Server/ServerSession.cs) | Hello-first 门控、v1 能力交集和可选稳定身份解析已接入；旧共享 token 会话没有稳定 Peer 身份 | 后续授权和 Peer 信令必须要求稳定身份并使用默认拒绝的授权提供者 |
 | [AgentOptions](../Aeterni.Tunnel.Engine/Client/AgentOptions.cs) | UseTls 默认为 true，证书校验默认开启，可配置 server name/自定义根证书 | 安全默认值迁移覆盖宿主、配置、证书加载与旧明文显式迁移，不能只改一个默认参数 |
 | [ITunnelConnection](../Aeterni.Tunnel.Engine/Transport/ITunnelConnection.cs) | 只暴露 Stream | 可靠流与数据报需要不同契约 |
-| [ChannelMultiplexer](../Aeterni.Tunnel.Engine/Channels/ChannelMultiplexer.cs)、[Channel](../Aeterni.Tunnel.Engine/Channels/Channel.cs) | 控制处理与网络读取已分离，控制队列和控制后首帧缓存有界；数据通道仍可能阻塞全局分发 | EN-030 补齐按字节预算、公平性和同端口附加连接隔离 |
-| [FrameCodec](../Aeterni.Tunnel.Engine/Wire/FrameCodec.cs) | 固定 v1 帧头、4 MiB 负载上限，读写分配并复制数组 | 先测量，再改内存所有权、批量写与帧预算 |
+| [ChannelMultiplexer](../Aeterni.Tunnel.Engine/Channels/ChannelMultiplexer.cs)、[Channel](../Aeterni.Tunnel.Engine/Channels/Channel.cs) | 控制处理与网络读取已分离；协商后按包/字节窗口背压，慢通道显式重置，写入按逻辑通道公平竞争连接 | 同入口附加数据连接用于隔离控制与可靠隧道流量；实时数据报仍待 P2P 阶段 |
+| [FrameCodec](../Aeterni.Tunnel.Engine/Wire/FrameCodec.cs) | 固定 v1 帧头、4 MiB 负载上限；写入使用清零池化缓冲，读取池化固定头并保留负载所有权 | EN-031 按冻结基准复测，后续优化不得破坏缓冲所有权 |
 | [UdpProxyListener](../Aeterni.Tunnel.Engine/Server/UdpProxyListener.cs) | 协商后使用来源 ID、有界/超时映射和 Agent 独立 socket；旧端保留最近来源模式 | 仍经可靠通道转发，不能直接视作 P2P 实时 UDP 数据面 |
 | [MessageCodecTests](../Aeterni.Tunnel.Engine.Tests/MessageCodecTests.cs) | 未知 JSON 消息类型抛异常 | 不向旧端发送未经协商的新消息 |
 
@@ -234,5 +234,7 @@ EN-051 完成后，依次推进 UI-001（框架与原生宿主）、UI-002（ATC
 | DEC-004 | 2026-09-21 | P2P 后端在 EN-040 实测后冻结 | 防止未经验证承诺平台/API/媒体能力 |
 | DEC-005 | 2026-09-21 | 本轮仅文档，代码任务全部未开始 | 完成状态和接手动作见 todolist |
 | DEC-006 | 2026-09-21 | 服务端 Blazor Interactive Server；客户端 Tauri + Blazor WebAssembly；最终退役 Avalonia | 用户明确技术栈；补充 DEC-003，替代的是 UI 优先顺序而非 Tauri 目标，迁移在 Engine 完成后执行 |
+| DEC-007 | 2026-09-23 | `ConnectionIsolation` 能力启用同 `bindPort` 的短期一次性数据连接绑定、显式可靠窗口和通道重置 | 隔离大流与控制且保持单一客户端入口；未协商旧端不接收新消息/帧，附加连接有配额与握手上限 |
+| DEC-008 | 2026-09-23 | EN-040 原型选用 `DataChannelDotnet` 1.3.1（MIT wrapper）/ libdatachannel 0.22.x 数据通道后端；不选 .NET `System.Net.Quic` 或 SIPSorcery 作为当前 P2P 数据面 | QUIC 官方 API 只提供多路流，未提供本任务所需 ICE/UDP 数据报；SIPSorcery 10.0.16 的当前公开增强项仍列不可靠 DataChannel 和高压数据通道问题。原型在两个独立进程完成 loopback ICE/DTLS/SCTP 可靠回执、10 个不可靠包和关闭；包含 macOS（目录名 osx-x64 但二进制为 arm64）、Linux x64、Windows x64/x86 native 资产，未包含 Linux/Windows arm64。跨 NAT、MTU/拥塞长稳、TURN/中继尚未验证，生产接入需先补这些证据并锁定可审计的 native 构建来源 |
 
 后续改变端口模型、协议、传输选型或兼容行为时，在此追加决策、证据及被替代条目，并同步任务依赖。用户新要求优先，文档同步解释变化。

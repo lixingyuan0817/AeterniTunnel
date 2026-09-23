@@ -69,6 +69,16 @@ public class MessageCodecTests
     [InlineData(typeof(HeartbeatMessage))]
     [InlineData(typeof(HeartbeatAckMessage))]
     [InlineData(typeof(ErrorMessage))]
+    [InlineData(typeof(RequestDataConnectionMessage))]
+    [InlineData(typeof(DataConnectionTokenMessage))]
+    [InlineData(typeof(BindDataConnectionMessage))]
+    [InlineData(typeof(BindDataConnectionAckMessage))]
+    [InlineData(typeof(PeerRequestMessage))]
+    [InlineData(typeof(PeerRequestNoticeMessage))]
+    [InlineData(typeof(PeerRequestAckMessage))]
+    [InlineData(typeof(PeerDescriptionMessage))]
+    [InlineData(typeof(PeerCandidateMessage))]
+    [InlineData(typeof(PeerSignalAckMessage))]
     public void RoundTrip_AllMessageTypes(Type type)
     {
         Message msg = type.Name switch
@@ -81,6 +91,16 @@ public class MessageCodecTests
             nameof(HeartbeatMessage) => new HeartbeatMessage(1234567890),
             nameof(HeartbeatAckMessage) => new HeartbeatAckMessage(1234567890),
             nameof(ErrorMessage) => new ErrorMessage(400, "bad request"),
+            nameof(RequestDataConnectionMessage) => new RequestDataConnectionMessage(),
+            nameof(DataConnectionTokenMessage) => new DataConnectionTokenMessage("token", 1234567890),
+            nameof(BindDataConnectionMessage) => new BindDataConnectionMessage("token"),
+            nameof(BindDataConnectionAckMessage) => new BindDataConnectionAckMessage(true, null),
+            nameof(PeerRequestMessage) => new PeerRequestMessage("r1", "peer-b", "svc", 1234567890),
+            nameof(PeerRequestNoticeMessage) => new PeerRequestNoticeMessage("r1", "peer-a", "svc", 1234567890),
+            nameof(PeerRequestAckMessage) => new PeerRequestAckMessage("r1", true, null, 1234567890),
+            nameof(PeerDescriptionMessage) => new PeerDescriptionMessage("r1", true, "v=0"),
+            nameof(PeerCandidateMessage) => new PeerCandidateMessage("r1", "candidate:host", "0"),
+            nameof(PeerSignalAckMessage) => new PeerSignalAckMessage("r1", true, null, "candidate"),
             _ => throw new ArgumentOutOfRangeException(),
         };
 

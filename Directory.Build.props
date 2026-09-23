@@ -1,0 +1,8 @@
+<Project>
+  <PropertyGroup>
+    <!-- The sandbox/offline developer environment cannot reach NuGet's audit service;
+         GitHub Actions sets CI=true and keeps auditing enabled there. -->
+    <NuGetAudit Condition="'$(CI)' == 'true'">true</NuGetAudit>
+    <NuGetAudit Condition="'$(CI)' != 'true'">false</NuGetAudit>
+  </PropertyGroup>
+</Project>

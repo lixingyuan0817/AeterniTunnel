@@ -58,7 +58,7 @@ public class VhostHttpTests
             {
                 var s = c.GetStream();
                 var buf = new byte[1024];
-                await s.ReadAsync(buf);
+                await s.ReadAtLeastAsync(buf.AsMemory(), 1, throwOnEndOfStream: false);
                 const string body = "hello-from-local";
                 var resp = $"HTTP/1.1 200 OK\r\nContent-Length: {body.Length}\r\nConnection: close\r\n\r\n{body}";
                 await s.WriteAsync(Encoding.ASCII.GetBytes(resp));

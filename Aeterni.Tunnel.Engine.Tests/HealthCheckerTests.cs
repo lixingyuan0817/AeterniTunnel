@@ -110,7 +110,7 @@ public class HealthCheckerTests
                         try
                         {
                             var buf = new byte[1024];
-                            await client.GetStream().ReadAsync(buf);
+                            await client.GetStream().ReadAtLeastAsync(buf.AsMemory(), 1, throwOnEndOfStream: false);
                             var body = "404 Not Found";
                             var resp = $"HTTP/1.1 404 Not Found\r\nContent-Length: {body.Length}\r\nConnection: close\r\n\r\n{body}";
                             await client.GetStream().WriteAsync(System.Text.Encoding.ASCII.GetBytes(resp));

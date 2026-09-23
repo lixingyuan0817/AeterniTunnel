@@ -74,7 +74,8 @@ public class DataPlaneTests
     public async Task UdpProxy_EndToEnd_Echo()
     {
         using var echoUdp = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
-        var echoPort = ((IPEndPoint)echoUdp.Client.LocalEndPoint).Port;
+        var echoPort = ((IPEndPoint?)echoUdp.Client.LocalEndPoint)?.Port
+            ?? throw new InvalidOperationException("UDP echo listener did not expose a local endpoint.");
         _ = EchoUdpLoopAsync(echoUdp);
 
         var proxyPort = FreePort();

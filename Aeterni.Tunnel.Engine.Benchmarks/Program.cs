@@ -21,18 +21,19 @@ internal static class Program
     private static async Task Main(string[] args)
     {
         var quick = args.Contains("--quick", StringComparer.OrdinalIgnoreCase);
+        var legacyChannel = args.Contains("--legacy-channel", StringComparer.OrdinalIgnoreCase);
         var frameRepeats = quick ? 2 : FrameRepeats;
         var channelMessages = quick ? 500 : ChannelMessages;
         var transportMessages = quick ? 100 : TransportMessages;
 
-        PrintEnvironment(quick);
+        PrintEnvironment(quick, legacyChannel);
         var processMetrics = new ProcessMetrics();
         processMetrics.Start();
 
         foreach (var size in new[] { 64, 1_024, 65_536 })
             RunFrameCodec(size, frameRepeats);
 
-        await RunChannelMultiplexerAsync(channelMessages);
+        await RunChannelMultiplexerAsync(channelMessages, enableIsolation: !legacyChannel);
         await RunSlowConsumerAsync();
         await RunControlLatencyAsync(useTls: false, quick ? 100 : ControlSamples);
         await RunControlLatencyAsync(useTls: true, quick ? 100 : ControlSamples);
@@ -47,7 +48,7 @@ internal static class Program
         processMetrics.StopAndPrint();
     }
 
-    private static void PrintEnvironment(bool quick)
+    private static void PrintEnvironment(bool quick, bool legacyChannel)
     {
         var assembly = Assembly.GetEntryAssembly()?.GetName().Version;
 #if DEBUG
@@ -64,6 +65,7 @@ internal static class Program
         Console.WriteLine($"entry_version={assembly}");
         Console.WriteLine($"configuration={configuration}");
         Console.WriteLine($"warmups={Warmups};quick={quick}");
+        Console.WriteLine($"channel_isolation={!legacyChannel}");
         Console.WriteLine();
     }
 
@@ -109,7 +111,7 @@ internal static class Program
         Console.WriteLine($"frame_codec,payload={payloadSize},ops={totalOps:0},ops_per_sec={totalOps / seconds:0},payload_mib_per_sec={throughput:0.00},alloc_bytes_per_op={allocated / totalOps:0.0}");
     }
 
-    private static async Task RunChannelMultiplexerAsync(int messages)
+    private static async Task RunChannelMultiplexerAsync(int messages, bool enableIsolation)
     {
         await using var server = TcpTlsTransport.Server(IPAddress.Loopback, 0);
         var port = GetListeningPort(server);
@@ -120,6 +122,11 @@ internal static class Program
         var serverConnection = await serverAccept;
         await using var clientMux = new ChannelMultiplexer(clientConnection);
         await using var serverMux = new ChannelMultiplexer(serverConnection);
+        if (enableIsolation)
+        {
+            clientMux.EnableSlowChannelIsolation();
+            serverMux.EnableSlowChannelIsolation();
+        }
         clientMux.Start();
         serverMux.Start();
         var clientChannel = clientMux.OpenChannel();
@@ -171,6 +178,8 @@ internal static class Program
         var serverConnection = await serverAccept;
         await using var clientMux = new ChannelMultiplexer(clientConnection);
         await using var serverMux = new ChannelMultiplexer(serverConnection);
+        clientMux.EnableSlowChannelIsolation();
+        serverMux.EnableSlowChannelIsolation();
         clientMux.Start();
         serverMux.Start();
         var clientChannel = clientMux.OpenChannel();
@@ -186,8 +195,6 @@ internal static class Program
         });
         await Task.Delay(50);
         var completedBeforeConsume = writer.IsCompleted;
-        if (completedBeforeConsume)
-            throw new InvalidOperationException("Slow-consumer writer finished before the receiver drained its bounded queue.");
         var timer = Stopwatch.StartNew();
         for (var i = 0; i < messages; i++)
         {

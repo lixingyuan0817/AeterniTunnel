@@ -38,6 +38,9 @@
                 <FieldRow Label="单客户端最大隧道数（maxPortsPerClient）" Hint="0 = 不限；vhost 隧道不计">
                     <input type="number" @bind="MaxPortsPerClient" min="0" max="10000" class="field" />
                 </FieldRow>
+                <FieldRow Label="单客户端附加数据连接（maxDataConnectionsPerClient）" Hint="默认 2；0 = 禁用；与控制连接共用 bindPort">
+                    <input type="number" @bind="MaxDataConnectionsPerClient" min="0" max="16" class="field" />
+                </FieldRow>
                 <FieldRow Label="端口白名单（allowPorts）" Hint="逗号分隔端口或区间，如 7071-7171,17061；空 = 不限（客户端可注册任意端口）">
                     <input type="text" @bind="AllowPortsText" placeholder="7071-7171,17061" class="field" />
                 </FieldRow>
@@ -156,6 +159,7 @@
     private int BindPort = 17070;
     private string Token = "";
     private int MaxPortsPerClient;
+    private int MaxDataConnectionsPerClient = 2;
     private string AllowPortsText = "";
     private int VhostHttpPort;
     private int VhostHttpsPort;
@@ -182,6 +186,7 @@
         BindPort = cfg.BindPort;
         Token = cfg.Token;
         MaxPortsPerClient = cfg.MaxPortsPerClient;
+        MaxDataConnectionsPerClient = cfg.MaxDataConnectionsPerClient;
         AllowPortsText = cfg.AllowPorts is null ? "" : string.Join(", ", cfg.AllowPorts.Select(p => p.Start == p.End ? p.Start.ToString() : $"{p.Start}-{p.End}"));
         VhostHttpPort = cfg.VhostHttpPort;
         VhostHttpsPort = cfg.VhostHttpsPort;
@@ -201,6 +206,11 @@
             _cfgError = "bindPort 需在 1-65535 之间";
             return;
         }
+        if (MaxDataConnectionsPerClient is < 0 or > 16)
+        {
+            _cfgError = "maxDataConnectionsPerClient 需在 0-16 之间";
+            return;
+        }
         var allowPorts = ParsePorts(AllowPortsText);
         if (allowPorts is null)
         {
@@ -212,6 +222,7 @@
         cfg.BindPort = BindPort;
         cfg.Token = Token.Trim();
         cfg.MaxPortsPerClient = MaxPortsPerClient;
+        cfg.MaxDataConnectionsPerClient = MaxDataConnectionsPerClient;
         cfg.AllowPorts = allowPorts;
         cfg.VhostHttpPort = VhostHttpPort;
         cfg.VhostHttpsPort = VhostHttpsPort;
