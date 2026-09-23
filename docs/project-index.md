@@ -1,6 +1,6 @@
 # 项目索引
 
-核对日期：2026-09-22。本文是当前仓库的源码导航，不是重构后的目录承诺，也不代表构建/测试已通过。项目清单以 [解决方案](../AeterniTunnel.slnx) 和各项目文件为依据。
+核对日期：2026-09-23。本文是当前仓库的源码导航，不是重构后的目录承诺，也不代表构建/测试已通过。项目清单以 [解决方案](../AeterniTunnel.slnx) 和各项目文件为依据。
 
 阅读分工：[AGENTS.md](../AGENTS.md) 定义协作规则；[文档索引](./README.md) 导航文档；本文定位项目和代码；[重构方案](./refactor-plan.md) 定义目标；[todolist](./todolist.md) 是唯一任务进度来源。
 
@@ -92,7 +92,7 @@ Engine 的 AgentHost 可被其他宿主直接使用；目前解决方案没有�
 - TCP：公网访问 → [ProxyListener](../Aeterni.Tunnel.Engine/Server/ProxyListener.cs) → OpenTunnel / Channel → AgentSession → [TcpBridge](../Aeterni.Tunnel.Engine/Channels/TcpBridge.cs) → 本地服务。
 - UDP：公网数据报 → [UdpProxyListener](../Aeterni.Tunnel.Engine/Server/UdpProxyListener.cs) → 同一 TCP 连接上的数据通道 → AgentSession 的本地 UDP 转发。
 - HTTP/HTTPS：vhost 监听 → Host/SNI 路由 → 对应客户端通道 → 本地服务。
-- 当前 UDP 路径只有最近来源映射；多来源隔离属于 EN-020。当前隧道数据经 ATS 转发，不能把现有 UDP 枚举理解为 P2P 数据面。
+- 新 ATS/ATC 协商 `UdpSourceAssociation` 后使用来源 ID 和有界映射隔离多个 UDP 来源；旧端未协商时保留最近来源兼容模式。该路径仍经 ATS 可靠通道转发，不能理解为 P2P 数据面或原生实时数据报。
 
 客户端统一接入端口与隧道/vhost 业务端口分别看待。重构后的信令仍须共用单一接入端口，具体约束见重构方案。
 
@@ -106,11 +106,11 @@ Engine 的 AgentHost 可被其他宿主直接使用；目前解决方案没有�
 | Client | [AgentSession](../Aeterni.Tunnel.Engine/Client/AgentSession.cs)、[AgentOptions](../Aeterni.Tunnel.Engine/Client/AgentOptions.cs) | 登录、重连、心跳、控制消息和本地转发 |
 | 健康检查 | [HealthChecker](../Aeterni.Tunnel.Engine/Client/HealthChecker.cs)、[IHealthChecker](../Aeterni.Tunnel.Engine/Client/IHealthChecker.cs)、[HealthCheckOptions](../Aeterni.Tunnel.Engine/Client/HealthCheckOptions.cs) | TCP/HTTP 可用性检测与宿主摘除/恢复 |
 | Server 会话 | [ServerListener](../Aeterni.Tunnel.Engine/Server/ServerListener.cs)、[ServerSession](../Aeterni.Tunnel.Engine/Server/ServerSession.cs) | 接入监听、Hello-first 认证门控、在线会话索引与隧道注册 |
-| 端口和转发 | [PortManager](../Aeterni.Tunnel.Engine/Server/PortManager.cs)、[PortRange](../Aeterni.Tunnel.Engine/Server/PortRange.cs)、[ProxyListener](../Aeterni.Tunnel.Engine/Server/ProxyListener.cs)、[UdpProxyListener](../Aeterni.Tunnel.Engine/Server/UdpProxyListener.cs) | 端口限制、分配释放、TCP/UDP 转发 |
+| 端口和转发 | [PortManager](../Aeterni.Tunnel.Engine/Server/PortManager.cs)、[PortRange](../Aeterni.Tunnel.Engine/Server/PortRange.cs)、[ProxyListener](../Aeterni.Tunnel.Engine/Server/ProxyListener.cs)、[UdpProxyListener](../Aeterni.Tunnel.Engine/Server/UdpProxyListener.cs)、[UdpSourceRegistry](../Aeterni.Tunnel.Engine/Server/UdpSourceRegistry.cs) | 端口限制、分配释放、TCP/UDP 转发和 UDP 来源生命周期 |
 | vhost | [VhostHttpListener](../Aeterni.Tunnel.Engine/Server/VhostHttpListener.cs)、[VhostHttpsListener](../Aeterni.Tunnel.Engine/Server/VhostHttpsListener.cs)、[IVhostRegistry](../Aeterni.Tunnel.Engine/Server/IVhostRegistry.cs)、[SniParser](../Aeterni.Tunnel.Engine/Protocol/SniParser.cs) | HTTP Host 与 TLS SNI 路由 |
-| 传输 | [ITunnelTransport](../Aeterni.Tunnel.Engine/Transport/ITunnelTransport.cs)、[ITunnelConnection](../Aeterni.Tunnel.Engine/Transport/ITunnelConnection.cs)、[TcpTlsTransport](../Aeterni.Tunnel.Engine/Transport/TcpTlsTransport.cs)、[TcpConnection](../Aeterni.Tunnel.Engine/Transport/TcpConnection.cs) | 连接工厂、字节流、TCP/TLS |
+| 传输 | [ITunnelTransport](../Aeterni.Tunnel.Engine/Transport/ITunnelTransport.cs)、[ITunnelConnection](../Aeterni.Tunnel.Engine/Transport/ITunnelConnection.cs)、[CommunicationContracts](../Aeterni.Tunnel.Engine/Transport/CommunicationContracts.cs)、[TcpTlsTransport](../Aeterni.Tunnel.Engine/Transport/TcpTlsTransport.cs)、[TcpConnection](../Aeterni.Tunnel.Engine/Transport/TcpConnection.cs) | 连接工厂、可靠流/消息/数据报契约、TCP/TLS |
 | 通道 | [ChannelMultiplexer](../Aeterni.Tunnel.Engine/Channels/ChannelMultiplexer.cs)、[Channel](../Aeterni.Tunnel.Engine/Channels/Channel.cs)、[TcpBridge](../Aeterni.Tunnel.Engine/Channels/TcpBridge.cs) | 控制/数据分发、队列、背压、连接桥接 |
-| 帧协议 | [FrameContract](../Aeterni.Tunnel.Engine/Protocol/FrameContract.cs)、[Frame](../Aeterni.Tunnel.Engine/Protocol/Frame.cs)、[FrameType](../Aeterni.Tunnel.Engine/Protocol/FrameType.cs)、[FrameCodec](../Aeterni.Tunnel.Engine/Wire/FrameCodec.cs)、[ProtocolException](../Aeterni.Tunnel.Engine/Wire/ProtocolException.cs) | 帧头、版本、负载边界、半包粘包 |
+| 帧协议 | [FrameContract](../Aeterni.Tunnel.Engine/Protocol/FrameContract.cs)、[Frame](../Aeterni.Tunnel.Engine/Protocol/Frame.cs)、[FrameType](../Aeterni.Tunnel.Engine/Protocol/FrameType.cs)、[ProtocolCapabilities](../Aeterni.Tunnel.Engine/Protocol/ProtocolCapabilities.cs)、[UdpSourceEnvelope](../Aeterni.Tunnel.Engine/Protocol/UdpSourceEnvelope.cs)、[FrameCodec](../Aeterni.Tunnel.Engine/Wire/FrameCodec.cs)、[ProtocolException](../Aeterni.Tunnel.Engine/Wire/ProtocolException.cs) | 帧头、版本、能力、UDP 来源关联、负载边界、半包粘包 |
 | 控制消息 | [Messages/](../Aeterni.Tunnel.Engine/Protocol/Messages)、[MessageCodec](../Aeterni.Tunnel.Engine/Protocol/Messages/MessageCodec.cs)、[MessageJsonContext](../Aeterni.Tunnel.Engine/Protocol/Messages/MessageJsonContext.cs)、[LinkType](../Aeterni.Tunnel.Engine/Protocol/LinkType.cs) | Hello、注册、命令、JSON 类型与源生成；枚举不等于已实现传输 |
 | 配置 | [ConfigLoader](../Aeterni.Tunnel.Engine/Config/ConfigLoader.cs)、[ServerConfig](../Aeterni.Tunnel.Engine/Config/ServerConfig.cs)、[AgentConfig](../Aeterni.Tunnel.Engine/Config/AgentConfig.cs)、[LogConfig](../Aeterni.Tunnel.Engine/Config/LogConfig.cs) | TOML 读写、TLS 安全默认值、证书路径/信任配置、配置到宿主选项转换 |
 | 日志与流量 | [Logging/](../Aeterni.Tunnel.Engine/Logging)、[TrafficCounter](../Aeterni.Tunnel.Engine/Traffic/TrafficCounter.cs) | 滚动日志、日志级别、环形缓冲和字节统计 |
@@ -150,7 +150,8 @@ Control、Security、Peers、Relay、Tunneling、Diagnostics 是重构方案中�
 | TLS 默认值、证书信任和明文迁移策略 | [TlsPolicyTests](../Aeterni.Tunnel.Engine.Tests/TlsPolicyTests.cs) |
 | 通道隔离、关闭、Ping 和背压 | [ChannelMultiplexerTests](../Aeterni.Tunnel.Engine.Tests/ChannelMultiplexerTests.cs)、[AdvancedTests](../Aeterni.Tunnel.Engine.Tests/AdvancedTests.cs) |
 | 登录、注册和控制流程 | [ControlPlaneTests](../Aeterni.Tunnel.Engine.Tests/ControlPlaneTests.cs) |
-| TCP/UDP 端到端转发 | [DataPlaneTests](../Aeterni.Tunnel.Engine.Tests/DataPlaneTests.cs) |
+| TCP/UDP 端到端转发、UDP 来源容量/超时 | [DataPlaneTests](../Aeterni.Tunnel.Engine.Tests/DataPlaneTests.cs)、[UdpSourceRegistryTests](../Aeterni.Tunnel.Engine.Tests/UdpSourceRegistryTests.cs) |
+| 通信契约默认授权与传输能力 | [CommunicationContractTests](../Aeterni.Tunnel.Engine.Tests/CommunicationContractTests.cs) |
 | 服务端删除指令、重连后状态 | [CommandTests](../Aeterni.Tunnel.Engine.Tests/CommandTests.cs) |
 | 重连、重复会话、多客户端 | [RobustnessTests](../Aeterni.Tunnel.Engine.Tests/RobustnessTests.cs) |
 | 宿主、热更新、端口策略和健康恢复 | [AgentHostTests](../Aeterni.Tunnel.Engine.Tests/AgentHostTests.cs)、[HealthCheckerTests](../Aeterni.Tunnel.Engine.Tests/HealthCheckerTests.cs) |

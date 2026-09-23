@@ -102,6 +102,28 @@ public class ChannelMultiplexerTests
     }
 
     [Fact]
+    public async Task CloseWriteDirection_AllowsRemainingPeerResponse()
+    {
+        var (server, client) = await ConnectPairAsync();
+        await using var _ = server;
+        await using var _2 = client;
+        var clientChannel = client.OpenChannel();
+        var serverChannel = server.AcceptChannel(clientChannel.ChannelId);
+
+        await clientChannel.WriteAsync(Encoding.UTF8.GetBytes("request"));
+        await clientChannel.CloseAsync();
+
+        Assert.Equal("request", Encoding.UTF8.GetString((await serverChannel.ReadAsync())!));
+        Assert.Null(await serverChannel.ReadAsync());
+
+        await serverChannel.WriteAsync(Encoding.UTF8.GetBytes("response"));
+        await serverChannel.CloseAsync();
+
+        Assert.Equal("response", Encoding.UTF8.GetString((await clientChannel.ReadAsync())!));
+        Assert.Null(await clientChannel.ReadAsync());
+    }
+
+    [Fact]
     public async Task Ping_IsAnsweredWithPong()
     {
         // server 端用 multiplexer（读循环自动回 Pong），client 端裸连接发 Ping
@@ -125,5 +147,57 @@ public class ChannelMultiplexerTests
         await serverMux.DisposeAsync();
         await clientConn.DisposeAsync();
         await serverTransport.DisposeAsync();
+    }
+
+    [Fact]
+    public async Task SlowControlHandler_DoesNotBlockDataDispatch()
+    {
+        var (server, client) = await ConnectPairAsync();
+        await using var _ = server;
+        await using var _2 = client;
+        var releaseControl = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var controlStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        server.ControlHandler = async (_, _) =>
+        {
+            controlStarted.TrySetResult();
+            await releaseControl.Task;
+        };
+        var clientChannel = client.OpenChannel();
+        var serverChannel = server.AcceptChannel(clientChannel.ChannelId);
+
+        await client.SendControlAsync(Encoding.UTF8.GetBytes("slow"));
+        await controlStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await clientChannel.WriteAsync(Encoding.UTF8.GetBytes("data-still-flows"));
+
+        var data = await serverChannel.ReadAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Equal("data-still-flows", Encoding.UTF8.GetString(data!));
+        releaseControl.TrySetResult();
+    }
+
+    [Fact]
+    public async Task DataFollowingControl_IsPreservedUntilChannelIsAccepted()
+    {
+        var (server, client) = await ConnectPairAsync();
+        await using var _ = server;
+        await using var _2 = client;
+        var releaseControl = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var accepted = new TaskCompletionSource<Channel>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var clientChannel = client.OpenChannel();
+        server.ControlHandler = async (_, _) =>
+        {
+            await releaseControl.Task;
+            accepted.TrySetResult(server.AcceptChannel(clientChannel.ChannelId));
+        };
+
+        await client.SendControlAsync(Encoding.UTF8.GetBytes("open-channel"));
+        await clientChannel.WriteAsync(Encoding.UTF8.GetBytes("first-payload"));
+        await clientChannel.CloseAsync();
+        await Task.Delay(25);
+        releaseControl.TrySetResult();
+
+        var serverChannel = await accepted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var data = await serverChannel.ReadAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Equal("first-payload", Encoding.UTF8.GetString(data!));
+        Assert.Null(await serverChannel.ReadAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(5)));
     }
 }

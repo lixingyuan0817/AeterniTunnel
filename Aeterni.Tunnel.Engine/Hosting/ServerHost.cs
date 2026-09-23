@@ -48,7 +48,9 @@ public sealed class ServerHost : IAsyncDisposable
             tlsCertificate: certificate,
             dashboardUser: options.DashboardUser,
             dashboardPassword: options.DashboardPassword,
-            maxPortsPerClient: options.MaxPortsPerClient);
+            maxPortsPerClient: options.MaxPortsPerClient,
+            identityResolver: options.IdentityResolver,
+            transportFactory: options.TransportFactory);
 
         _listener.SessionAccepted += s => s.LogLine += (_, line) => LogLine?.Invoke(line);
         _listener.Start();

@@ -5,14 +5,9 @@ namespace Aeterni.Tunnel.Engine.Transport;
 ///   默认 TcpTlsTransport（TCP + TLS1.3）；
 ///   QUIC / WSS 作为后续可插拔实现，协议层不感知差异。
 /// </summary>
-public interface ITunnelTransport
+public interface ITunnelTransport : ITransportFactory
 {
     /// <summary>"tcp" / "tcp+tls" / "quic" / "wss"</summary>
     string Name { get; }
 
-    /// <summary>客户端侧：连接远端</summary>
-    ValueTask<ITunnelConnection> ConnectAsync(string host, int port, CancellationToken ct = default);
-
-    /// <summary>服务端侧：接受一个连接</summary>
-    ValueTask<ITunnelConnection> AcceptAsync(CancellationToken ct = default);
 }

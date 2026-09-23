@@ -21,6 +21,8 @@ public sealed class TcpTlsTransport : ITunnelTransport, IAsyncDisposable
     private readonly string? _caCertificatePath;
 
     public string Name => _useTls ? "tcp+tls" : "tcp";
+    public TransportCapabilities Capabilities =>
+        TransportCapabilities.ReliableStream | TransportCapabilities.ReliableMessage;
 
     private TcpTlsTransport(
         TcpListener? listener,

@@ -61,18 +61,18 @@
 
 ## 3. 已核对的代码基线
 
-以下为源码检查结果，尚未执行本轮测试或性能测量。
+以下为 2026-09-23 的源码检查结果；任务状态和验证证据只在 [todolist](./todolist.md) 维护。
 
 | 位置 | 现状 | 重构依据 |
 |---|---|---|
-| [AgentSession](../Aeterni.Tunnel.Engine/Client/AgentSession.cs) | 直接创建 TcpTlsTransport，并处理登录、重连及本地转发 | 通过工厂注入传输，拆分控制会话与隧道职责 |
-| [ServerListener](../Aeterni.Tunnel.Engine/Server/ServerListener.cs) | 已有按 ClientId 查询的在线会话索引 | 复用并加强认证绑定，不重复建设一套无关联注册表 |
-| [ServerSession](../Aeterni.Tunnel.Engine/Server/ServerSession.cs) | 已要求首条受理消息为 Hello；认证前其他控制消息、错误/空身份和重复 Hello 会被拒绝并关闭 | 后续在 EN-012 将共享 token 身份升级为稳定 Peer 身份与授权边界 |
+| [AgentSession](../Aeterni.Tunnel.Engine/Client/AgentSession.cs) | 通过 `ITransportFactory` 注入传输，并处理登录、重连及本地转发 | 后续继续从会话中提取隧道实现，但保持宿主兼容入口 |
+| [ServerListener](../Aeterni.Tunnel.Engine/Server/ServerListener.cs) | 复用按认证主体查询的在线会话索引；可注入传输和 `IClientIdentityResolver` | 后续 Peer 功能只使用解析器确认的 `AuthenticatedPeerId`，不信任自报 ID |
+| [ServerSession](../Aeterni.Tunnel.Engine/Server/ServerSession.cs) | Hello-first 门控、v1 能力交集和可选稳定身份解析已接入；旧共享 token 会话没有稳定 Peer 身份 | 后续授权和 Peer 信令必须要求稳定身份并使用默认拒绝的授权提供者 |
 | [AgentOptions](../Aeterni.Tunnel.Engine/Client/AgentOptions.cs) | UseTls 默认为 true，证书校验默认开启，可配置 server name/自定义根证书 | 安全默认值迁移覆盖宿主、配置、证书加载与旧明文显式迁移，不能只改一个默认参数 |
 | [ITunnelConnection](../Aeterni.Tunnel.Engine/Transport/ITunnelConnection.cs) | 只暴露 Stream | 可靠流与数据报需要不同契约 |
-| [ChannelMultiplexer](../Aeterni.Tunnel.Engine/Channels/ChannelMultiplexer.cs)、[Channel](../Aeterni.Tunnel.Engine/Channels/Channel.cs) | 单连接读循环等待各通道入队；队列按 64 个包限制 | 慢消费者会阻塞分发；还需要字节预算、公平性和取消语义 |
+| [ChannelMultiplexer](../Aeterni.Tunnel.Engine/Channels/ChannelMultiplexer.cs)、[Channel](../Aeterni.Tunnel.Engine/Channels/Channel.cs) | 控制处理与网络读取已分离，控制队列和控制后首帧缓存有界；数据通道仍可能阻塞全局分发 | EN-030 补齐按字节预算、公平性和同端口附加连接隔离 |
 | [FrameCodec](../Aeterni.Tunnel.Engine/Wire/FrameCodec.cs) | 固定 v1 帧头、4 MiB 负载上限，读写分配并复制数组 | 先测量，再改内存所有权、批量写与帧预算 |
-| [UdpProxyListener](../Aeterni.Tunnel.Engine/Server/UdpProxyListener.cs) | 固定通道、只保存最近来源地址；经 TCP 连接转发 | 补齐多来源关联，不能直接视作实时 UDP 数据面 |
+| [UdpProxyListener](../Aeterni.Tunnel.Engine/Server/UdpProxyListener.cs) | 协商后使用来源 ID、有界/超时映射和 Agent 独立 socket；旧端保留最近来源模式 | 仍经可靠通道转发，不能直接视作 P2P 实时 UDP 数据面 |
 | [MessageCodecTests](../Aeterni.Tunnel.Engine.Tests/MessageCodecTests.cs) | 未知 JSON 消息类型抛异常 | 不向旧端发送未经协商的新消息 |
 
 枚举中存在某个 LinkType 不代表已经提供对应传输。接口注释声称已加密，也不等于所有实际连接都启用了加密。
@@ -96,7 +96,7 @@
 
 依赖方向：宿主组合服务；隧道与上层业务使用通信契约；通信契约不依赖 UI、房间、音频或存储。协议 DTO 不自动等于公共业务 DTO。只有出现实际跨项目复用需求时才抽 Contracts 项目，不向 Common 堆入所有模型。
 
-建议能力契约（名称待 EN-010 冻结，尚未实现）：
+EN-010 已冻结的能力契约位于 [Engine 通信契约](./communication-contract.md)：
 
 | 契约 | 语义 |
 |---|---|

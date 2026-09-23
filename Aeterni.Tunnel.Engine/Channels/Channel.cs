@@ -11,7 +11,8 @@ public sealed class Channel : IAsyncDisposable
 {
     private readonly System.Threading.Channels.Channel<byte[]> _queue;
     private readonly ChannelMultiplexer _owner;
-    private int _completed;
+    private int _readsCompleted;
+    private int _writesCompleted;
 
     /// <summary>通道号（0 为控制通道，数据通道从 1 起）</summary>
     public ushort ChannelId { get; }
@@ -38,18 +39,35 @@ public sealed class Channel : IAsyncDisposable
 
     /// <summary>向对端发送一帧数据</summary>
     public ValueTask WriteAsync(ReadOnlyMemory<byte> data, CancellationToken ct = default)
-        => _owner.SendDataAsync(ChannelId, data, ct);
+    {
+        if (Volatile.Read(ref _writesCompleted) != 0)
+            throw new InvalidOperationException("通道写方向已完成");
+        return _owner.SendDataAsync(ChannelId, data, ct);
+    }
 
-    /// <summary>关闭本通道（发送 Close 帧并释放本地队列）</summary>
+    /// <summary>完成本端写方向；仍可读取对端在其 Close 之前发送的数据。</summary>
     public ValueTask CloseAsync(CancellationToken ct = default)
         => _owner.CloseChannelAsync(ChannelId, ct);
 
     internal ValueTask EnqueueAsync(byte[] data) => _queue.Writer.WriteAsync(data);
 
+    internal bool TryEnqueue(byte[] data) => _queue.Writer.TryWrite(data);
+
+    internal bool CompleteWrites() => Interlocked.Exchange(ref _writesCompleted, 1) == 0;
+
+    internal void CompleteReads()
+    {
+        if (Interlocked.Exchange(ref _readsCompleted, 1) == 0)
+            _queue.Writer.TryComplete();
+    }
+
+    internal bool IsFullyClosed =>
+        Volatile.Read(ref _readsCompleted) != 0 && Volatile.Read(ref _writesCompleted) != 0;
+
     internal void Complete()
     {
-        if (Interlocked.Exchange(ref _completed, 1) == 0)
-            _queue.Writer.TryComplete();
+        CompleteWrites();
+        CompleteReads();
     }
 
     public ValueTask DisposeAsync()

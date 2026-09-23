@@ -91,6 +91,40 @@ public class DataPlaneTests
         Assert.Equal(payload, resp.Buffer);
     }
 
+    [Fact]
+    public async Task UdpProxy_TwoSources_ResponsesRemainAssociatedWhenReordered()
+    {
+        using var localUdp = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
+        var localPort = ((IPEndPoint)localUdp.Client.LocalEndPoint!).Port;
+        var localEcho = Task.Run(async () =>
+        {
+            var first = await localUdp.ReceiveAsync();
+            var second = await localUdp.ReceiveAsync();
+            await localUdp.SendAsync(second.Buffer, second.RemoteEndPoint);
+            await Task.Delay(25);
+            await localUdp.SendAsync(first.Buffer, first.RemoteEndPoint);
+        });
+
+        var proxyPort = FreePort();
+        var (listener, agent) = await SetupTunnelAsync(localPort, proxyPort, LinkType.Udp);
+        await using var _l = listener;
+        await using var _a = agent;
+        using var firstUser = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
+        using var secondUser = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
+        var firstPayload = Encoding.UTF8.GetBytes("source-one");
+        var secondPayload = Encoding.UTF8.GetBytes("source-two");
+        var proxy = new IPEndPoint(IPAddress.Loopback, proxyPort);
+
+        await firstUser.SendAsync(firstPayload, proxy);
+        await secondUser.SendAsync(secondPayload, proxy);
+        var firstResponse = firstUser.ReceiveAsync().WaitAsync(TimeSpan.FromSeconds(5));
+        var secondResponse = secondUser.ReceiveAsync().WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.Equal(firstPayload, (await firstResponse).Buffer);
+        Assert.Equal(secondPayload, (await secondResponse).Buffer);
+        await localEcho.WaitAsync(TimeSpan.FromSeconds(5));
+    }
+
     private static async Task<(ServerListener Listener, AgentSession Agent)> SetupTunnelAsync(int echoPort, int proxyPort, LinkType linkType = LinkType.Tcp)
     {
         var serverPort = FreePort();

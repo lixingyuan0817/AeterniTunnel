@@ -18,6 +18,48 @@ public class MessageCodecTests
         Assert.Contains("\"token\":\"token\"", json);
     }
 
+    [Fact]
+    public void LegacyHelloWithoutCapabilities_RemainsReadable()
+    {
+        var restored = MessageCodec.Deserialize(Encoding.UTF8.GetBytes(
+            "{\"type\":\"hello\",\"clientId\":\"legacy\",\"version\":1,\"token\":\"t\",\"hostname\":\"pc\"}"));
+
+        var hello = Assert.IsType<HelloMessage>(restored);
+        Assert.Equal(0UL, hello.Capabilities);
+    }
+
+    [Fact]
+    public void HelloWithUnknownOptionalProperty_RemainsReadable()
+    {
+        var restored = MessageCodec.Deserialize(Encoding.UTF8.GetBytes(
+            "{\"type\":\"hello\",\"clientId\":\"newer\",\"version\":1,\"token\":\"t\",\"hostname\":\"pc\",\"futureOptional\":true}"));
+
+        Assert.IsType<HelloMessage>(restored);
+    }
+
+    [Fact]
+    public void HelloCapabilities_RoundTripSeparatelyFromProtocolVersion()
+    {
+        var message = new HelloMessage("agent", ProtocolContract.CurrentVersion, "token", "pc",
+            (ulong)(ProtocolCapabilities.ReliableMessage | ProtocolCapabilities.UdpSourceAssociation));
+
+        var restored = Assert.IsType<HelloMessage>(MessageCodec.Deserialize(MessageCodec.Serialize(message)));
+
+        Assert.Equal(ProtocolContract.CurrentVersion, restored.Version);
+        Assert.Equal(message.Capabilities, restored.Capabilities);
+    }
+
+    [Fact]
+    public void UdpSourceEnvelope_PreservesSourceAndPayload()
+    {
+        var encoded = UdpSourceEnvelope.Encode(42, new byte[] { 1, 2, 3 });
+
+        Assert.True(UdpSourceEnvelope.TryDecode(encoded, out var sourceId, out var payload));
+        Assert.Equal((uint)42, sourceId);
+        Assert.Equal(new byte[] { 1, 2, 3 }, payload.ToArray());
+        Assert.False(UdpSourceEnvelope.TryDecode(new byte[3], out _, out _));
+    }
+
     [Theory]
     [InlineData(typeof(HelloMessage))]
     [InlineData(typeof(HelloAckMessage))]

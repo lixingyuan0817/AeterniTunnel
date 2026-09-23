@@ -13,11 +13,23 @@ namespace Aeterni.Tunnel.Engine.Channels;
 /// </summary>
 public sealed class ChannelMultiplexer : IAsyncDisposable
 {
+    private const int MaxPendingChannelFrames = 64;
     private readonly ITunnelConnection _connection;
     private readonly CancellationTokenSource _cts = new();
     private readonly ConcurrentDictionary<ushort, Channel> _channels = new();
+    private readonly Dictionary<ushort, List<byte[]>> _pendingChannelData = new();
+    private readonly HashSet<ushort> _pendingChannelCloses = [];
+    private readonly object _channelGate = new();
     private readonly SemaphoreSlim _writeLock = new(1, 1);
+    private readonly System.Threading.Channels.Channel<(ushort ChannelId, byte[] Payload)> _controlQueue =
+        System.Threading.Channels.Channel.CreateBounded<(ushort, byte[])>(new System.Threading.Channels.BoundedChannelOptions(64)
+        {
+            FullMode = System.Threading.Channels.BoundedChannelFullMode.Wait,
+            SingleReader = true,
+            SingleWriter = true,
+        });
     private int _nextChannelId;
+    private int _pendingChannelFrameCount;
     private bool _readLoopStarted;
     private int _disposed;
 
@@ -41,6 +53,7 @@ public sealed class ChannelMultiplexer : IAsyncDisposable
         if (!_readLoopStarted)
         {
             _readLoopStarted = true;
+            _ = ControlLoopAsync();
             _ = ReadLoopAsync();
         }
     }
@@ -50,25 +63,48 @@ public sealed class ChannelMultiplexer : IAsyncDisposable
     {
         var id = (ushort)Interlocked.Increment(ref _nextChannelId);
         var ch = new Channel(this, id);
-        _channels[id] = ch;
+        lock (_channelGate)
+            _channels[id] = ch;
         return ch;
     }
 
     /// <summary>按对端告知的通道号注册通道（OpenTunnel 控制消息处理时调用）</summary>
     public Channel AcceptChannel(ushort channelId)
     {
-        var ch = new Channel(this, channelId);
-        _channels[channelId] = ch;
-        return ch;
+        lock (_channelGate)
+        {
+            if (_channels.TryGetValue(channelId, out var existing))
+                return existing;
+
+            var ch = new Channel(this, channelId);
+            if (_pendingChannelData.Remove(channelId, out var pending))
+            {
+                foreach (var payload in pending)
+                    ch.TryEnqueue(payload);
+                _pendingChannelFrameCount -= pending.Count;
+            }
+            if (_pendingChannelCloses.Remove(channelId))
+                ch.CompleteReads();
+
+            _channels[channelId] = ch;
+            return ch;
+        }
     }
 
     /// <summary>关闭通道：发 Close 帧 + 释放本地队列</summary>
     public async ValueTask CloseChannelAsync(ushort channelId, CancellationToken ct = default)
     {
-        if (_channels.TryRemove(channelId, out var ch))
+        Channel? ch;
+        lock (_channelGate)
+            _channels.TryGetValue(channelId, out ch);
+        if (ch is not null && ch.CompleteWrites())
         {
-            ch.Complete();
             await WriteFrameAsync(new Frame(FrameType.Close, channelId, []), ct);
+            if (ch.IsFullyClosed)
+            {
+                lock (_channelGate)
+                    _channels.TryRemove(channelId, out _);
+            }
         }
     }
 
@@ -114,12 +150,29 @@ public sealed class ChannelMultiplexer : IAsyncDisposable
                 switch (frame.Type)
                 {
                     case FrameType.Control when frame.ChannelId == FrameContract.ControlChannel:
-                        if (ControlHandler is not null)
-                            await ControlHandler(frame.ChannelId, frame.Payload);
+                        await _controlQueue.Writer.WriteAsync((frame.ChannelId, frame.Payload), _cts.Token);
                         break;
 
                     case FrameType.Data:
-                        if (_channels.TryGetValue(frame.ChannelId, out var ch))
+                        Channel? ch;
+                        lock (_channelGate)
+                        {
+                            if (!_channels.TryGetValue(frame.ChannelId, out ch))
+                            {
+                                if (!_pendingChannelCloses.Contains(frame.ChannelId) &&
+                                    _pendingChannelFrameCount < MaxPendingChannelFrames)
+                                {
+                                    if (!_pendingChannelData.TryGetValue(frame.ChannelId, out var pending))
+                                    {
+                                        pending = [];
+                                        _pendingChannelData[frame.ChannelId] = pending;
+                                    }
+                                    pending.Add(frame.Payload);
+                                    _pendingChannelFrameCount++;
+                                }
+                            }
+                        }
+                        if (ch is not null)
                             await ch.EnqueueAsync(frame.Payload);
                         break;
 
@@ -131,8 +184,22 @@ public sealed class ChannelMultiplexer : IAsyncDisposable
                         break;
 
                     case FrameType.Close:
-                        if (_channels.TryRemove(frame.ChannelId, out var closed))
-                            closed.Complete();
+                        Channel? closed;
+                        lock (_channelGate)
+                        {
+                            _channels.TryGetValue(frame.ChannelId, out closed);
+                            if (closed is null && _pendingChannelData.ContainsKey(frame.ChannelId))
+                                _pendingChannelCloses.Add(frame.ChannelId);
+                        }
+                        if (closed is not null)
+                        {
+                            closed.CompleteReads();
+                            if (closed.IsFullyClosed)
+                            {
+                                lock (_channelGate)
+                                    _channels.TryRemove(frame.ChannelId, out _);
+                            }
+                        }
                         break;
                 }
             }
@@ -147,16 +214,40 @@ public sealed class ChannelMultiplexer : IAsyncDisposable
         }
         finally
         {
+            _controlQueue.Writer.TryComplete();
             CloseAllChannels();
             ConnectionClosed?.Invoke();
         }
     }
 
+    private async Task ControlLoopAsync()
+    {
+        try
+        {
+            await foreach (var item in _controlQueue.Reader.ReadAllAsync(_cts.Token))
+            {
+                if (ControlHandler is not null)
+                    await ControlHandler(item.ChannelId, item.Payload);
+            }
+        }
+        catch (OperationCanceledException) { }
+        catch
+        {
+            _cts.Cancel();
+        }
+    }
+
     private void CloseAllChannels()
     {
-        foreach (var ch in _channels.Values)
-            ch.Complete();
-        _channels.Clear();
+        lock (_channelGate)
+        {
+            foreach (var ch in _channels.Values)
+                ch.Complete();
+            _channels.Clear();
+            _pendingChannelData.Clear();
+            _pendingChannelCloses.Clear();
+            _pendingChannelFrameCount = 0;
+        }
     }
 
     public async ValueTask DisposeAsync()
@@ -164,6 +255,7 @@ public sealed class ChannelMultiplexer : IAsyncDisposable
         if (Interlocked.Exchange(ref _disposed, 1) != 0)
             return;
         _cts.Cancel();
+        _controlQueue.Writer.TryComplete();
         CloseAllChannels();
         _writeLock.Dispose();
         await _connection.DisposeAsync();

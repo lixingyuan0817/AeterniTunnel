@@ -20,4 +20,6 @@ public sealed record ServerHostOptions(
     bool UseTls = true,
     string TlsCertificatePath = "",
     string TlsCertificatePassword = "",
-    bool AllowInsecureTransport = false);
+    bool AllowInsecureTransport = false,
+    Server.IClientIdentityResolver? IdentityResolver = null,
+    Transport.ITransportFactory? TransportFactory = null);

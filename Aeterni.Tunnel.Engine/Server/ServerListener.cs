@@ -10,7 +10,7 @@ namespace Aeterni.Tunnel.Engine.Server;
 /// </summary>
 public sealed class ServerListener : IAsyncDisposable
 {
-    private readonly TcpTlsTransport _transport;
+    private readonly ITransportFactory _transport;
     private readonly PortManager _ports;
     private readonly string _token;
     private readonly CancellationTokenSource _cts = new();
@@ -22,6 +22,7 @@ public sealed class ServerListener : IAsyncDisposable
     private readonly int _dashboardPort;
     private readonly int _allowPortsCount;
     private readonly int _maxPortsPerClient;
+    private readonly IClientIdentityResolver? _identityResolver;
     private readonly DateTime _startedAt = DateTime.UtcNow;
 
     /// <summary>新会话接入（用于测试/宿主收集）</summary>
@@ -39,9 +40,9 @@ public sealed class ServerListener : IAsyncDisposable
     /// <summary>主域名后缀（subdomain 拼接用）</summary>
     public string SubDomainHost { get; }
 
-    public ServerListener(int bindPort, string token, PortManager? ports = null, int vhostHttpPort = 0, int vhostHttpsPort = 0, string subDomainHost = "", int dashboardPort = 0, System.Security.Cryptography.X509Certificates.X509Certificate2? tlsCertificate = null, string dashboardUser = "", string dashboardPassword = "", int maxPortsPerClient = 0)
+    public ServerListener(int bindPort, string token, PortManager? ports = null, int vhostHttpPort = 0, int vhostHttpsPort = 0, string subDomainHost = "", int dashboardPort = 0, System.Security.Cryptography.X509Certificates.X509Certificate2? tlsCertificate = null, string dashboardUser = "", string dashboardPassword = "", int maxPortsPerClient = 0, IClientIdentityResolver? identityResolver = null, ITransportFactory? transportFactory = null)
     {
-        _transport = TcpTlsTransport.Server(IPAddress.Any, bindPort, tlsCertificate);
+        _transport = transportFactory ?? TcpTlsTransport.Server(IPAddress.Any, bindPort, tlsCertificate);
         BindPort = bindPort;
         _ports = ports ?? new PortManager();
         _token = token;
@@ -51,6 +52,7 @@ public sealed class ServerListener : IAsyncDisposable
         _dashboardPort = dashboardPort;
         _allowPortsCount = _ports.GetAllowedCount();
         _maxPortsPerClient = maxPortsPerClient;
+        _identityResolver = identityResolver;
 
         if (vhostHttpPort > 0)
         {
@@ -164,7 +166,7 @@ public sealed class ServerListener : IAsyncDisposable
             {
                 var conn = await _transport.AcceptAsync(_cts.Token);
                 var mux = new ChannelMultiplexer(conn);
-                var session = new ServerSession(mux, _ports, _token, VhostHttp, VhostHttps, SubDomainHost, _maxPortsPerClient);
+                var session = new ServerSession(mux, _ports, _token, VhostHttp, VhostHttps, SubDomainHost, _maxPortsPerClient, _identityResolver);
                 lock (_sessionsLock)
                     _sessions.Add(session);
                 session.LoggedIn += OnSessionLoggedIn;
@@ -247,6 +249,8 @@ public sealed class ServerListener : IAsyncDisposable
             _ = VhostHttps.DisposeAsync();
         if (Dashboard is not null)
             _ = Dashboard.DisposeAsync();
-        return _transport.DisposeAsync();
+        return _transport is IAsyncDisposable disposable
+            ? disposable.DisposeAsync()
+            : ValueTask.CompletedTask;
     }
 }

@@ -22,6 +22,7 @@ public sealed class ServerSession : IAsyncDisposable
     private readonly IVhostRegistry? _vhostHttps;
     private readonly string _subDomainHost;
     private readonly int _maxPortsPerClient;
+    private readonly IClientIdentityResolver? _identityResolver;
     private readonly Dictionary<string, int> _proxyPorts = new();
     private readonly Dictionary<string, LinkType> _proxyTypes = new();
     private readonly Dictionary<string, string> _proxyGroups = new();
@@ -37,6 +38,12 @@ public sealed class ServerSession : IAsyncDisposable
     /// <summary>已登录的 Agent 标识</summary>
     public string? ClientId { get; private set; }
 
+    /// <summary>由宿主身份解析器确认的稳定 Peer 身份；旧共享 token 会话为 null。</summary>
+    public string? AuthenticatedPeerId { get; private set; }
+
+    /// <summary>本次 Hello 与服务端能力的交集。</summary>
+    public ProtocolCapabilities NegotiatedCapabilities { get; private set; }
+
     /// <summary>登录成功（Hello 通过后触发，供服务端做同 clientId 会话替换）</summary>
     public event Action<ServerSession>? LoggedIn;
 
@@ -47,7 +54,7 @@ public sealed class ServerSession : IAsyncDisposable
 
     public ServerSession(ChannelMultiplexer mux, PortManager ports, string serverToken,
         IVhostRegistry? vhostHttp = null, IVhostRegistry? vhostHttps = null, string subDomainHost = "",
-        int maxPortsPerClient = 0)
+        int maxPortsPerClient = 0, IClientIdentityResolver? identityResolver = null)
     {
         _mux = mux;
         _ports = ports;
@@ -56,6 +63,7 @@ public sealed class ServerSession : IAsyncDisposable
         _vhostHttps = vhostHttps;
         _subDomainHost = subDomainHost;
         _maxPortsPerClient = maxPortsPerClient;
+        _identityResolver = identityResolver;
         _lastHeartbeat = Environment.TickCount64;
         _mux.ControlHandler = HandleControlAsync;
         // 客户端断开（优雅 FIN 或异常）→ 立即清理本会话并释放端口，无需等心跳超时
@@ -135,12 +143,31 @@ public sealed class ServerSession : IAsyncDisposable
             return;
         }
 
-        ClientId = hello.ClientId;
+        if (hello.Version != ProtocolContract.CurrentVersion)
+        {
+            await SendAsync(new HelloAckMessage(false, $"不支持的协议版本：{hello.Version}", ServerVersion));
+            await DisposeAsync();
+            return;
+        }
+
+        var resolvedClientId = _identityResolver is null
+            ? hello.ClientId
+            : await _identityResolver.ResolveAsync(hello, _cts.Token);
+        if (string.IsNullOrWhiteSpace(resolvedClientId))
+        {
+            await SendAsync(new HelloAckMessage(false, "客户端身份未获授权", ServerVersion));
+            await DisposeAsync();
+            return;
+        }
+
+        ClientId = resolvedClientId;
+        AuthenticatedPeerId = _identityResolver is null ? null : resolvedClientId;
         Hostname = hello.Hostname;
+        NegotiatedCapabilities = (ProtocolCapabilities)hello.Capabilities & ProtocolContract.SupportedCapabilities;
         Volatile.Write(ref _authenticated, 1);
         LoggedIn?.Invoke(this);
         LogLine?.Invoke("server", $"Agent 登录成功：{hello.ClientId} ({hello.Hostname})");
-        await SendAsync(new HelloAckMessage(true, null, ServerVersion));
+        await SendAsync(new HelloAckMessage(true, null, ServerVersion, (ulong)NegotiatedCapabilities));
         // 下发端口策略：allowPorts 白名单 + 每客户端上限（客户端添加隧道前做前置校验）
         await SendAsync(new PortPolicyMessage(_ports.GetAllowedPorts(), _maxPortsPerClient));
     }
@@ -189,7 +216,8 @@ public sealed class ServerSession : IAsyncDisposable
             }
             else if (reg.LinkType == LinkType.Udp)
             {
-                var listener = new UdpProxyListener(_mux, reg.ProxyId, port, _traffic[reg.ProxyId]);
+                var listener = new UdpProxyListener(_mux, reg.ProxyId, port, _traffic[reg.ProxyId],
+                    NegotiatedCapabilities.HasFlag(ProtocolCapabilities.UdpSourceAssociation));
                 _udpListeners[reg.ProxyId] = listener;
                 listener.Start();
             }

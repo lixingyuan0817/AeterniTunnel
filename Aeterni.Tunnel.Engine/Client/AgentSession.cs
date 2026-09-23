@@ -11,7 +11,10 @@ namespace Aeterni.Tunnel.Engine.Client;
 /// </summary>
 public sealed class AgentSession : IAsyncDisposable
 {
+    private static readonly TimeSpan UdpSourceIdleTimeout = TimeSpan.FromMinutes(2);
+    private static readonly TimeSpan UdpSourceCleanupInterval = TimeSpan.FromSeconds(30);
     private readonly AgentOptions _options;
+    private readonly ITransportFactory _transportFactory;
     private readonly CancellationTokenSource _cts = new();
     private readonly Dictionary<string, (string LocalIp, int LocalPort, LinkType LinkType)> _localProxies = new();
     private readonly Dictionary<string, Traffic.TrafficCounter> _traffic = new();
@@ -37,13 +40,21 @@ public sealed class AgentSession : IAsyncDisposable
     /// <summary>服务端端口策略（登录后下发；AllowPorts 空 = 不限制）——添加隧道前置校验用</summary>
     public PortPolicyMessage? PortPolicy { get; private set; }
 
-    private TaskCompletionSource<(bool Ok, string? Error, string? Version)>? _pendingHelloAck;
+    private TaskCompletionSource<(bool Ok, string? Error, string? Version, ulong Capabilities)>? _pendingHelloAck;
 
     public bool IsConnected => Volatile.Read(ref _connected) != 0;
 
-    public AgentSession(AgentOptions options)
+    /// <summary>最近一次 Hello 协商得到的能力；断线后清零。</summary>
+    public ProtocolCapabilities NegotiatedCapabilities { get; private set; }
+
+    public AgentSession(AgentOptions options, ITransportFactory? transportFactory = null)
     {
         _options = options;
+        _transportFactory = transportFactory ?? TcpTlsTransport.Client(
+            options.ServerAddr, options.ServerPort, options.UseTls,
+            targetHost: options.TlsServerName,
+            validateCertificate: options.ValidateCertificate,
+            caCertificatePath: options.TlsCaCertificatePath);
     }
 
     /// <summary>连接并登录（Hello）；结果经 LogLine / 后续消息体现</summary>
@@ -69,12 +80,7 @@ public sealed class AgentSession : IAsyncDisposable
     private async Task ConnectCoreAsync(CancellationToken ct = default)
     {
         LogLine?.Invoke($"正在连接 {_options.ServerAddr}:{_options.ServerPort}{(string.IsNullOrEmpty(_options.ClientId) ? "" : $"（{_options.ClientId}）")}…");
-        var transport = TcpTlsTransport.Client(
-            _options.ServerAddr, _options.ServerPort, _options.UseTls,
-            targetHost: _options.TlsServerName,
-            validateCertificate: _options.ValidateCertificate,
-            caCertificatePath: _options.TlsCaCertificatePath);
-        var conn = await transport.ConnectAsync(_options.ServerAddr, _options.ServerPort, ct);
+        var conn = await _transportFactory.ConnectAsync(_options.ServerAddr, _options.ServerPort, ct);
 
         _mux = new ChannelMultiplexer(conn);
         _mux.ControlHandler = HandleControlAsync;
@@ -82,9 +88,10 @@ public sealed class AgentSession : IAsyncDisposable
         _mux.Start();
 
         // 握手：发 Hello 并等待服务端 HelloAck（带超时）——连到非 ATS 服务不误判"已连接"
-        var ack = new TaskCompletionSource<(bool Ok, string? Error, string? Version)>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var ack = new TaskCompletionSource<(bool Ok, string? Error, string? Version, ulong Capabilities)>(TaskCreationOptions.RunContinuationsAsynchronously);
         _pendingHelloAck = ack;
-        await SendAsync(new HelloMessage(_options.ClientId, 1, _options.Token, Environment.MachineName));
+        await SendAsync(new HelloMessage(_options.ClientId, ProtocolContract.CurrentVersion, _options.Token,
+            Environment.MachineName, (ulong)ProtocolContract.SupportedCapabilities));
 
         var finished = await Task.WhenAny(ack.Task, Task.Delay(TimeSpan.FromSeconds(10), ct));
         if (finished != ack.Task)
@@ -103,6 +110,7 @@ public sealed class AgentSession : IAsyncDisposable
         }
 
         LogLine?.Invoke($"登录成功 (server {result.Version})");
+        NegotiatedCapabilities = (ProtocolCapabilities)result.Capabilities;
         Interlocked.Exchange(ref _connected, 1);
         Connected?.Invoke();
         StartHeartbeat();
@@ -137,6 +145,7 @@ public sealed class AgentSession : IAsyncDisposable
     private void OnConnectionClosed()
     {
         Interlocked.Exchange(ref _connected, 0);
+        NegotiatedCapabilities = ProtocolCapabilities.None;
         Disconnected?.Invoke();
         LogLine?.Invoke("连接断开，准备重连");
         _ = ReconnectLoopAsync();
@@ -198,7 +207,7 @@ public sealed class AgentSession : IAsyncDisposable
         {
             case HelloAckMessage ack:
                 // 握手结果由 ConnectCoreAsync 统一处理（日志/失败断开/标记已连接）
-                _pendingHelloAck?.TrySetResult((ack.Ok, ack.Error, ack.ServerVersion));
+                _pendingHelloAck?.TrySetResult((ack.Ok, ack.Error, ack.ServerVersion, ack.Capabilities));
                 break;
 
             case PortPolicyMessage policy:
@@ -256,7 +265,8 @@ public sealed class AgentSession : IAsyncDisposable
         var ch = _mux.AcceptChannel(open.ChannelId);
         var counter = _traffic.TryGetValue(open.ProxyId, out var tc) ? tc : null;
         if (target.LinkType == LinkType.Udp)
-            _ = UdpTunnelAsync(ch, target, counter);
+            _ = UdpTunnelAsync(ch, target, counter,
+                NegotiatedCapabilities.HasFlag(ProtocolCapabilities.UdpSourceAssociation));
         else
             _ = ForwardToLocalAsync(ch, target, counter);
     }
@@ -274,11 +284,20 @@ public sealed class AgentSession : IAsyncDisposable
     }
 
     /// <summary>UDP 隧道：通道帧 → 本地 UDP；本地 UDP 回复 → 通道帧</summary>
-    private async Task UdpTunnelAsync(Channel ch, (string LocalIp, int LocalPort, LinkType LinkType) target, Traffic.TrafficCounter? counter)
+    private async Task UdpTunnelAsync(Channel ch, (string LocalIp, int LocalPort, LinkType LinkType) target, Traffic.TrafficCounter? counter, bool sourceAssociation)
     {
-        // 必须显式绑定（new UdpClient() 无参构造未绑定，ReceiveAsync 会抛异常）
-        using var udp = new System.Net.Sockets.UdpClient(new System.Net.IPEndPoint(System.Net.IPAddress.Any, 0));
+        if (!sourceAssociation)
+        {
+            await LegacyUdpTunnelAsync(ch, target, counter);
+            return;
+        }
+
         var localEp = new System.Net.IPEndPoint(System.Net.IPAddress.Parse(target.LocalIp), target.LocalPort);
+        const int maxSources = 1024;
+        var sources = new System.Collections.Concurrent.ConcurrentDictionary<uint, UdpSourceState>();
+        var responseTasks = new List<Task>();
+        using var cleanupCts = new CancellationTokenSource();
+        var cleanupTask = CleanupUdpSourcesAsync(sources, cleanupCts.Token);
 
         var toLocal = Task.Run(async () =>
         {
@@ -288,13 +307,83 @@ public sealed class AgentSession : IAsyncDisposable
                 {
                     var data = await ch.ReadAsync();
                     if (data is null) break;
-                    counter?.AddDown(data.Length);
-                    await udp.SendAsync(data, data.Length, localEp);
+                    if (!UdpSourceEnvelope.TryDecode(data, out var sourceId, out var payload))
+                        continue;
+
+                    if (sources.Count >= maxSources && !sources.ContainsKey(sourceId))
+                    {
+                        var oldest = sources.MinBy(pair => pair.Value.LastUsedTicks);
+                        if (sources.TryRemove(oldest.Key, out var removed))
+                            removed.Socket.Dispose();
+                    }
+
+                    var state = sources.GetOrAdd(sourceId, _ =>
+                    {
+                        var created = new UdpSourceState(new System.Net.Sockets.UdpClient(new System.Net.IPEndPoint(System.Net.IPAddress.Any, 0)));
+                        responseTasks.Add(ReceiveUdpResponseAsync(sourceId, created.Socket, ch, counter));
+                        return created;
+                    });
+                    state.Touch();
+                    counter?.AddDown(payload.Length);
+                    await state.Socket.SendAsync(payload, localEp);
                 }
             }
             catch { }
+            finally
+            {
+                cleanupCts.Cancel();
+                foreach (var state in sources.Values)
+                    state.Socket.Dispose();
+            }
         });
 
+        await toLocal;
+        try { await cleanupTask; } catch (OperationCanceledException) { }
+        try { await Task.WhenAll(responseTasks); } catch { }
+        await ch.CloseAsync();
+    }
+
+    private static async Task CleanupUdpSourcesAsync(
+        System.Collections.Concurrent.ConcurrentDictionary<uint, UdpSourceState> sources,
+        CancellationToken ct)
+    {
+        using var timer = new PeriodicTimer(UdpSourceCleanupInterval);
+        while (await timer.WaitForNextTickAsync(ct))
+        {
+            var expiryTicks = DateTime.UtcNow.Subtract(UdpSourceIdleTimeout).Ticks;
+            foreach (var pair in sources)
+            {
+                if (pair.Value.LastUsedTicks <= expiryTicks &&
+                    sources.TryRemove(pair.Key, out var removed))
+                {
+                    removed.Socket.Dispose();
+                }
+            }
+        }
+    }
+
+    private static async Task LegacyUdpTunnelAsync(Channel ch, (string LocalIp, int LocalPort, LinkType LinkType) target, Traffic.TrafficCounter? counter)
+    {
+        using var udp = new System.Net.Sockets.UdpClient(new System.Net.IPEndPoint(System.Net.IPAddress.Any, 0));
+        var localEp = new System.Net.IPEndPoint(System.Net.IPAddress.Parse(target.LocalIp), target.LocalPort);
+        var toLocal = Task.Run(async () =>
+        {
+            try
+            {
+                while (true)
+                {
+                    var data = await ch.ReadAsync();
+                    if (data is null) break;
+                    counter?.AddDown(data.Length);
+                    await udp.SendAsync(data, localEp);
+                }
+            }
+            catch { }
+            finally
+            {
+                udp.Dispose();
+            }
+        });
         var toChannel = Task.Run(async () =>
         {
             try
@@ -308,8 +397,32 @@ public sealed class AgentSession : IAsyncDisposable
             }
             catch { }
         });
-
         await Task.WhenAll(toLocal, toChannel);
+        await ch.CloseAsync();
+    }
+
+    private static async Task ReceiveUdpResponseAsync(uint sourceId, System.Net.Sockets.UdpClient udp, Channel ch, Traffic.TrafficCounter? counter)
+    {
+        try
+        {
+            while (true)
+            {
+                var result = await udp.ReceiveAsync();
+                counter?.AddUp(result.Buffer.Length);
+                await ch.WriteAsync(UdpSourceEnvelope.Encode(sourceId, result.Buffer));
+            }
+        }
+        catch { }
+    }
+
+    private sealed class UdpSourceState(System.Net.Sockets.UdpClient socket)
+    {
+        private long _lastUsedTicks = DateTime.UtcNow.Ticks;
+
+        public System.Net.Sockets.UdpClient Socket { get; } = socket;
+        public long LastUsedTicks => Interlocked.Read(ref _lastUsedTicks);
+
+        public void Touch() => Interlocked.Exchange(ref _lastUsedTicks, DateTime.UtcNow.Ticks);
     }
 
     // ═════════ 心跳 ═════════

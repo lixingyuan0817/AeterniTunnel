@@ -75,6 +75,7 @@ public class ControlPlaneTests
 
         // 等"登录成功"日志（"正在连接"之后出现）
         await WaitForLogAsync(logs, "登录成功", TimeSpan.FromSeconds(15));
+        Assert.True(agent.NegotiatedCapabilities.HasFlag(ProtocolCapabilities.ReliableMessage));
 
         // 注册隧道成功，返回远程地址
         var regTcs = new TaskCompletionSource<(string, bool, string?)>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -137,6 +138,79 @@ public class ControlPlaneTests
         var ack = Assert.IsType<HelloAckMessage>(await ReadControlAsync(tcp.GetStream()));
         Assert.False(ack.Ok);
         Assert.Contains("clientId", ack.Error);
+        await WaitForClientCountAsync(listener, 0);
+    }
+
+    [Fact]
+    public async Task Login_UnsupportedProtocolVersion_IsRejected()
+    {
+        var controlPort = FreePort();
+        var listener = new ServerListener(controlPort, TestToken);
+        listener.Start();
+        await using var _listener = listener;
+        using var tcp = new TcpClient();
+        await tcp.ConnectAsync(IPAddress.Loopback, controlPort);
+
+        await SendControlAsync(tcp.GetStream(), new HelloMessage("future", 99, TestToken, "host"));
+
+        var ack = Assert.IsType<HelloAckMessage>(await ReadControlAsync(tcp.GetStream()));
+        Assert.False(ack.Ok);
+        Assert.Contains("协议版本", ack.Error);
+        await WaitForClientCountAsync(listener, 0);
+    }
+
+    [Fact]
+    public async Task Login_UnknownCapabilities_AreNotNegotiated()
+    {
+        var controlPort = FreePort();
+        var listener = new ServerListener(controlPort, TestToken);
+        listener.Start();
+        await using var _listener = listener;
+        using var tcp = new TcpClient();
+        await tcp.ConnectAsync(IPAddress.Loopback, controlPort);
+        var requested = (ulong)ProtocolCapabilities.ReliableMessage | (1UL << 63);
+
+        await SendControlAsync(tcp.GetStream(), new HelloMessage("cap-test", 1, TestToken, "host", requested));
+
+        var ack = Assert.IsType<HelloAckMessage>(await ReadControlAsync(tcp.GetStream()));
+        Assert.True(ack.Ok, ack.Error);
+        Assert.Equal((ulong)ProtocolCapabilities.ReliableMessage, ack.Capabilities);
+    }
+
+    [Fact]
+    public async Task IdentityResolver_BindsSessionToResolvedIdentity()
+    {
+        var controlPort = FreePort();
+        var listener = new ServerListener(controlPort, TestToken, identityResolver: new FixedIdentityResolver("stable-peer"));
+        listener.Start();
+        await using var _listener = listener;
+        using var tcp = new TcpClient();
+        await tcp.ConnectAsync(IPAddress.Loopback, controlPort);
+
+        await SendControlAsync(tcp.GetStream(), new HelloMessage("spoofed-client-id", 1, TestToken, "host"));
+
+        var ack = Assert.IsType<HelloAckMessage>(await ReadControlAsync(tcp.GetStream()));
+        Assert.True(ack.Ok, ack.Error);
+        Assert.IsType<PortPolicyMessage>(await ReadControlAsync(tcp.GetStream()));
+        Assert.Null(listener.GetSession("spoofed-client-id"));
+        Assert.Equal("stable-peer", listener.GetSession("stable-peer")?.AuthenticatedPeerId);
+    }
+
+    [Fact]
+    public async Task IdentityResolver_DefaultDenyRejectsSession()
+    {
+        var controlPort = FreePort();
+        var listener = new ServerListener(controlPort, TestToken, identityResolver: new FixedIdentityResolver(null));
+        listener.Start();
+        await using var _listener = listener;
+        using var tcp = new TcpClient();
+        await tcp.ConnectAsync(IPAddress.Loopback, controlPort);
+
+        await SendControlAsync(tcp.GetStream(), new HelloMessage("claimed", 1, TestToken, "host"));
+
+        var ack = Assert.IsType<HelloAckMessage>(await ReadControlAsync(tcp.GetStream()));
+        Assert.False(ack.Ok);
+        Assert.Contains("身份", ack.Error);
         await WaitForClientCountAsync(listener, 0);
     }
 
@@ -243,5 +317,11 @@ public class ControlPlaneTests
         var (id2, ok2, err2) = await reg2.Task.WaitAsync(TimeSpan.FromSeconds(15));
         Assert.False(ok2);
         Assert.Contains("占用", err2);
+    }
+
+    private sealed class FixedIdentityResolver(string? identity) : IClientIdentityResolver
+    {
+        public ValueTask<string?> ResolveAsync(HelloMessage hello, CancellationToken ct = default)
+            => ValueTask.FromResult(identity);
     }
 }
