@@ -104,6 +104,7 @@ remotePort = 17062
 | `webToken` / `webTokenSalt` | 首次自动生成 | 管理台登录，加盐 SHA256 哈希存储 |
 | `allowPorts` | 空 = 不限 | 客户端可注册的公网端口或区间，如 `[7071, "7071-7171"]` |
 | `maxPortsPerClient` | `0` = 不限 | 单个客户端最多隧道数 |
+| `maxDataConnectionsPerClient` | `2` | 单个客户端在同一 `bindPort` 上最多附加数据连接数；`0` = 禁用 |
 | `vhostHttpPort` / `vhostHttpsPort` | `0` = 关闭 | 域名反代入口（80/443） |
 | `subDomainHost` | 空 | 子域后缀，如 `aeterni.dev` → `myapp.aeterni.dev` |
 | `webBind` | `127.0.0.1:7500` | 遗留字段，当前未使用 |
@@ -117,7 +118,10 @@ bindPort = 7000
 useTls = true
 tlsCertificatePath = "certs/ats.pfx"
 tlsCertificatePassword = "通过受保护的部署注入"
+maxDataConnectionsPerClient = 2
 ```
+
+支持 `ConnectionIsolation` 的新 ATC 会在登录后通过控制连接取得 15 秒有效、一次性使用的绑定凭证，再连接同一个 `bindPort` 建立附加 TLS 数据连接；控制、登录和信令仍只使用这一入口。凭证过期、重放、跨会话使用或超过连接配额都会被拒绝。未协商该能力的旧端继续使用原控制连接承载隧道数据。
 
 `tlsCertificatePath` 使用 `server.toml` 所在目录解析相对路径；证书文件和密码应通过受保护的部署材料提供，不能提交到仓库。
 

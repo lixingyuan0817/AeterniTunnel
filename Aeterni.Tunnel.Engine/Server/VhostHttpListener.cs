@@ -17,7 +17,8 @@ public sealed class VhostHttpListener : IAsyncDisposable, IVhostRegistry
 
     private readonly TcpListener _listener;
     private readonly CancellationTokenSource _cts = new();
-    private readonly ConcurrentDictionary<string, (ChannelMultiplexer Mux, string ProxyId)> _routes = new();
+    private readonly ConcurrentDictionary<string, Route> _routes =
+        new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>日志（调试用）</summary>
     public event Action<string>? LogLine;
@@ -31,11 +32,17 @@ public sealed class VhostHttpListener : IAsyncDisposable, IVhostRegistry
         _listener.Start();
     }
 
-    public void Register(string host, ChannelMultiplexer mux, string proxyId)
-        => _routes[host] = (mux, proxyId);
+    public bool TryRegister(string host, ChannelMultiplexer owner,
+        Func<ChannelMultiplexer> selectMultiplexer, string proxyId)
+        => _routes.TryAdd(host, new Route(owner, selectMultiplexer, proxyId));
 
-    public void Unregister(string host)
-        => _routes.TryRemove(host, out _);
+    public bool Unregister(string host, ChannelMultiplexer owner, string proxyId)
+    {
+        if (!_routes.TryGetValue(host, out var route) ||
+            !ReferenceEquals(route.Owner, owner) || route.ProxyId != proxyId)
+            return false;
+        return ((ICollection<KeyValuePair<string, Route>>)_routes).Remove(new(host, route));
+    }
 
     /// <summary>是否已路由该 host（管理端/测试用）</summary>
     public bool Contains(string host)
@@ -76,8 +83,9 @@ public sealed class VhostHttpListener : IAsyncDisposable, IVhostRegistry
             }
 
             LogLine?.Invoke($"vhost 命中：{host} → {route.ProxyId}");
-            var ch = route.Mux.OpenChannel();
-            await route.Mux.SendControlAsync(MessageCodec.Serialize(new OpenTunnelMessage(route.ProxyId, ch.ChannelId)));
+            var mux = route.SelectMultiplexer();
+            var ch = mux.OpenChannel();
+            await mux.SendControlAsync(MessageCodec.Serialize(new OpenTunnelMessage(route.ProxyId, ch.ChannelId)));
 
             // 先显式转发已读的请求头（ReadByte 已从缓冲取出），再转发剩余流量
             await ch.WriteAsync(headerBytes);
@@ -146,4 +154,7 @@ public sealed class VhostHttpListener : IAsyncDisposable, IVhostRegistry
         _listener.Stop();
         return ValueTask.CompletedTask;
     }
+
+    private sealed record Route(ChannelMultiplexer Owner,
+        Func<ChannelMultiplexer> SelectMultiplexer, string ProxyId);
 }

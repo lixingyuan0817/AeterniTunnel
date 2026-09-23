@@ -19,4 +19,10 @@ public enum FrameType : byte
 
     /// <summary>通道关闭（带 FIN 语义）</summary>
     Close = 5,
+
+    /// <summary>通道异常重置；Payload 为 UTF-8 错误原因</summary>
+    Reset = 6,
+
+    /// <summary>可靠通道接收窗口增量；Payload 为包数(int32) + 字节数(int64)，大端序</summary>
+    WindowUpdate = 7,
 }

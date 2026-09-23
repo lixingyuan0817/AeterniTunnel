@@ -11,7 +11,7 @@ namespace Aeterni.Tunnel.Engine.Server;
 public sealed class ProxyListener : IAsyncDisposable
 {
     private readonly TcpListener _listener;
-    private readonly ChannelMultiplexer _mux;
+    private readonly Func<ChannelMultiplexer> _selectMultiplexer;
     private readonly string _proxyId;
     private readonly Aeterni.Tunnel.Engine.Traffic.TrafficCounter _traffic;
     private readonly CancellationTokenSource _cts = new();
@@ -19,8 +19,14 @@ public sealed class ProxyListener : IAsyncDisposable
     public int Port { get; }
 
     public ProxyListener(ChannelMultiplexer mux, string proxyId, int port, Aeterni.Tunnel.Engine.Traffic.TrafficCounter traffic)
+        : this(() => mux, proxyId, port, traffic)
     {
-        _mux = mux;
+    }
+
+    public ProxyListener(Func<ChannelMultiplexer> selectMultiplexer, string proxyId, int port,
+        Aeterni.Tunnel.Engine.Traffic.TrafficCounter traffic)
+    {
+        _selectMultiplexer = selectMultiplexer;
         _proxyId = proxyId;
         Port = port;
         _traffic = traffic;
@@ -50,8 +56,9 @@ public sealed class ProxyListener : IAsyncDisposable
     {
         try
         {
-            var ch = _mux.OpenChannel();
-            await _mux.SendControlAsync(MessageCodec.Serialize(new OpenTunnelMessage(_proxyId, ch.ChannelId)));
+            var mux = _selectMultiplexer();
+            var ch = mux.OpenChannel();
+            await mux.SendControlAsync(MessageCodec.Serialize(new OpenTunnelMessage(_proxyId, ch.ChannelId)));
             await TcpBridge.RunAsync(userTcp.GetStream(), ch, _traffic.AddUp, _traffic.AddDown);
         }
         catch { /* 用户连接异常，直接关闭 */ }

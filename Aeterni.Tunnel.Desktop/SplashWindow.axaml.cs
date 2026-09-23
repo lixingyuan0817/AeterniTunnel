@@ -25,6 +25,8 @@ public partial class SplashWindow : Window
     /// <summary>内容根（启动过渡淡出用）</summary>
     public Control ContentRoot => RootPanel;
 
+    public SplashWindow() : this(() => { }) { }
+
     public SplashWindow(Action onDone)
     {
         InitializeComponent();

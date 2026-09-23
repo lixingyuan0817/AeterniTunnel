@@ -50,7 +50,8 @@ public sealed class ServerHost : IAsyncDisposable
             dashboardPassword: options.DashboardPassword,
             maxPortsPerClient: options.MaxPortsPerClient,
             identityResolver: options.IdentityResolver,
-            transportFactory: options.TransportFactory);
+            transportFactory: options.TransportFactory,
+            maxDataConnectionsPerClient: options.MaxDataConnectionsPerClient);
 
         _listener.SessionAccepted += s => s.LogLine += (_, line) => LogLine?.Invoke(line);
         _listener.Start();

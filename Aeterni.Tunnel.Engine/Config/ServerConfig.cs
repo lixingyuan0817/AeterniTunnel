@@ -32,6 +32,9 @@ public sealed class ServerConfig
     /// <summary>每客户端最大隧道端口数（0 = 不限；vhost 域名隧道不计）</summary>
     public int MaxPortsPerClient { get; set; }
 
+    /// <summary>每客户端在同一 ATS 接入端口上的附加数据连接上限（0 = 禁用）。</summary>
+    public int MaxDataConnectionsPerClient { get; set; } = 2;
+
     /// <summary>网页管理器访问 token（sha256+salt 哈希，hex；仅初始化/重置时打印明文）</summary>
     public string WebToken { get; set; } = "";
 

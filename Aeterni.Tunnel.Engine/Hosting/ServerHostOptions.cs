@@ -21,5 +21,6 @@ public sealed record ServerHostOptions(
     string TlsCertificatePath = "",
     string TlsCertificatePassword = "",
     bool AllowInsecureTransport = false,
+    int MaxDataConnectionsPerClient = 2,
     Server.IClientIdentityResolver? IdentityResolver = null,
     Transport.ITransportFactory? TransportFactory = null);

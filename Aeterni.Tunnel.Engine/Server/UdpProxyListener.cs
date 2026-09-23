@@ -17,7 +17,8 @@ public sealed class UdpProxyListener : IAsyncDisposable
     private const int DefaultMaxSources = 1024;
     private static readonly TimeSpan DefaultSourceIdleTimeout = TimeSpan.FromMinutes(2);
     private readonly UdpClient _udp;
-    private readonly ChannelMultiplexer _mux;
+    private readonly Func<ChannelMultiplexer> _selectMultiplexer;
+    private ChannelMultiplexer? _mux;
     private readonly string _proxyId;
     private readonly Aeterni.Tunnel.Engine.Traffic.TrafficCounter _traffic;
     private readonly bool _useSourceAssociation;
@@ -30,8 +31,15 @@ public sealed class UdpProxyListener : IAsyncDisposable
     public int Port { get; }
 
     public UdpProxyListener(ChannelMultiplexer mux, string proxyId, int port, Aeterni.Tunnel.Engine.Traffic.TrafficCounter traffic, bool useSourceAssociation = true, int maxSources = DefaultMaxSources, TimeSpan? sourceIdleTimeout = null)
+        : this(() => mux, proxyId, port, traffic, useSourceAssociation, maxSources, sourceIdleTimeout)
     {
-        _mux = mux;
+    }
+
+    public UdpProxyListener(Func<ChannelMultiplexer> selectMultiplexer, string proxyId, int port,
+        Aeterni.Tunnel.Engine.Traffic.TrafficCounter traffic, bool useSourceAssociation = true,
+        int maxSources = DefaultMaxSources, TimeSpan? sourceIdleTimeout = null)
+    {
+        _selectMultiplexer = selectMultiplexer;
         _proxyId = proxyId;
         Port = port;
         _traffic = traffic;
@@ -42,6 +50,7 @@ public sealed class UdpProxyListener : IAsyncDisposable
 
     public void Start()
     {
+        _mux = _selectMultiplexer();
         _channel = _mux.OpenChannel();
         _ = _mux.SendControlAsync(MessageCodec.Serialize(new OpenTunnelMessage(_proxyId, _channel.ChannelId)));
         _ = ReceiveLoopAsync();

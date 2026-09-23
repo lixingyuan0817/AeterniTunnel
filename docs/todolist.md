@@ -4,10 +4,10 @@
 
 ## 1. 当前交接快照
 
-- 本轮范围：EN-010、EN-011、EN-012 和 EN-020 已完成，建立通信契约、协议能力协商、身份/控制生命周期边界及 UDP 多来源关联。
-- 当前活动任务：无；四项任务已通过全量测试与解决方案构建，提交已推送到远端主分支。
-- 已完成代码任务：EN-000、EN-001、EN-002、EN-003、EN-010、EN-011、EN-012、EN-020。跨网络结果和 P2P 后端尚未验证。
-- 下一项：EN-021 端口/监听资源事务与配额。
+- 本轮范围：EN-021、EN-030、EN-031、EN-040、EN-041 已完成；资源事务、同端口连接隔离、可靠窗口、公平发送、帧热路径优化、P2P 后端有界原型及统一入口信令已落地。
+- 当前活动任务：EN-042，由 Codex 于 2026-09-23 领取；身份绑定租约、路径策略和 native DataChannel adapter 已接入，正在组装统一 Peer 信令的 SDP/ICE 与 adapter，并补充跨网络安全证据。
+- 已完成代码任务：EN-000、EN-001、EN-002、EN-003、EN-010、EN-011、EN-012、EN-020、EN-021、EN-030、EN-031、EN-040、EN-041。跨 NAT、MTU/拥塞长稳和中继尚未验证。
+- 下一项：完成 EN-042 的 native 身份绑定数据面和直接路径失败原因；EN-043 已先完成可独立验证的授权/资源门禁，正式中继接入仍待 EN-042 验收。
 - 当前阻塞：无；待执行的测试与选型是任务，不记作阻塞。
 - 首要约束：Engine 只提供通信；单一 ATS 客户端接入端口；隧道/P2P 数据允许其他端口。
 - 已替代路线：先迁移 Tauri/WASM、统一组件库、再加 P2P。被替代的是执行顺序；Tauri + Blazor WebAssembly 已确定为客户端目标，仍排在 Engine 重构之后。
@@ -67,12 +67,12 @@
 | EN-011 | P1 | 版本、能力协商及扩展消息边界 | EN-010 | DONE | Codex / 2026-09-23 |
 | EN-012 | P1 | 控制会话、身份授权和生命周期拆分 | EN-011 | DONE | Codex / 2026-09-23 |
 | EN-020 | P1 | 隧道适配与 UDP 多来源关联 | EN-012 | DONE | Codex / 2026-09-23 |
-| EN-021 | P1 | 端口/监听资源事务与配额 | EN-020 | TODO | — |
-| EN-030 | P2 | 有界队列、公平调度与同端口连接隔离 | EN-001, EN-012, EN-021 | TODO | — |
-| EN-031 | P2 | 帧热路径优化与性能复测 | EN-030 | TODO | — |
-| EN-040 | P3 | P2P 通信后端原型与选型 | EN-010, EN-011 | TODO | — |
-| EN-041 | P3 | 统一入口 Peer 信令与短期授权 | EN-012, EN-040 | TODO | — |
-| EN-042 | P3 | 安全直连数据面 | EN-030, EN-041 | TODO | — |
+| EN-021 | P1 | 端口/监听资源事务与配额 | EN-020 | DONE | Codex / 2026-09-23 |
+| EN-030 | P2 | 有界队列、公平调度与同端口连接隔离 | EN-001, EN-012, EN-021 | DONE | Codex / 2026-09-23 |
+| EN-031 | P2 | 帧热路径优化与性能复测 | EN-030 | DONE | Codex / 2026-09-23 |
+| EN-040 | P3 | P2P 通信后端原型与选型 | EN-010, EN-011 | DONE | Codex / 2026-09-23 |
+| EN-041 | P3 | 统一入口 Peer 信令与短期授权 | EN-012, EN-040 | DONE | Codex / 2026-09-23 |
+| EN-042 | P3 | 安全直连数据面 | EN-030, EN-041 | DOING | Codex / 2026-09-23 |
 | EN-043 | P3 | 授权中继与路径策略 | EN-042 | TODO | — |
 | EN-044 | P3 | Peer 恢复、租约及宿主通信 API | EN-020, EN-043 | TODO | — |
 | EN-050 | P4 | 跨平台/跨网络、安全和长稳验收 | EN-031, EN-044 | TODO | — |
@@ -257,6 +257,83 @@ EN-040 的依赖刻意不包含性能优化：若接口设计出现后端可行�
 - 约束：替代客户端尚未验证前不删除旧客户端；过渡期间只做必要兼容与缺陷修复，不新增 Avalonia 产品能力。
 
 ## 6. 执行记录
+
+### 2026-09-23 / Asia/Shanghai — EN-040 / Codex
+
+- 状态：TODO → DOING → DONE；EN-041 随后由 TODO → DOING。
+- 选型：`.NET System.Net.Quic` 仅公开 QUIC 多路流，缺少 ICE/UDP 数据报能力；SIPSorcery 10.0.16 虽有 WebRTC/ICE，但其公开增强项仍列不可靠 DataChannel、高压数据通道性能问题，不能满足本任务双语义证据。选用 `DataChannelDotnet` 1.3.1（MIT）封装的 libdatachannel 0.22.x，生产接入仍需锁定可审计 native 构建来源。
+- 交付：新增 `Aeterni.Tunnel.Engine.P2PPrototype`，不接入 ATS、不包含房间/媒体/UI；offer/answer 两个独立进程通过临时文件交换 SDP/候选，实际在 loopback UDP 上进行 ICE、DTLS/SCTP 数据通道验证。可靠通道发送合成消息并得到 ACK；不可靠、无序通道发送 10 个包并由对端收到；双方记录 host/prflx 候选和 `RTC_CLOSED`。
+- 验证：Release 构建 0 错误；两个进程退出码均为 0，日志证据为 `RTC_CONNECTED`、`reliable_ack=...`、`realtime_received=10`、`ice=RTC_ICE_CLOSED`、`closed=true`。失败路径已验证连接超时/原生协商错误会以非零退出，不静默回退。
+- 资产/风险：NuGet 包含 macOS（目录名 `osx-x64` 但文件实测 arm64）、Linux x64、Windows x64/x86 native 库；无 Linux/Windows arm64 资产。尚未验证同 LAN/跨 NAT、IPv6、MTU 边界、拥塞长稳、TURN/中继和直接路径流量审计；这些归 EN-042～EN-050，不得把 loopback 结果写成公网成功率。
+- 下一动作：在既有 `ServerListener` 控制连接上增加 Peer 请求/响应、在线会话索引、授权租约和候选洪泛限制；不新增客户端必需信令端口。
+- 提交：未提交。
+
+### 2026-09-23 / Asia/Shanghai — EN-041 / Codex
+
+- 状态：TODO → DOING → DONE；EN-042 随后由 TODO → DOING。
+- 已完成：新增 `PeerRequest`/`PeerRequestNotice`/`PeerRequestAck`、`PeerDescription`、`PeerCandidate` 和信令回执；`PeerSignalingRegistry` 复用 ATS 控制连接，绑定稳定双方身份、`serviceId`、目标在线状态和双方授权结果，租约最多 30 秒；每 Peer 8 个并发请求、每租约 128 个候选，SDP/候选长度受限，offer/answer 方向不可伪造。
+- 客户端 API：`AgentSession.RequestPeerAsync`、`SendPeerDescriptionAsync`、`SendPeerCandidateAsync` 及对应通知/回执事件；未新增登录、信令或 RPC 端口。
+- 验证：消息编解码和注册表授权/离线/方向/候选洪泛测试 28/28 通过；Engine 全量回归 144/144 通过；解决方案 Release 构建成功，0 错误、6 条既有 Avalonia 警告。
+- 限制：信令成功不等于直连成功；native DataChannel 后端仍只在独立 loopback 原型中验证，身份绑定、端到端数据面、跨 NAT、MTU 和流量审计归 EN-042～EN-050。
+- 下一动作：实现 native WebRTC 数据通道适配和对端身份/授权租约绑定，DirectOnly 失败时不得隐式回落中继。
+- 提交：未提交。
+
+### 2026-09-23 / Asia/Shanghai — EN-042 / Codex（进行中）
+
+- 已完成：新增 `PeerAuthorizationLease`，以密码学随机短期凭证绑定本地/远端稳定身份、服务和有效期，支持撤销并限制最长 30 秒；统一信令租约在 `PeerRequestAck`/`PeerRequestNotice` 向双方下发同一 lease token；新增 `PeerPathSelector`，明确 `PreferDirect`、`DirectOnly`、`RelayOnly` 的选择及可分类失败原因；新增 `PeerDataPlaneGate`，在 native adapter 报告标准加密握手成功前拒绝业务包，且每个数据连接只接受一次 lease 认证。
+- 已补充：`NativePeerDataChannelAdapter` 已接入 Engine，包装 DataChannelDotnet 1.3.1 的 `IRtcDataChannel` 打开、二进制/文本收包和生命周期；收包仍经过 `PeerDataPlaneGate`，发送前要求 lease 已认证；不新增控制端口。
+- 验证：Peer 定向测试 11/11 通过；Engine 全量回归 165/165 通过；Engine 项目构建成功（DataChannelDotnet 依赖漏洞源检查受网络限制）；解决方案 Release 构建 0 错误、11 条既有警告；沙箱内测试运行器因禁止绑定本地端口而无法启动，未将该失败计入代码失败。
+- 未完成：对端证书/密钥绑定、SDP/ICE 与 adapter 的端到端组装、IPv4/IPv6/跨 NAT/MTU/流量审计。当前 adapter 接入和本地单元测试不代表 EN-042 验收完成；DataChannelDotnet 的多平台 native 资产仍需逐平台核验。
+- 下一动作：在不新增客户端登录/信令端口的前提下，把现有 Peer 信令的 SDP/ICE 事件组装到 adapter，补充伪造/重放及跨网络证据。
+- 提交：未提交。
+
+### 2026-09-23 / Asia/Shanghai — EN-043 / 前置边界 / Codex
+
+- 已完成：新增 `PeerRelayAdmission` 与 `PeerRelayLimits`，中继必须先通过双方身份/服务绑定的 lease 认证；待处理包数、待处理字节数和单包大小均有上限，reservation 释放幂等，关闭后不再接受新包。
+- 安全边界：门禁只接受后续标准安全传输产生的 opaque ciphertext，不解密、不解释业务负载；当前不代表 ATS 已提供生产中继或已完成端到端加密实现。
+- 验证：中继资源/认证定向测试 3/3 通过；正式 EN-043 仍保持 TODO，等待 EN-042 native adapter 和加密数据面验收。
+- 下一动作：完成 EN-042 后，将该门禁接入实际 relay transport，补充 DirectOnly 不回落、拒绝授权、断直连和中继不可用测试。
+- 提交：未提交。
+
+### 2026-09-23 / Asia/Shanghai — EN-044 / 前置边界 / Codex
+
+- 已完成：新增 `PeerRecoveryPolicy`，区分 `AtsControlDisconnected` 与 Peer 传输失败；ATS 控制掉线进入等待控制恢复，不把 Peer 直接标记为关闭；网络切换/传输失败采用可配置上限的指数退避；租约过期、撤销和主动关闭均为终态，不自动重试。
+- 验证：恢复策略定向测试 5/5 通过，覆盖有界退避、ATS/Peer 分离和终态原因。
+- 未完成：实际 OpenPeer/流/消息/数据报宿主 API、native adapter 重连、质量事件和关闭竞态集成测试；这些依赖 EN-042/EN-043 的真实数据面。
+- 已补充：`PeerSessionLifecycle` 实现最小宿主状态边界（Connecting/Connected/Degraded/Failed/Closing/Closed）、关闭幂等和质量快照事件；绑定 lease 时可在 adapter 周期检查过期/撤销并进入终态；不创建虚假的底层流或数据报能力。
+- 下一动作：将恢复策略接入 Peer session 生命周期，再补订阅释放、租约撤销生效上界和关闭竞态测试。
+- 提交：未提交。
+
+### 2026-09-23 / Asia/Shanghai — EN-031 / Codex
+
+- 状态：TODO → DOING → DONE；EN-040 随后由 TODO → DOING。
+- 已完成：FrameCodec 写入改用池化连续帧并在归还前清零，读取头部也池化；ChannelMultiplexer 数据负载不再 `ToArray`，写入取消令牌贯穿实际 I/O，窗口更新批量异步发送；基准新增默认隔离模式及 `--legacy-channel` 同协议比较开关，慢消费者失败改为报告结果而不截断整轮。
+- 性能：基线提交 `bd95042` 与候选五轮交错 Release 复测；同协议通道中位数 332.25 → 315.60 MiB/s（95.0%），默认可靠窗口模式 205.82 MiB/s；帧分配三档每操作均减少 40 B；TLS 控制延迟、单/8 连接吞吐、CPU、工作集和托管堆均通过绝对门槛及可适用的相对门槛。基线单连接 TLS 建连波动 36.4%，仅该相对项不作收益结论；详见 [性能报告](./performance-baseline.md#en-031-优化复测五轮-release)。
+- 行为/验证：旧基线五轮有四轮慢消费者写端提前完成，候选五轮均保持背压；`dotnet test AeterniTunnel.slnx -c Release --no-restore` 135/135 通过；解决方案 Release 构建成功，0 错误、6 条既有 Avalonia 警告。
+- 剩余/风险：可靠窗口隔离较无窗口旧协议存在可量化调度成本，但高于冻结的 150 MiB/s 绝对门槛；跨平台、长稳和公网性能归 EN-050。
+- 下一动作：执行 EN-040，先以实际 API/双进程原型冻结 P2P 后端，不提前实现房间、音频或 UI。
+- 提交：未提交。
+
+### 2026-09-23 / Asia/Shanghai — EN-030 / Codex
+
+- 状态：TODO → DOING → DONE。
+- 已完成：新增 `ConnectionIsolation` 能力；可靠通道按包数和字节数限制收发窗口，窗口更新批量发送，超限通道显式 Reset；同通道只有一个写入竞争连接级写锁，不同通道公平进入；ATS 在原 `bindPort` 首帧区分 Hello/绑定请求，使用 15 秒一次性随机凭证绑定原认证会话；附加连接、待认证握手均有限额，控制与隧道数据可分离。
+- 安全/兼容：绑定凭证过期、重放、伪造、跨会话及超配额均拒绝；新控制消息和 Reset/WindowUpdate 帧只在能力协商后发送；旧端继续使用原控制连接和旧背压路径，不新增客户端配置端口。
+- 测试：新增 `ConnectionIsolationTests` 7 项，覆盖同端口绑定、真实隧道流量、一次性/过期凭证、连接配额、慢通道隔离、公平发送和取消释放；Engine 全量 135/135 通过；解决方案构建成功，0 错误及 6 条既有 Avalonia 警告。
+- 配置/文档：新增 `maxDataConnectionsPerClient`（默认 2、0 禁用）并接入 Web 设置页；同步 README、通信契约、协议兼容、重构决策和项目索引。
+- 剩余/风险：附加连接或网络切换后的长期恢复策略归 EN-044；实时数据报仍未实现。完整性能相对门槛复测归 EN-031。
+- 下一动作：执行 EN-031，连续运行至少五轮完整 Release 基准，记录中位数、波动和相对 EN-001 门槛；随后全量回归。
+- 提交：未提交。
+
+### 2026-09-23 / Asia/Shanghai — EN-021 / Codex
+
+- 状态：TODO → DOING → DONE。
+- 已完成：注册/注销/断连清理通过会话级资源门串行执行；配额在端口预留前检查；监听绑定、状态提交或成功回执失败时回滚监听与端口；重复 ProxyId 和未支持类型明确拒绝；vhost 改为大小写不敏感的原子占用，并按会话/隧道所有者注销；ServerListener 停止时等待会话资源清理。
+- 测试：新增 `ResourceTransactionTests` 7 项，覆盖配额拒绝、绑定失败重试、重复 ID、跨会话并发抢占、vhost 冲突/断连释放、端口分配并发及断连重绑；定向相关回归 38/38 通过；Engine 全量 123/123 通过。
+- 验证：`dotnet build Aeterni.Tunnel.Engine.Tests/Aeterni.Tunnel.Engine.Tests.csproj --no-restore --nologo --verbosity minimal -p:UseSharedCompilation=false` 成功，仅 5 条既有测试警告；`git diff --check` 通过。测试因 MSBuild 命名管道和真实回环 socket 在沙箱外运行。
+- 剩余/风险：尚未实现按字节预算、公平调度和同端口附加数据连接，归 EN-030；本轮未执行跨平台/跨网络验证。
+- 下一动作：执行 EN-030，先冻结队列预算、调度和附加连接绑定的最小协议，再补慢消费者、重放/过期/越权与端口清单测试。
+- 提交：未提交。
 
 ### 2026-09-23 / Asia/Shanghai — EN-010、EN-011、EN-012、EN-020 / Codex
 

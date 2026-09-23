@@ -2,6 +2,8 @@ using Aeterni.Tunnel.Engine.Channels;
 using Aeterni.Tunnel.Engine.Protocol;
 using Aeterni.Tunnel.Engine.Protocol.Messages;
 using Aeterni.Tunnel.Engine.Transport;
+using Aeterni.Tunnel.Engine.Wire;
+using System.Collections.Concurrent;
 
 namespace Aeterni.Tunnel.Engine.Client;
 
@@ -16,13 +18,16 @@ public sealed class AgentSession : IAsyncDisposable
     private readonly AgentOptions _options;
     private readonly ITransportFactory _transportFactory;
     private readonly CancellationTokenSource _cts = new();
-    private readonly Dictionary<string, (string LocalIp, int LocalPort, LinkType LinkType)> _localProxies = new();
-    private readonly Dictionary<string, Traffic.TrafficCounter> _traffic = new();
+    private readonly ConcurrentDictionary<string, (string LocalIp, int LocalPort, LinkType LinkType)> _localProxies = new();
+    private readonly ConcurrentDictionary<string, Traffic.TrafficCounter> _traffic = new();
     private readonly List<(string ProxyId, RegisterProxyMessage Msg)> _desiredProxies = new();
+    private readonly object _dataConnectionsLock = new();
+    private readonly List<ChannelMultiplexer> _dataMultiplexers = [];
     private ChannelMultiplexer? _mux;
     private int _disposed;
     private int _reconnecting;
     private int _connected;
+    private int _bindingDataConnection;
 
     public event Action<string>? LogLine;
     public event Action<string, bool, string?>? ProxyRegistered;
@@ -36,6 +41,11 @@ public sealed class AgentSession : IAsyncDisposable
 
     /// <summary>服务端端口策略到达（登录后下发，后台线程）</summary>
     public event Action<PortPolicyMessage>? PortPolicyReceived;
+    public event Action<PeerRequestNoticeMessage>? PeerRequestReceived;
+    public event Action<PeerDescriptionMessage>? PeerDescriptionReceived;
+    public event Action<PeerCandidateMessage>? PeerCandidateReceived;
+    public event Action<PeerRequestAckMessage>? PeerRequestAcknowledged;
+    public event Action<PeerSignalAckMessage>? PeerSignalAcknowledged;
 
     /// <summary>服务端端口策略（登录后下发；AllowPorts 空 = 不限制）——添加隧道前置校验用</summary>
     public PortPolicyMessage? PortPolicy { get; private set; }
@@ -43,6 +53,15 @@ public sealed class AgentSession : IAsyncDisposable
     private TaskCompletionSource<(bool Ok, string? Error, string? Version, ulong Capabilities)>? _pendingHelloAck;
 
     public bool IsConnected => Volatile.Read(ref _connected) != 0;
+
+    public int DataConnectionCount
+    {
+        get
+        {
+            lock (_dataConnectionsLock)
+                return _dataMultiplexers.Count(mux => !mux.IsClosed);
+        }
+    }
 
     /// <summary>最近一次 Hello 协商得到的能力；断线后清零。</summary>
     public ProtocolCapabilities NegotiatedCapabilities { get; private set; }
@@ -82,10 +101,11 @@ public sealed class AgentSession : IAsyncDisposable
         LogLine?.Invoke($"正在连接 {_options.ServerAddr}:{_options.ServerPort}{(string.IsNullOrEmpty(_options.ClientId) ? "" : $"（{_options.ClientId}）")}…");
         var conn = await _transportFactory.ConnectAsync(_options.ServerAddr, _options.ServerPort, ct);
 
-        _mux = new ChannelMultiplexer(conn);
-        _mux.ControlHandler = HandleControlAsync;
-        _mux.ConnectionClosed += OnConnectionClosed;
-        _mux.Start();
+        var controlMux = new ChannelMultiplexer(conn);
+        _mux = controlMux;
+        controlMux.ControlHandler = (channelId, payload) => HandleControlAsync(controlMux, channelId, payload);
+        controlMux.ConnectionClosed += OnConnectionClosed;
+        controlMux.Start();
 
         // 握手：发 Hello 并等待服务端 HelloAck（带超时）——连到非 ATS 服务不误判"已连接"
         var ack = new TaskCompletionSource<(bool Ok, string? Error, string? Version, ulong Capabilities)>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -111,9 +131,13 @@ public sealed class AgentSession : IAsyncDisposable
 
         LogLine?.Invoke($"登录成功 (server {result.Version})");
         NegotiatedCapabilities = (ProtocolCapabilities)result.Capabilities;
+        if (NegotiatedCapabilities.HasFlag(ProtocolCapabilities.ConnectionIsolation))
+            controlMux.EnableSlowChannelIsolation();
         Interlocked.Exchange(ref _connected, 1);
         Connected?.Invoke();
         StartHeartbeat();
+        if (NegotiatedCapabilities.HasFlag(ProtocolCapabilities.ConnectionIsolation))
+            await SendAsync(new RequestDataConnectionMessage(), ct);
     }
 
     public async Task RegisterProxyAsync(
@@ -130,11 +154,30 @@ public sealed class AgentSession : IAsyncDisposable
 
     public async Task UnregisterProxyAsync(string proxyId, CancellationToken ct = default)
     {
-        _localProxies.Remove(proxyId);
-        _traffic.Remove(proxyId);
+        _localProxies.TryRemove(proxyId, out _);
+        _traffic.TryRemove(proxyId, out _);
         _desiredProxies.RemoveAll(x => x.ProxyId == proxyId);
         await SendAsync(new UnregisterProxyMessage(proxyId), ct);
     }
+
+    /// <summary>通过 ATS 统一控制连接请求已授权 Peer；默认租约不超过 30 秒。</summary>
+    public Task RequestPeerAsync(string requestId, string targetPeerId, string serviceId,
+        TimeSpan? lifetime = null, CancellationToken ct = default)
+    {
+        var duration = lifetime.GetValueOrDefault(TimeSpan.FromSeconds(15));
+        if (duration <= TimeSpan.Zero || duration > TimeSpan.FromSeconds(30))
+            throw new ArgumentOutOfRangeException(nameof(lifetime));
+        return SendAsync(new PeerRequestMessage(requestId, targetPeerId, serviceId,
+            DateTimeOffset.UtcNow.Add(duration).ToUnixTimeMilliseconds()), ct).AsTask();
+    }
+
+    public Task SendPeerDescriptionAsync(string requestId, bool isOffer, string sdp,
+        CancellationToken ct = default)
+        => SendAsync(new PeerDescriptionMessage(requestId, isOffer, sdp), ct).AsTask();
+
+    public Task SendPeerCandidateAsync(string requestId, string candidate, string? sdpMid = null,
+        bool endOfCandidates = false, CancellationToken ct = default)
+        => SendAsync(new PeerCandidateMessage(requestId, candidate, sdpMid, endOfCandidates), ct).AsTask();
 
     /// <summary>隧道流量快照（TUI/Dashboard 用）：proxyId → (up, down)</summary>
     public IReadOnlyDictionary<string, (long Up, long Down)> GetTrafficSnapshot()
@@ -146,6 +189,7 @@ public sealed class AgentSession : IAsyncDisposable
     {
         Interlocked.Exchange(ref _connected, 0);
         NegotiatedCapabilities = ProtocolCapabilities.None;
+        _ = DisposeDataConnectionsAsync();
         Disconnected?.Invoke();
         LogLine?.Invoke("连接断开，准备重连");
         _ = ReconnectLoopAsync();
@@ -200,7 +244,7 @@ public sealed class AgentSession : IAsyncDisposable
 
     // ═════════ 控制消息处理 ═════════
 
-    private async ValueTask HandleControlAsync(ushort channelId, byte[] payload)
+    private async ValueTask HandleControlAsync(ChannelMultiplexer source, ushort channelId, byte[] payload)
     {
         var msg = MessageCodec.Deserialize(payload);
         switch (msg)
@@ -221,7 +265,31 @@ public sealed class AgentSession : IAsyncDisposable
                 break;
 
             case OpenTunnelMessage open:
-                await HandleOpenTunnelAsync(open);
+                await HandleOpenTunnelAsync(source, open);
+                break;
+
+            case DataConnectionTokenMessage token:
+                _ = BindDataConnectionAsync(token);
+                break;
+
+            case PeerRequestNoticeMessage notice:
+                PeerRequestReceived?.Invoke(notice);
+                break;
+
+            case PeerDescriptionMessage description:
+                PeerDescriptionReceived?.Invoke(description);
+                break;
+
+            case PeerCandidateMessage candidate:
+                PeerCandidateReceived?.Invoke(candidate);
+                break;
+
+            case PeerRequestAckMessage requestAck:
+                PeerRequestAcknowledged?.Invoke(requestAck);
+                break;
+
+            case PeerSignalAckMessage signalAck:
+                PeerSignalAcknowledged?.Invoke(signalAck);
                 break;
 
             case RemoveProxyCommandMessage cmd:
@@ -241,8 +309,8 @@ public sealed class AgentSession : IAsyncDisposable
     /// </summary>
     private async Task HandleRemoveProxyCommandAsync(RemoveProxyCommandMessage cmd)
     {
-        _localProxies.Remove(cmd.ProxyId);
-        _traffic.Remove(cmd.ProxyId);
+        _localProxies.TryRemove(cmd.ProxyId, out _);
+        _traffic.TryRemove(cmd.ProxyId, out _);
         _desiredProxies.RemoveAll(x => x.ProxyId == cmd.ProxyId);
         ProxyRemoved?.Invoke(cmd.ProxyId);
         LogLine?.Invoke($"服务端指令：移除隧道 {cmd.ProxyId}");
@@ -252,23 +320,111 @@ public sealed class AgentSession : IAsyncDisposable
     }
 
     /// <summary>Server 请求建立数据隧道：接受通道 → 连接本地服务 → 双向转发</summary>
-    private async Task HandleOpenTunnelAsync(OpenTunnelMessage open)
+    private async Task HandleOpenTunnelAsync(ChannelMultiplexer source, OpenTunnelMessage open)
     {
-        if (_mux is null)
-            return;
         if (!_localProxies.TryGetValue(open.ProxyId, out var target))
         {
             LogLine?.Invoke($"未知隧道的隧道请求：{open.ProxyId}");
             return;
         }
 
-        var ch = _mux.AcceptChannel(open.ChannelId);
+        var ch = source.AcceptChannel(open.ChannelId);
         var counter = _traffic.TryGetValue(open.ProxyId, out var tc) ? tc : null;
         if (target.LinkType == LinkType.Udp)
             _ = UdpTunnelAsync(ch, target, counter,
                 NegotiatedCapabilities.HasFlag(ProtocolCapabilities.UdpSourceAssociation));
         else
             _ = ForwardToLocalAsync(ch, target, counter);
+    }
+
+    private async Task BindDataConnectionAsync(DataConnectionTokenMessage token)
+    {
+        if (Interlocked.Exchange(ref _bindingDataConnection, 1) != 0)
+            return;
+
+        ITunnelConnection? connection = null;
+        var ownershipTransferred = false;
+        try
+        {
+            if (Volatile.Read(ref _disposed) != 0 || Volatile.Read(ref _connected) == 0 ||
+                token.ExpiresUnixMilliseconds <= DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
+                return;
+
+            connection = await _transportFactory.ConnectAsync(
+                _options.ServerAddr, _options.ServerPort, _cts.Token);
+            await FrameCodec.WriteAsync(connection.Stream,
+                Frame.Control(FrameContract.ControlChannel,
+                    MessageCodec.Serialize(new BindDataConnectionMessage(token.Token))), _cts.Token);
+
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token);
+            timeout.CancelAfter(TimeSpan.FromSeconds(10));
+            var frame = await FrameCodec.ReadAsync(connection.Stream, timeout.Token);
+            if (frame.Type != FrameType.Control || frame.ChannelId != FrameContract.ControlChannel)
+                throw new CommunicationException(CommunicationErrorCode.ProtocolViolation,
+                    "附加数据连接绑定响应不是控制帧");
+            var ack = MessageCodec.Deserialize(frame.Payload) as BindDataConnectionAckMessage
+                ?? throw new CommunicationException(CommunicationErrorCode.ProtocolViolation,
+                    "附加数据连接绑定响应类型无效");
+            if (!ack.Ok)
+                throw new CommunicationException(CommunicationErrorCode.Unauthorized,
+                    ack.Error ?? "附加数据连接绑定被拒绝");
+
+            var multiplexer = new ChannelMultiplexer(connection);
+            ownershipTransferred = true;
+            multiplexer.EnableSlowChannelIsolation();
+            multiplexer.ControlHandler = (channelId, payload) =>
+                HandleControlAsync(multiplexer, channelId, payload);
+            multiplexer.ConnectionClosed += () => OnDataConnectionClosed(multiplexer);
+            lock (_dataConnectionsLock)
+                _dataMultiplexers.Add(multiplexer);
+            multiplexer.Start();
+            LogLine?.Invoke("附加数据连接已通过统一接入端口绑定");
+        }
+        catch (OperationCanceledException) when (_cts.IsCancellationRequested) { }
+        catch (Exception ex)
+        {
+            LogLine?.Invoke($"附加数据连接失败：{ex.Message}");
+        }
+        finally
+        {
+            if (!ownershipTransferred && connection is not null)
+                await connection.DisposeAsync();
+            Interlocked.Exchange(ref _bindingDataConnection, 0);
+        }
+    }
+
+    private void OnDataConnectionClosed(ChannelMultiplexer multiplexer)
+    {
+        lock (_dataConnectionsLock)
+            _dataMultiplexers.Remove(multiplexer);
+        if (Volatile.Read(ref _disposed) == 0 && Volatile.Read(ref _connected) != 0 &&
+            NegotiatedCapabilities.HasFlag(ProtocolCapabilities.ConnectionIsolation))
+            _ = RequestReplacementDataConnectionAsync();
+    }
+
+    private async Task RequestReplacementDataConnectionAsync()
+    {
+        try
+        {
+            await SendAsync(new RequestDataConnectionMessage(), _cts.Token);
+        }
+        catch (OperationCanceledException) when (_cts.IsCancellationRequested) { }
+        catch (Exception ex)
+        {
+            LogLine?.Invoke($"请求替代数据连接失败：{ex.Message}");
+        }
+    }
+
+    private async Task DisposeDataConnectionsAsync()
+    {
+        ChannelMultiplexer[] multiplexers;
+        lock (_dataConnectionsLock)
+        {
+            multiplexers = _dataMultiplexers.ToArray();
+            _dataMultiplexers.Clear();
+        }
+        foreach (var multiplexer in multiplexers)
+            await multiplexer.DisposeAsync();
     }
 
     private async Task ForwardToLocalAsync(Channel ch, (string LocalIp, int LocalPort, LinkType LinkType) target, Traffic.TrafficCounter? counter)
@@ -458,6 +614,7 @@ public sealed class AgentSession : IAsyncDisposable
         if (Interlocked.Exchange(ref _disposed, 1) != 0)
             return;
         _cts.Cancel();
+        await DisposeDataConnectionsAsync();
         if (_mux is not null)
             await _mux.DisposeAsync();
         Disconnected?.Invoke();

@@ -109,6 +109,19 @@ public class ConfigLoaderTests
     }
 
     [Fact]
+    public void DataConnectionQuota_RoundTripsAndDefaultsToTwo()
+    {
+        var defaults = ConfigLoader.LoadString("bindPort = 7000")!;
+        var configured = ConfigLoader.LoadString("maxDataConnectionsPerClient = 4")!;
+
+        Assert.Equal(2, defaults.MaxDataConnectionsPerClient);
+        Assert.Equal(2, ConfigLoader.ToHostOptions(defaults).MaxDataConnectionsPerClient);
+        Assert.Equal(4, configured.MaxDataConnectionsPerClient);
+        Assert.Equal(4, ConfigLoader.ToHostOptions(configured).MaxDataConnectionsPerClient);
+        Assert.Contains("maxDataConnectionsPerClient = 4", ConfigLoader.Write(configured));
+    }
+
+    [Fact]
     public void Load_RoundTrips()
     {
         var dir = Path.Combine(Path.GetTempPath(), "at-cfg-" + Guid.NewGuid().ToString("N"));

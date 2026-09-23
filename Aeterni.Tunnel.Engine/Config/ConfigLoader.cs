@@ -40,6 +40,7 @@ public static class ConfigLoader
             DashboardUser = GetString(kv, "dashboardUser", ""),
             DashboardPassword = GetString(kv, "dashboardPassword", ""),
             MaxPortsPerClient = GetInt(kv, "maxPortsPerClient", 0),
+            MaxDataConnectionsPerClient = GetInt(kv, "maxDataConnectionsPerClient", 2),
             WebBind = GetString(kv, "webBind", "127.0.0.1:7500"),
             ApiEnabled = GetBool(kv, "apiEnabled", false),
             WebToken = GetString(kv, "webToken", ""),
@@ -92,6 +93,7 @@ public static class ConfigLoader
             DashboardUser: cfg.DashboardUser,
             DashboardPassword: cfg.DashboardPassword,
             MaxPortsPerClient: cfg.MaxPortsPerClient,
+            MaxDataConnectionsPerClient: cfg.MaxDataConnectionsPerClient,
             WebBind: cfg.WebBind,
             ApiEnabled: cfg.ApiEnabled);
 
@@ -246,6 +248,8 @@ public static class ConfigLoader
             sb.AppendLine($"webBind = \"{Escape(cfg.WebBind)}\"");
         if (cfg.MaxPortsPerClient > 0)
             sb.AppendLine($"maxPortsPerClient = {cfg.MaxPortsPerClient}");
+        if (cfg.MaxDataConnectionsPerClient != 2)
+            sb.AppendLine($"maxDataConnectionsPerClient = {cfg.MaxDataConnectionsPerClient}");
         if (cfg.AllowPorts is { Count: > 0 })
             sb.AppendLine($"allowPorts = [{string.Join(", ", cfg.AllowPorts.Select(p => p.Start == p.End ? p.Start.ToString() : $"\"{p.Start}-{p.End}\""))}]");
         if (cfg.ApiEnabled)

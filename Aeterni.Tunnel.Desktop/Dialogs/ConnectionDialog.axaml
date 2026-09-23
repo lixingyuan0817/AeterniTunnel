@@ -4,7 +4,7 @@
         x:Class="Aeterni.Tunnel.Desktop.Dialogs.ConnectionDialog"
         Title="连接设置" Width="420" SizeToContent="Height"
         WindowStartupLocation="CenterOwner" CanResize="False"
-        SystemDecorations="None"
+        WindowDecorations="None"
         TransparencyLevelHint="AcrylicBlur,Blur,Transparent" Background="Transparent">
     <Border CornerRadius="10" ClipToBounds="True" Background="{DynamicResource BgBrush}">
     <Grid RowDefinitions="Auto,*">

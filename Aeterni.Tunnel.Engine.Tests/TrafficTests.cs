@@ -17,7 +17,7 @@ public class TrafficCounterTests
     }
 
     [Fact]
-    public void ConcurrentAdds_AreConsistent()
+    public async Task ConcurrentAdds_AreConsistent()
     {
         var c = new TrafficCounter();
         var tasks = Enumerable.Range(0, 8).Select(_ => Task.Run(() =>
@@ -29,7 +29,7 @@ public class TrafficCounterTests
             }
         })).ToArray();
 
-        Task.WaitAll(tasks);
+        await Task.WhenAll(tasks);
         Assert.Equal(8000, c.UpBytes);
         Assert.Equal(8000, c.DownBytes);
     }

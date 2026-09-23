@@ -11,7 +11,7 @@
         Title="AETERNI TUNNEL · ATC"
         Width="1000" Height="660" MinWidth="880" MinHeight="580"
         WindowStartupLocation="CenterScreen"
-        SystemDecorations="None"
+        WindowDecorations="None"
         TransparencyLevelHint="AcrylicBlur,Blur,Transparent" Background="Transparent">
 
     <!-- MainWindow = 布局壳：圆角根（自绘圆角，无边框窗口）+ 自定义标题栏 + 顶栏 + 内容区 + 状态栏 + Toast -->
