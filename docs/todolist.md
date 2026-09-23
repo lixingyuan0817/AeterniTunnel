@@ -5,7 +5,7 @@
 ## 1. 当前交接快照
 
 - 本轮范围：EN-010、EN-011、EN-012 和 EN-020 已完成，建立通信契约、协议能力协商、身份/控制生命周期边界及 UDP 多来源关联。
-- 当前活动任务：无；四项任务已通过全量测试与解决方案构建并提交，等待推送主分支。
+- 当前活动任务：无；四项任务已通过全量测试与解决方案构建，提交已推送到远端主分支。
 - 已完成代码任务：EN-000、EN-001、EN-002、EN-003、EN-010、EN-011、EN-012、EN-020。跨网络结果和 P2P 后端尚未验证。
 - 下一项：EN-021 端口/监听资源事务与配额。
 - 当前阻塞：无；待执行的测试与选型是任务，不记作阻塞。
@@ -267,8 +267,8 @@ EN-040 的依赖刻意不包含性能优化：若接口设计出现后端可行�
 - EN-020：UDP 协商后使用来源 ID，服务端来源表与 Agent 独立 socket 均限制为 1024 个并支持空闲回收；双来源乱序响应保持正确关联；未协商时保留旧单来源封装；可靠通道 `Close` 改为方向性 EOF 并覆盖半关闭响应。
 - 验证：四项定向测试 39/39 通过，UDP/通道收尾定向测试 11/11 通过；`dotnet test AeterniTunnel.slnx --no-restore --nologo --verbosity minimal` 最终为 116/116 通过；安装锁定的 Web npm 依赖后，`dotnet build AeterniTunnel.slnx --no-restore --nologo --verbosity minimal -p:UseSharedCompilation=false` 成功，0 错误及 6 条现有 Avalonia 警告；`git diff --check` 通过。
 - 兼容与限制：旧 v1 端缺少能力字段时按 0 处理，UDP 保留最近来源模式；共享 token 只提供兼容 `ClientId`，不能用于后续 Peer 授权；实时数据报和 P2P 数据面仍未实现，归 EN-040～EN-044。
-- 下一动作：推送功能分支和主分支；之后执行 EN-021，处理端口/监听资源事务、故障回滚与配额。
-- 提交：fd3412a（refactor(engine): establish communication and UDP contracts）。
+- 下一动作：执行 EN-021，处理端口/监听资源事务、故障回滚与配额。
+- 提交：fd3412a（refactor(engine): establish communication and UDP contracts）；8ff9295（docs: record completed engine contract phases）。两个远端分支已核验同步到 8ff9295。
 
 ### 2026-09-22 / Asia/Shanghai — EN-003 / Codex
 
